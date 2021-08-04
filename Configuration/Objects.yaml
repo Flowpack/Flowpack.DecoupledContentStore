@@ -1,0 +1,19 @@
+Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect:
+  properties:
+    contentCacheFrontend:
+      object:
+        factoryObjectName: Neos\Flow\Cache\CacheManager
+        factoryMethodName: getCache
+        arguments:
+          1:
+            value: Neos_Fusion_Content
+
+Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentCacheReader:
+  properties:
+    contentCache:
+      object:
+        factoryObjectName: Neos\Flow\Cache\CacheManager
+        factoryMethodName: getCache
+        arguments:
+          1:
+            value: Neos_Fusion_Content

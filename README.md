@@ -1,0 +1,296 @@
+# Decoupled Content Store based on Redis
+
+This is the 2nd generation of a Two-Stack CMS package for Neos.
+
+**This Package is currently work-in-progress and heavily developed right now. It is
+not yet ready for general usage, but will be soon.**
+
+The Content Store package is one part of a [Two-Stack CMS](https://martinfowler.com/articles/two-stack-cms/)
+solution with Neos. A Two-Stack architecture separates editing and publishing
+from the delivery of content. This is also an architecture that's suitable to+
+integrate Neos content in various other systems without adding overhead during
+delivery.
+
+The first iteration was not open source; developed jointly by [Networkteam](https://networkteam.com/) and [Sandstorm](https://sandstorm.de/)
+and is in use for several large customers. The second iteration (this project) is developed from scratch, in an open-source
+way, based on the learnings of the first iteration. Especially the robustness has been greatly increased.
+
+## What does it do?
+
+The Content Store package publishes content from Neos to a Redis database as
+immutable _content releases_. These releases can be atomically switched and
+a _current release_ points to the active release.
+
+The _delivery layer_ in the Two-Stack architecture uses the _current release_
+and looks for matching URLs in the _content store_ and delivers the pre-rendered
+content. A _delivery layer_ is decoupled from the actual Neos CMS and can be
+implemented in any language or framework. It is also possible to integrate the
+delivery layer part in another software (e.g. a shop system) as an extension.
+
+## Features
+
+- Publish a full, read-only snapshot of your live content to Redis in a so-called *Content Release*
+- allows for *incremental publishing*; so if a change is made, only the needed pages are re-rendered. This is
+  *integrated with the Neos Content Cache*; so cache flushings work correctly.
+-Integration with Neos workspace publishing for automatic incremental
+  publishing to the Content Store
+- Configurable Content Store format, decoupled from the internal representation in Neos.
+- Extensibility: Enrich content releases with your custom data.
+- Allows parallel rendering
+- Allows copying the content releases to different environments.
+- Allows rsyncing persistent assets around (should you need it)
+- Backend module with overview of _content releases_ (current release, switching
+  releases, manual publish)
+
+This project is using the go-package [prunner](https://github.com/Flowpack/prunner) and [its Flow Package wrapper](https://github.com/Flowpack/Flowpack.Prunner)
+as the basis for orchestrating and executing a content release.
+
+## Requirements
+
+- Redis
+- Sandstorm.OptimizedCacheBackend recommended
+- Prunner
+
+Start up prunner via the following command:
+
+```bash
+prunner/prunner --path Packages --data Data/Persistent/prunner
+```
+
+Copy the `pipelines_template.yml` file into your project and adjust it as needed (see below and the comments in the file for explanation).
+
+## Approach to Rendering
+
+The following flow chart shows the rendering pipeline for creating a content release.
+
+```                                                                                                 
+                       ┌─────────────────────┐                                                      
+                       │   Node Rendering    │                                                      
+     ┌───────────┐     │   ┌─────────────┐   │     ┌───────────┐     ┌───────────┐     ┌───────────┐
+     │   Node    │     │   │Orchestrator │   │     │  Release  │     │Transfer to│     │  Atomic   │
+     │Enumeration│────▶│   └─────────────┘   │────▶│Validation │────▶│  Target   │────▶│  Switch   │
+     └───────────┘     │┌────────┐ ┌────────┐│     └───────────┘     └───────────┘     └───────────┘
+                       ││Renderer│ │Renderer││                                                      
+                       └┴────────┴─┴────────┴┘                                                      
+```
+
+- At the beginning of every render, all nodes are **enumerated**. The Node Enumeration contains all pages
+  which need to be in the final content release.
+
+- Then, the rendering takes place. In parallel, the **orchestrator** checks if pages are already fully rendered. If no,
+  he creates rendering jobs. If yes, the rendered page is added to the in-progress content release.
+  
+  The **renderers** simply render the pages as instructed by the orchestrator.
+
+  The **orchestrator** tries to render multiple times: It can happen that after a render, the rendering did not
+  successfully work, because an editor has changed pages at the same time; leading to content cache flushes and
+  "holes" in the output.
+
+- During **validation**, checks can happen to see whether the content release is fully complete; to check whether
+  it really can go online.
+
+- During the **transfer** phase, the finished content release is copied to the production Redis instance if needed.
+  This includes copying of assets if needed.
+
+- In the **switch** phase, the content release goes live.
+
+The above pipeline is implemented with [prunner](https://github.com/Flowpack/prunner) which is orchestrating
+the different steps.
+
+## Infrastructure
+
+Here, we explain the different infrastructure and setup constraints for using the content store.
+
+- The Neos Content Cache must use Redis. It can use the OptimizedRedisCacheBackend.
+- The Content Store needs a separate Redis Database, but it can run on the same server.
+
+**It is crucial that Redis is available via lowest latency for Neos AND the Delivery Layer.** See the different
+setup scenarios below for how this can be done.
+
+### Minimal Setup
+
+The minimal setup looks as follows:
+
+- Neos writes into the Content Store Redis Database, and the Delivery Layer reads from the Content Store Redis Database.
+- Assets (persistent resources) are written directly to a publicly available Cloud Storage such as S3.
+
+```
+┌──────────────┐   ┌──────────────┐            
+│ Neos Content │   │Content Store │            
+│Cache Redis DB│   │   Redis DB   │◀───┐       
+└──────────────┘   └──────────────┘    │       
+        ▲                  ▲           │       
+        └────────┬─────────┘           │       
+                 │                     │       
+             ╔══════╗          ╔══════════════╗
+             ║ Neos ║          ║Delivery Layer║
+             ╚══════╝          ╚══════════════╝
+                 │                             
+                 │                             
+                 │       ┌──────────────┐      
+                 │       │Asset Storage │      
+                 └──────▶│   (S3 etc)   │      
+                         └──────────────┘      
+```
+
+In this case, the *transfer* phase does not need to do anything, and you need to configure Neos to use the cloud
+storage (e.g. via [Flownative.Google.CloudStorage](https://github.com/flownative/flow-google-cloudstorage) or
+[Flownative.Aws.S3](https://github.com/flownative/flow-aws-s3/)) for resources.
+
+**This is implemented in the default `pipelines_template.yml`.**
+
+**This Setup should be used if:**
+- the Delivery Layer and Neos are in the same data center (or host), so both can access Redis via lowest latencies
+- you want the easiest possible setup.
+
+If you use Cloud Asset Storage, ensure that you **never delete** assets from there. For `Flownative.Aws.S3`,
+you can [follow the guide on "Preventing Unpublishing of Resources in the Target"](https://github.com/flownative/flow-aws-s3/#preventing-unpublishing-of-resources-in-the-target).
+
+### Manually Sync Assets to the Delivery Layer via RSync
+
+If you can not to use a Cloud Asset Storage, there's a built-in feature to manually sync assets to the delivery
+layer(s) via RSync.
+
+To enable this, you need to follow the following steps:
+
+1. Configure in `Settings.yaml`:
+
+    ```yaml
+    Flowpack:
+      DecoupledContentStore:
+        resource:
+          sync:
+            targets:
+              -
+                host: localhost
+                port: ''
+                user: ''
+                directory: '../nginx/frontend/resources/'
+    ```
+
+2. In `pipelines.yml`, underneath `4) TRANSFER`, comment-in the `transfer_resources` task.
+
+### Copy Content Releases to a different Redis instance
+
+**This Setup should be used if:**
+- the Delivery Layer and Neos are in *different* data centers, so that there is a higher latency between one of the instances toward Redis
+- Or you need multiple delivery layers with different content states, with e.g. a *staging* delivery layer and a *live* delivery layer.
+
+```
+┌──────────────┐   ┌──────────────┐                   ┌──────────────┐
+│ Neos Content │   │Content Store │                   │Content Store │
+│Cache Redis DB│   │   Redis DB   │  ┌ ─ ─ ─ ─ ─ ─ ─ ▶│   Redis DB   │
+└──────────────┘   └──────────────┘    Higher         └──────────────┘
+        ▲                  ▲         │ Latency                ▲       
+        └────────┬─────────┘                                  │       
+                 │                   │                        │       
+             ╔══════╗                                 ╔══════════════╗
+             ║ Neos ║─ ─ ─ ─ ─ ─ ─ ─ ┘                ║Delivery Layer║
+             ╚══════╝                                 ╚══════════════╝
+                 │                                                    
+                 │                                                    
+                 │       ┌──────────────┐                             
+                 │       │Asset Storage │                             
+                 └──────▶│   (S3 etc)   │                             
+                         └──────────────┘                                                 
+```
+
+In this case, the content store Redis DB is **explicitly synced** by Neos to another Delivery layer.
+
+To enable this feature, do the following:
+
+1. Configure the additional Content Stores in `Settings.yaml` underneath `Flowpack.DecoupledContentStore.redisContentStores`.
+   The key is the internal identifier of the content store:
+
+    ```yaml
+    Flowpack:
+      DecoupledContentStore:
+        redisContentStores:
+          live:
+            label: 'Live Site'
+            hostname: my-redis-hostname
+            port: 6379
+            database: 11
+          staging:
+            label: 'Staging Site'
+            hostname: my-staging-redis-hostname
+            port: 6379
+            database: 11
+    ```
+
+2. In `pipelines.yml`, underneath `4) TRANSFER`, comment-in and adjust the `transfer_content` task.
+
+3. In `pipelines.yml`, underneath `5) TRANSFER`, comment-in the additional `contentReleaseSwitch:switchActiveContentRelease` commands.
+
+> **Alternative: Redis Replication**
+> 
+> Instead of the explicit synchronization described here, you can also use [Redis Replication](https://redis.io/topics/replication)
+> to synchronize the primary Redis to the other instances.
+>
+> Using Redis replication is transparent to Neos or the Delivery Layer.
+> 
+> To be able to use Redis replication, the Redis *secondary* (i.e. the delivery-layer's instance)
+> needs to connect to the primary Redis instance.
+> 
+> For the explicit synchronization described here, the Redis instances do not need to communicate directly
+> with each other; but Neos needs to be able to reach all instances.
+
+## Incremental Rendering
+
+As a big improvement for stability (compared to v1), the rendering pipeline does not make a difference whether
+it is a full or an incremental render. To trigger a full render, the content cache is flushed before
+the rendering is started.
+
+### What happens if edits happen during a rendering?
+
+If a change by an editor happens during a rendering, the content cache is flushed (by tag) as a result of
+this content modification. Now, there are two possible cases:
+
+- the document (which was modified) has not been rendered yet inside the current rendering. In this case,
+  the rendered document would contain the recent changes.
+- the document was already rendered and added to the content release. **In this case, the rendered
+  document would *not* contain the recent changes**.
+
+The 2nd case is a bit dangerous, in the sense that we need a re-render to happen soon; otherwise we would
+not converge to a consistent state.
+
+For use cases like scheduling re-renders, `prunner` supports a *concurrency limit* (i.e. how many
+jobs can run in parallel) - and if this limit is reached, it supports an additional *queue* which can
+be also limited.
+
+So the following lines from `pipelines.yml` are crucial:
+
+```yaml
+pipelines:
+  do_content_release:
+    concurrency: 1
+    queue_limit: 1
+    queue_strategy: replace
+```
+
+So, if a content release is currently running, and we try to start a new content release, then this task is
+added to the queue (but not yet executed). In case there is already a rendering task queued, this gets replaced
+by the newer rendering task.
+
+**This ensures that we have at most one content release running at any given time; and at most one content-release
+in the wait-list waiting to be rendered.** Additionally, we can be sure that scheduled content releases will be
+eventually executed, because that's prunner's job.
+
+## Testing
+
+export ID=42
+./flow nodeenumeration:enumerateallnodes $ID
+./flow noderendering:orchestraterendering $ID
+./flow noderendering:renderworker $ID worker-1
+
+
+## TODO
+
+clean up of old content releases
+error handling better
+tests
+
+
+## License
+
+GPL v3

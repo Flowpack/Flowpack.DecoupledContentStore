@@ -1,0 +1,23 @@
+<f:switch expression="{release.status}">
+	<f:case value="scheduled">
+		<span class="neos-badge" title="total" data-neos-toggle="tooltip">{release.queuedUrlCount}</span>
+	</f:case>
+	<f:case value="running">
+		<div class="progress"
+			 title="{release.renderedUrlCount} / {release.queuedUrlCount}"
+			 data-neos-toggle="tooltip">
+			<div class="progress-bar"
+				 role="progressbar"
+				 aria-valuenow="{release.progress}"
+				 aria-valuemin="0"
+				 aria-valuemax="100"
+				 style="min-width: 2em; width: {release.progress}%;">
+				{release.progress}%
+			</div>
+		</div>
+	</f:case>
+	<f:case value="finished">
+		<span class="neos-badge neos-badge-success" title="rendered" data-neos-toggle="tooltip">{release.renderedUrlCount}</span>
+		/ <span class="neos-badge" title="total" data-neos-toggle="tooltip">{release.urlCount}</span>
+	</f:case>
+</f:switch>

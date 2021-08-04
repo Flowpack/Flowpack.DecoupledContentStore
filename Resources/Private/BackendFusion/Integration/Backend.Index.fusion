@@ -1,0 +1,83 @@
+prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(Neos.Fusion:Component) {
+
+    // API, list of ContentReleaseOverviewRow objects
+    overviewData = null
+
+    renderer = Neos.Fusion:Component {
+        _renderedTableBody = Neos.Fusion:Loop {
+            items = ${props.overviewData}
+            itemRenderer = Neos.Fusion:Component {
+                // item instanceof ContentReleaseOverviewRow
+                identifier = ${item.contentReleaseIdentifier.identifier}
+                jobIdentifier = ${item.job.id}
+
+                enumeratedDocumentNodesCount = ${item.enumeratedDocumentNodesCount}
+                renderedJobs = ${item.renderingProgress.renderedJobs}
+                totalJobs = ${item.renderingProgress.totalJobs}
+                start = ${Date.format(item.job.start, 'd.m.Y H:i:s')}
+                renderer = afx`
+                    <tr>
+                        <td>
+                            <Neos.Fusion:Link.Action href.action="details" href.arguments={{jobIdentifier: props.jobIdentifier}}>
+                                {props.identifier}
+                            </Neos.Fusion:Link.Action>
+                        </td>
+                        <td>{props.renderedJobs} / {props.totalJobs}</td>
+                        <td>{props.enumeratedDocumentNodesCount}</td>
+                        <td>{props.start}</td>
+                    </tr>
+                `
+            }
+        }
+        renderer = afx`
+            <form id="postHelper" method="post">
+                <input
+                        type="hidden"
+                        name="__csrfToken"
+                        value={Security.csrfToken()}
+                />
+            </form>
+            <div class="neos-content neos-container-fluid">
+                <legend>Content Store Releases</legend>
+                <div class="neos-row-fluid">
+                    <table class="neos-table cs-releases-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 240px">Identifier</th>
+                            <th style="width: 200px">Render Progress</th>
+                            <th style="width: 200px">Page Count</th>
+                            <th>Start</th>
+                            <th>Switch </th>
+                            <th>Stop</th>
+                            <th>&nbsp;</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            {props._renderedTableBody}
+                        </tbody>
+                    </table>
+
+                    <Flowpack.DecoupledContentStore:ListFooter />
+                </div>
+            </div>
+        `
+    }
+    @process.debugDump = Neos.Fusion:DebugDump
+}
+
+prototype(Flowpack.DecoupledContentStore:ListFooter) < prototype(Neos.Fusion:Component) {
+    _publishAllUri = Neos.Fusion:UriBuilder {
+        action = 'publishAll'
+    }
+    renderer = afx`
+        <div class="neos-footer">
+            <Neos.Fusion:Link.Action href.action="index" attributes.class="neos-button">
+                <i class="fa fa-sync"></i> Reload
+            </Neos.Fusion:Link.Action>
+
+            <button form="postHelper" formaction={props._publishAllUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
+                Publish All
+            </button>
+        </div>
+    `
+}

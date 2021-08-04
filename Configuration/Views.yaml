@@ -1,0 +1,6 @@
+-
+  requestFilter: 'parentRequest.isPackage("Neos.Neos") && isFormat("html") && isPackage("Flowpack.DecoupledContentStore")'
+  options:
+    fusionPathPatterns:
+      - 'resource://Flowpack.DecoupledContentStore/Private/BackendFusion'
+

@@ -1,0 +1,27 @@
+# Normally, content dimension presets get injected from the Neos.ContentRepository.contentDimensions Setting.
+# For running the Behat tests, we do not want the settings to be merged together, because we want to fully
+# control all active content dimensions.
+# If we would not do this here, the content dimensions of this package (for testing) would be merged
+# with the content dimensions of other site packages, leading to indeterministic tests.
+'Neos\ContentRepository\Domain\Service\ConfigurationContentDimensionPresetSource':
+  properties:
+    configuration: &contentDimensionPresets
+      value:
+        language:
+          default: en_US
+          defaultPreset: en_US
+          presets:
+            en_US:
+              label: 'English (US)'
+              values:
+                - en_US
+              uriSegment: en
+            de:
+              label: 'DE'
+              values:
+                - de
+              uriSegment: de
+
+Neos\Neos\Domain\Service\ConfigurationContentDimensionPresetSource:
+  properties:
+    configuration: *contentDimensionPresets

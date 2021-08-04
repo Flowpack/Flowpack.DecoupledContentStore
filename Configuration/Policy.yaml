@@ -1,0 +1,11 @@
+privilegeTargets:
+  'Neos\Neos\Security\Authorization\Privilege\ModulePrivilege':
+    'Flowpack.DecoupledContentStore:BackendModule':
+      matcher: 'administration/contentstore'
+
+roles:
+  'Neos.Neos:Administrator':
+    privileges:
+      -
+        privilegeTarget: 'Flowpack.DecoupledContentStore:BackendModule'
+        permission: GRANT

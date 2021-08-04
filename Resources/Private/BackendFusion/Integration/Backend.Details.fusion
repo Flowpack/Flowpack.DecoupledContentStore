@@ -1,0 +1,21 @@
+prototype(Flowpack.DecoupledContentStore:Controller.Backend.Details) < prototype(Neos.Fusion:Component) {
+
+    // API, ContentReleaseDetails
+    detailsData = null
+
+    renderer = Neos.Fusion:Component {
+        @apply.parent = ${props}
+
+        renderer = afx`
+            <h1>{props.detailsData.contentReleaseIdentifier.identifier}</h1>
+            <p>
+                Prunner Job ID: {props.detailsData.job.id}<br />
+                Enumerated Documents Count: {props.detailsData.enumeratedDocumentNodesCount}<br />
+                Render Progress: {props.detailsData.renderingProgress.renderedJobs} / {props.detailsData.renderingProgress.totalJobs}<br />
+
+                rendered pages per second over time: {props.detailsData.svgSparkline}
+            </p>
+        `
+    }
+    @process.debugDump = Neos.Fusion:DebugDump
+}

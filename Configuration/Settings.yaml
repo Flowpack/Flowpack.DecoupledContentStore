@@ -1,0 +1,75 @@
+Flowpack:
+  DecoupledContentStore:
+    redisContentStores:
+      # the "Primary" content store is the one Neos writes to during building the content release.
+      primary:
+        label: 'Primary'
+        hostname: 127.0.0.1
+        port: 6379
+        database: 11
+      # you can add additional, arbitrarily named, content stores here - they appear in the UI.
+      # If you do this, see the hints in the README "Copy Content Releases to a different Redis instance".
+
+    publishing:
+      # Allows to filter the list of node types which should end up in the content store; and in the content
+      # enumeration. Supports the format of NodeInterface::getChildren() (or NodeTypeConstraintFactory, which is
+      # its internal implementation)
+      # Example:
+      # Neos.Neos:Document,!My.Package:Bar
+      nodeTypeWhitelist: 'Neos.Neos:Document'
+
+      # Allows to filter the list of enumerated URLs which should end up in the content store (and thus, in the content enumeration).
+      #
+      # This is sometimes needed because the same node is accessed via different URLs, and some URLs are internal and should
+      # not end up in the content store.
+      #
+      # We match the full URL (including hostname and prefix; so like "http://foo.bar/bla") with this regex.
+      #
+      # If "FALSE", the blacklisting is disabled.
+      urlBlacklistRegex: false
+    resource:
+      sync:
+        targets: {  }
+        #
+        # Target configuration for resource publication / sync
+        #
+        #  -
+        #    host: localhost
+        #    port: ''
+        #    user: ''
+        #    directory: '../nginx/frontend/resources/'
+Neos:
+  Neos:
+    fusion:
+      autoInclude:
+        Flowpack.DecoupledContentStore: true
+    modules:
+      'administration':
+        submodules:
+          'contentstore':
+            label: 'Content Store'
+            controller: 'Flowpack\DecoupledContentStore\Controller\BackendController'
+            description: 'Decoupled Content Publishing'
+            icon: 'fas fa-exchange'
+
+  Flow:
+    resource:
+      targets:
+        localWebDirectoryStaticResourcesTarget:
+          target: Flowpack\DecoupledContentStore\Resource\Target\MultisiteFileSystemSymlinkTarget
+        localWebDirectoryPersistentResourcesTarget:
+          target: Flowpack\DecoupledContentStore\Resource\Target\MultisiteFileSystemSymlinkTarget
+
+    security:
+      authentication:
+        providers:
+          'Neos.Neos:Backend':
+            requestPatterns:
+              'Flowpack.DecoupledContentStore:Controllers':
+                pattern: 'ControllerObjectName'
+                patternOptions:
+                  controllerObjectNamePattern: 'Flowpack\DecoupledContentStore\Controller\.*'
+    mvc:
+      routes:
+        'Flowpack.DecoupledContentStore':
+          position: 'before Neos.Neos'

@@ -1,0 +1,169 @@
+#
+# This file defines the rendering pipeline for the two-stack CMS.
+#
+# EXTENSIBILITY: For custom pipelines, it is common to copy this file to your own package,
+# change the pipeline name, and the `Flowpack.DecoupledContentStore.contentReleasePipelineName` Setting.
+#
+# In this file, all "standard" modification points are marked with "Extension Point".
+#
+# The contents of this file is read by [prunner](https://github.com/Flowpack/prunner).
+#
+pipelines:
+  # ARG: contentReleaseId
+  do_content_release:
+
+    # crucial settings for incremental rendering to work
+    concurrency: 1
+    queue_limit: 1
+    queue_strategy: replace
+
+    tasks:
+      ################################################################################
+      # 1) ENUMERATION
+      ################################################################################
+      enumerate_nodes:
+        script:
+          - ./flow nodeEnumeration:enumerateAllNodes {{ .contentReleaseId }}
+
+      # Extension Point: If you want to enumerate additional things (not just nodes)
+      # add a new enumerate_* task here.
+      #
+      # 1) the task name must start with enumerate_ (to not break the UI)
+      # 2) the task name must be included in enumerate_finished.depends_on
+
+      # marker task to depend on all enumeration jobs; as separation between enumeration and rendering stages
+      enumerate_finished:
+        script: [""]
+        depends_on:
+          - enumerate_nodes
+
+      ################################################################################
+      # 2) RENDERING
+      ################################################################################
+      render_orchestrator:
+        script:
+          - ./flow nodeRendering:orchestrateRendering {{ .contentReleaseId }}
+        depends_on: [enumerate_finished]
+      render_1:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w1
+        depends_on: [enumerate_finished]
+      render_2:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w2
+        depends_on: [enumerate_finished]
+      render_3:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w3
+        depends_on: [enumerate_finished]
+      render_4:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w4
+        depends_on: [enumerate_finished]
+      render_5:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w5
+        depends_on: [enumerate_finished]
+      render_6:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w6
+        depends_on: [enumerate_finished]
+      render_7:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w7
+        depends_on: [enumerate_finished]
+      render_8:
+        script:
+          - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w8
+        depends_on: [enumerate_finished]
+
+      # Extension Point: If you want to render additional things (not just nodes)
+      # add a new render_* task here.
+      #
+      # 1) the task name must start with render_ (to not break the UI)
+      # 2) the task must include `depends_on: [enumerate_finished]` to be sorted at the correct pipeline step
+      # 3) the task name must be included in render_finished.depends_on
+
+      # marker task to depend on all rendering jobs; as separation between rendering and validation stages
+      render_finished:
+        script: [""]
+        depends_on:
+          - render_orchestrator
+          - render_1
+          - render_2
+          - render_3
+          - render_4
+          - render_5
+          - render_6
+          - render_7
+          - render_8
+
+      ################################################################################
+      # 3) VALIDATION
+      ################################################################################
+      validate_content:
+        script:
+          - ./flow contentReleaseValidation:validate {{ .contentReleaseId }}
+        depends_on: [ render_finished ]
+
+      # Extension Point: If you want to validate additional things
+      # add a new validate_* task here.
+      #
+      # 1) the task name must start with validate_ (to not break the UI)
+      # 2) the task must include `depends_on: [render_finished]` to be sorted at the correct pipeline step
+      # 3) the task name must be included in validate_finished.depends_on
+
+      # marker task to depend on all validation jobs; as separation between validation and transfer stages
+      validate_finished:
+        script: [""]
+        depends_on:
+          - validate_content
+
+      ################################################################################
+      # 4) TRANSFER
+      ################################################################################
+      # By default, the transfer phase is empty. ("Minimal Setup" in the README)
+      transfer_content:
+        script:
+          # in case you want to use additional content stores, you need to enable the command
+          # below (see "Copy Content Releases to a different Redis instance" in README)
+          # and adjust the name of the redis instance you want to sync to ("live" in the
+          # invocation below).
+          - ""
+          # - ./flow contentReleaseTransfer:transferToContentStore live {{ .contentReleaseId }}
+        depends_on: [validate_finished]
+
+      transfer_resources:
+        script:
+          # in case you need to manually sync assets using rsync, you need to enable the command
+          # below (see "Manually Sync Assets to the Delivery Layer via RSync" in README)
+          - ""
+          #- ./flow contentReleaseTransfer:syncResources {{ .contentReleaseId }}
+
+      # Extension Point: If you want to transfer additional things
+      # add a new transfer_* task here.
+      #
+      # 1) the task name must start with transfer_ (to not break the UI)
+      # 2) the task must include `depends_on: [validate_finished]` to be sorted at the correct pipeline step
+      # 3) the task name must be included in transfer_finished.depends_on
+
+      # marker task to depend on all transfer jobs; as separation between transfer and switch stages
+      transfer_finished:
+        script: [""]
+        depends_on:
+          - transfer_content
+          - transfer_resources
+
+      ################################################################################
+      # 5) SWITCH
+      ################################################################################
+      switch:
+        script:
+          - ./flow contentReleaseSwitch:switchActiveContentRelease primary {{ .contentReleaseId }}
+          # in case you need want to switch the active content release in another content store,
+          # comment-in and adjust the line below (see "Copy Content Releases to a different Redis instance" in README).
+          # Do not forget to adjust the name of the redis instance you want to sync to ("live" in the invocation below).
+          #- ./flow contentReleaseSwitch:switchActiveContentRelease live {{ .contentReleaseId }}
+        depends_on:
+          - transfer_content
+

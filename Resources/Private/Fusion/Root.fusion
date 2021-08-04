@@ -1,0 +1,59 @@
+# Override default exception handlers to use custom handlers that check if a rendering for content store publishing is
+# currently done
+
+root {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwarePageHandler'
+}
+
+prototype(Neos.Neos:Content) {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareNodeWrappingHandler'
+}
+
+prototype(Neos.Neos:ContentCollection) {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareNodeWrappingHandler'
+}
+
+prototype(Neos.Neos:Page) {
+	head {
+		alternateLanguageLinks >
+	}
+
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwarePageHandler'
+}
+
+prototype(Neos.Neos:Breadcrumb) {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareContextDependentHandler'
+}
+
+prototype(Neos.Neos:Menu) {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareContextDependentHandler'
+}
+
+prototype(Neos.Neos:Shortcut) {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareNodeWrappingHandler'
+}
+
+prototype(Neos.Neos:ContentComponent) {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareNodeWrappingHandler'
+}
+
+prototype(Flowpack.DecoupledContentStore:DocumentRendering) < prototype(Neos.Fusion:Case)
+
+documentRendering < root
+documentRendering = Flowpack.DecoupledContentStore:DocumentRendering
+
+# for improving content rendering effectiveness, if changing the root page, do not clear all the other page's tags.
+# -> We remove the parent-page tags, as they are only used if you use "page layouts" (which we do not).
+#
+# HINT: Because the OneAndOne.Neos.Publishing package copies the `root` key to `documentRendering`, we need to apply the fix twice.
+root.@cache.entryTags.2 >
+documentRendering.@cache.entryTags.2 >
+
+
+
+# bugfix for "when images change, trigger correct cache flushes" (see FixedAssetHandlingInContentCacheFlusherAspect for explanation)
+prototype(Neos.Neos:ImageUri) {
+    @class = 'Flowpack\\DecoupledContentStore\\Fusion\\ImageUriImplementation'
+}
+
+
