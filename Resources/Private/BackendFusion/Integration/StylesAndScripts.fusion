@@ -1,0 +1,17 @@
+prototype(Flowpack.DecoupledContentStore:Integration.StylesAndScripts) < prototype(Neos.Fusion:Join) {
+    script = Neos.Fusion:Tag {
+        tagName = "script"
+        attributes.src = Neos.Fusion:ResourceUri {
+            path = 'resource://Flowpack.DecoupledContentStore/Public/BackendCompiled/out.js'
+        }
+    }
+
+    styles = Neos.Fusion:Tag {
+        tagName = "link"
+        attributes.rel = "stylesheet"
+        attributes.type = "text/css"
+        attributes.href = Neos.Fusion:ResourceUri {
+            path = 'resource://Flowpack.DecoupledContentStore/Public/BackendCompiled/out.css'
+        }
+    }
+}

@@ -82,6 +82,7 @@ Neos:
             controller: 'Flowpack\DecoupledContentStore\Controller\BackendController'
             description: 'Decoupled Content Publishing'
             icon: 'fas fa-exchange'
+            mainStylesheet: 'Lite'
 
   Flow:
     resource:

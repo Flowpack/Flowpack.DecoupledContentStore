@@ -338,6 +338,14 @@ Flowpack:
 This is needed so that the system knows which keys should be synchronized between the different content stores,
 and what data to delete if a release is removed.
 
+## Development
+
+- You need [pnpm](https://github.com/pnpm/pnpm) as package panager installed: `curl -f https://get.pnpm.io/v6.js | node - add --global pnpm`
+- Run `pnpm install` in this folder
+- Then run `pnpm watch` for development and `pnpm build` for prod build.
+
+We use esbuild combined with tailwind.css for building.
+
 ## TODO
 
 clean up of old content releases

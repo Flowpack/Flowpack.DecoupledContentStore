@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "autoprefixer": "^10.3.1",
+    "esbuild": "^0.12.18",
+    "esbuild-plugin-postcss2": "^0.0.9",
+    "postcss": "^8.3.6",
+    "tailwindcss": "^2.2.7"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "watch": "DEV=1 node build.js"
+  }
+}

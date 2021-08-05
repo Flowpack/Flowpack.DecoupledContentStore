@@ -7,7 +7,8 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Details) < prototype
         @apply.parent = ${props}
 
         renderer = afx`
-            <h1>{props.detailsData.contentReleaseIdentifier.identifier}</h1>
+            <Flowpack.DecoupledContentStore:Integration.StylesAndScripts />
+            <h1 class="text-2xl">{props.detailsData.contentReleaseIdentifier.identifier}</h1>
             <p>
                 Prunner Job ID: {props.detailsData.job.id}<br />
                 Enumerated Documents Count: {props.detailsData.enumeratedDocumentNodesCount}<br />
