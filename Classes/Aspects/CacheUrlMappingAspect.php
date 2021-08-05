@@ -8,6 +8,7 @@ use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheValues;
+use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\RenderExceptionExtractor;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Aop\JoinPointInterface;
@@ -39,15 +40,21 @@ class CacheUrlMappingAspect
     protected $contentCache;
 
     /**
+     * @Flow\Inject
+     * @var NodeRenderingExtensionManager
+     */
+    protected $nodeRenderingExtensionManager;
+
+    /**
      * @var \Neos\Cache\Frontend\StringFrontend
      */
     protected $contentCacheFrontend;
 
     /**
-     * @Flow\InjectConfiguration(path="publishing.urlBlacklistRegex")
+     * @Flow\InjectConfiguration(path="nodeRendering.urlExcludelistRegex")
      * @var string|false
      */
-    protected $urlBlacklistRegex = false;
+    protected $urlExcludelistRegex = false;
 
     /**
      * @var ContentReleaseLogger
@@ -108,7 +115,7 @@ class CacheUrlMappingAspect
             throw new \RuntimeException('TODO Logger not found - should never happen');
         }
         if ($this->urlIsMatchingBlacklist($url)) {
-            $logger->info(sprintf('Skipping URL %s, because it matches the blacklist %s', $url, $this->urlBlacklistRegex));
+            $logger->info(sprintf('Skipping URL %s, because it matches the blacklist %s', $url, $this->urlExcludelistRegex));
 
             return;
         }
@@ -122,6 +129,8 @@ class CacheUrlMappingAspect
         $arguments = $this->getCurrentArguments($node);
         $rootKey = DocumentNodeCacheKey::fromNodeAndArguments($node, $arguments);
         $rootCacheValues = DocumentNodeCacheValues::create($rootIdentifier, $url);
+        // allow other document metadata generators here
+        $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators($node, $arguments, $this->controllerContext, $rootCacheValues);
         $this->contentCacheFrontend->set($rootKey->redisKeyName(), json_encode($rootCacheValues), $rootTags);
     }
 
@@ -165,11 +174,11 @@ class CacheUrlMappingAspect
 
     private function urlIsMatchingBlacklist(string $url): bool
     {
-        if (!is_string($this->urlBlacklistRegex)) {
+        if (!is_string($this->urlExcludelistRegex)) {
             // no blacklist configured; so we allow all URLs.
             return false;
         }
-        return preg_match($this->urlBlacklistRegex, $url) === 1;
+        return preg_match($this->urlExcludelistRegex, $url) === 1;
     }
 
     public function setContentReleaseLoggerForThisRendering(ContentReleaseLogger $contentReleaseLogger): void

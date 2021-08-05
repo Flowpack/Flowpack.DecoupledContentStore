@@ -24,6 +24,7 @@ class RedisRenderingErrorManager
         $this->redisClientManager->getPrimaryRedis()->sAdd($contentReleaseIdentifier->redisKey('renderingErrors'), $exception->getMessage() . ' - ' . json_encode($additionalData));
     }
 
+
     public function getRenderingErrors(ContentReleaseIdentifier $contentReleaseIdentifier): array
     {
         return $this->redisClientManager->getPrimaryRedis()->sMembers($contentReleaseIdentifier->redisKey('renderingErrors'));

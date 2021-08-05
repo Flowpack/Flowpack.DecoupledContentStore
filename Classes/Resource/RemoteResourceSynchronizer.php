@@ -13,7 +13,7 @@ use Neos\Utility\Files;
 class RemoteResourceSynchronizer
 {
     /**
-     * @Flow\InjectConfiguration(path="resource.sync.targets")
+     * @Flow\InjectConfiguration(path="resourceSync.targets")
      * @var array
      */
     protected $targets = array();

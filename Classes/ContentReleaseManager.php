@@ -27,7 +27,7 @@ class ContentReleaseManager
     protected $prunnerApiService;
 
 
-    public function startContentRelease()
+    public function startIncrementalContentRelease()
     {
         $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time()]);
     }

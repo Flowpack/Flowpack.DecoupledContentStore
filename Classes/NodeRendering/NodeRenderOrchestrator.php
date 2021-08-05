@@ -6,6 +6,7 @@ namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingProgress;
+use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentCacheReader;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentReleaseWriter;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -73,15 +74,15 @@ class NodeRenderOrchestrator
 
     /**
      * @Flow\Inject
-     * @var RedisContentReleaseWriter
-     */
-    protected $redisContentReleaseWriter;
-
-    /**
-     * @Flow\Inject
      * @var RedisRenderingStatisticsStore
      */
     protected $redisRenderingStatisticsStore;
+
+    /**
+     * @Flow\Inject
+     * @var NodeRenderingExtensionManager
+     */
+    protected $nodeRenderingExtensionManager;
 
 
     public function renderContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger)
@@ -156,6 +157,8 @@ class NodeRenderOrchestrator
                 }
             }
 
+            $this->redisRenderingStatisticsStore->updateRenderingProgress($contentReleaseIdentifier, RenderingProgress::create(0, $totalJobsCount));
+
             $contentReleaseLogger->info('Rendering iteration completed. Continuing with next iteration.');
             // here, the rendering has completed. in the next iteration, we try to copy the
             // nodes which have been rendered in this iteration to the content store - so we iterate over the
@@ -176,7 +179,7 @@ class NodeRenderOrchestrator
                 $contentReleaseLogger->debug('Node fully rendered, adding to content release', ['node' => $enumeratedNode]);
                 // NOTE: Eventually consistent (TODO describe)
                 // If wanted more fully consistent, move to bottom....
-                $this->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache);
+                $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
             } else {
                 $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: '. $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
                 // the rendered document was not found, or has holes. so we need to re-render.
@@ -187,12 +190,4 @@ class NodeRenderOrchestrator
 
         return $nodesScheduledForRendering;
     }
-
-
-    protected function addRenderedDocumentToContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache)
-    {
-        $compressedContent = gzencode($renderedDocumentFromContentCache->getFullContent(), 9);
-        $this->redisContentReleaseWriter->writeRenderedDocumentsToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache->getUrl(), $compressedContent);
-    }
-
 }

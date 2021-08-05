@@ -2,6 +2,7 @@
 
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
+use Flowpack\DecoupledContentStore\Exception;
 use Neos\Flow\Annotations as Flow;
 /**
  * @Flow\Proxy(false)
@@ -16,6 +17,9 @@ final class ContentReleaseIdentifier implements \JsonSerializable
 
     private function __construct(string $identifier)
     {
+        if (!preg_match('/^[0-9]+$/', $identifier)) {
+            throw new Exception('Content release identifier malformed; must be numeric only. Given: ' . $identifier);
+        }
         $this->identifier = $identifier;
     }
 

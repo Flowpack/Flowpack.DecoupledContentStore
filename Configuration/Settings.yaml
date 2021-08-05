@@ -10,7 +10,7 @@ Flowpack:
       # you can add additional, arbitrarily named, content stores here - they appear in the UI.
       # If you do this, see the hints in the README "Copy Content Releases to a different Redis instance".
 
-    publishing:
+    nodeRendering:
       # Allows to filter the list of node types which should end up in the content store; and in the content
       # enumeration. Supports the format of NodeInterface::getChildren() (or NodeTypeConstraintFactory, which is
       # its internal implementation)
@@ -18,7 +18,7 @@ Flowpack:
       # Neos.Neos:Document,!My.Package:Bar
       nodeTypeWhitelist: 'Neos.Neos:Document'
 
-      # Allows to filter the list of enumerated URLs which should end up in the content store (and thus, in the content enumeration).
+      # Allows to filter the list of enumerated URLs which should end up in the content store.
       #
       # This is sometimes needed because the same node is accessed via different URLs, and some URLs are internal and should
       # not end up in the content store.
@@ -26,18 +26,49 @@ Flowpack:
       # We match the full URL (including hostname and prefix; so like "http://foo.bar/bla") with this regex.
       #
       # If "FALSE", the blacklisting is disabled.
-      urlBlacklistRegex: false
-    resource:
-      sync:
-        targets: {  }
-        #
-        # Target configuration for resource publication / sync
-        #
-        #  -
-        #    host: localhost
-        #    port: ''
-        #    user: ''
-        #    directory: '../nginx/frontend/resources/'
+      urlExcludelistRegex: false
+
+      # Set to `true` to render relative resource URIs
+      useRelativeResourceUris: false
+
+      # Add full HTTP message to the output of the content store
+      addHttpMessage: false
+
+
+
+    extensions:
+      # Extend Node Rendering by generating additional data for each rendering, interleaved with the content cache.
+      #
+      #  (must implement DocumentMetadataGeneratorInterface)
+      # -
+      #   className: Fully\Qualified\Classname
+      documentMetadataGenerators: []
+
+      # Register additional content release writers, being called for every finished node which should be added
+      # to the content release.
+      #  (must implement ContentReleaseWriterInterface)
+      contentReleaseWriters:
+        gzipCompressed:
+          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
+
+    redisKeyPostfixesForEachRelease:
+      # each content release starts with a fixed prefix "contentRelease:[releaseId]:", and afterwards
+      # follows a part which needs to be registered here. This is needed for synchronization between different
+      # content stores and cleanup of old releases.
+      renderedContent: true
+
+
+
+    resourceSync:
+      targets: {  }
+      #
+      # Target configuration for resource publication / sync
+      #
+      #  -
+      #    host: localhost
+      #    port: ''
+      #    user: ''
+      #    directory: '../nginx/frontend/resources/'
 Neos:
   Neos:
     fusion:

@@ -1,6 +1,6 @@
 <?php
-
 declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
 use Neos\Flow\Annotations as Flow;
@@ -17,9 +17,9 @@ final class RenderedDocumentFromContentCache
     protected $fullContent;
 
     /**
-     * @var string
+     * @var DocumentNodeCacheValues
      */
-    protected $url;
+    protected $documentNodeCacheValues;
 
     /**
      * @var bool
@@ -31,15 +31,10 @@ final class RenderedDocumentFromContentCache
      */
     protected $incompleteReason;
 
-    /**
-     * RenderedDocumentFromContentCache constructor.
-     * @param string $fullContent
-     * @param bool $isComplete
-     */
-    public function __construct(string $fullContent, string $url, bool $isComplete, string $incompleteReason)
+    private function __construct(string $fullContent, DocumentNodeCacheValues $documentNodeCacheValues, bool $isComplete, string $incompleteReason)
     {
         $this->fullContent = $fullContent;
-        $this->url = $url;
+        $this->documentNodeCacheValues = $documentNodeCacheValues;
         $this->isComplete = $isComplete;
         $this->incompleteReason = $incompleteReason;
     }
@@ -47,12 +42,12 @@ final class RenderedDocumentFromContentCache
 
     static public function createIncomplete(string $reason): self
     {
-        return new self('', '',false, $reason);
+        return new self('', DocumentNodeCacheValues::empty(), false, $reason);
     }
 
     static public function createWithFullContent(string $fullContent, DocumentNodeCacheValues $documentNodeCacheValues): self
     {
-        return new self($fullContent, $documentNodeCacheValues->getUrl(), true, '');
+        return new self($fullContent, $documentNodeCacheValues, true, '');
     }
 
     public function getFullContent(): string
@@ -62,7 +57,12 @@ final class RenderedDocumentFromContentCache
 
     public function getUrl(): string
     {
-        return $this->url;
+        return $this->documentNodeCacheValues->getUrl();
+    }
+
+    public function getMetadata(): array
+    {
+        return $this->documentNodeCacheValues->getMetadata();
     }
 
     public function isComplete(): bool

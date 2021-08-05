@@ -115,7 +115,8 @@ pipelines:
 
       # marker task to depend on all validation jobs; as separation between validation and transfer stages
       validate_finished:
-        script: [""]
+        script:
+          - ./flow contentReleaseValidation:ensureNoValidationErrorsExist {{ .contentReleaseId }}
         depends_on:
           - validate_content
 
@@ -165,5 +166,5 @@ pipelines:
           # Do not forget to adjust the name of the redis instance you want to sync to ("live" in the invocation below).
           #- ./flow contentReleaseSwitch:switchActiveContentRelease live {{ .contentReleaseId }}
         depends_on:
-          - transfer_content
+          - transfer_finished
 

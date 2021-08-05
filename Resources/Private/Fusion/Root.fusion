@@ -45,7 +45,7 @@ documentRendering = Flowpack.DecoupledContentStore:DocumentRendering
 # for improving content rendering effectiveness, if changing the root page, do not clear all the other page's tags.
 # -> We remove the parent-page tags, as they are only used if you use "page layouts" (which we do not).
 #
-# HINT: Because the OneAndOne.Neos.Publishing package copies the `root` key to `documentRendering`, we need to apply the fix twice.
+# HINT: Because the Flowpack.DecoupledContentStore package copies the `root` key to `documentRendering`, we need to apply the fix twice.
 root.@cache.entryTags.2 >
 documentRendering.@cache.entryTags.2 >
 

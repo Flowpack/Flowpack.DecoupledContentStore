@@ -29,7 +29,7 @@ class NodeEnumerator
     protected $redisEnumerationRepository;
 
     /**
-     * @Flow\InjectConfiguration("publishing.nodeTypeWhitelist")
+     * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
      * @var string
      */
     protected $nodeTypeWhitelist;

@@ -29,7 +29,7 @@ class IncrementalContentReleaseHandler
     public function startContentReleaseIfNotRunning()
     {
         if ($this->nodePublishedInThisRequest === true) {
-            $this->contentReleaseManager->startContentRelease();
+            $this->contentReleaseManager->startIncrementalContentRelease();
         }
     }
 }

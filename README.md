@@ -158,14 +158,13 @@ To enable this, you need to follow the following steps:
     ```yaml
     Flowpack:
       DecoupledContentStore:
-        resource:
-          sync:
-            targets:
-              -
-                host: localhost
-                port: ''
-                user: ''
-                directory: '../nginx/frontend/resources/'
+        resourceSync:
+          targets:
+            -
+              host: localhost
+              port: ''
+              user: ''
+              directory: '../nginx/frontend/resources/'
     ```
 
 2. In `pipelines.yml`, underneath `4) TRANSFER`, comment-in the `transfer_resources` task.
@@ -276,20 +275,79 @@ by the newer rendering task.
 in the wait-list waiting to be rendered.** Additionally, we can be sure that scheduled content releases will be
 eventually executed, because that's prunner's job.
 
-## Testing
+## Extensibility
 
-export ID=42
-./flow nodeenumeration:enumerateallnodes $ID
-./flow noderendering:orchestraterendering $ID
-./flow noderendering:renderworker $ID worker-1
+### Custom `pipelines.yml`
 
+Crafting a custom `pipelines.yml` is the main extension point for doing additional work (f.e. additional enumeration
+or rendering).
+
+### Custom Document Metadata, integrated with the Content Cache
+
+Sometimes, you need to build additional data structures for every individual document. Ideally, you'll want this
+structure to be integrated with the content cache; i.e. only refresh it if the page has changed.
+
+Performance-wise, it is clever to do this at the same time as the rendering itself, as the content nodes
+(which you'll usually need) are already loaded in memory. You can register a
+`Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentMetadataGeneratorInterface` in `Settings.yaml`:
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    extensions:
+      documentMetadataGenerators:
+        'yourMetadataGenerator':
+          className: 'Your\Extra\MetadataGenerator'
+```
+
+When you implement this class, you can add additional Metadata which is serialized to the Neos content cache
+for every rendered document.
+
+Often, you'll also want to add another `contentReleaseWriter` which reads the newly added metadata and adds
+it to the final content release. Read the next section how this works.
+
+### Custom Content Release Writer
+
+You can completely define how a content release is laid out in Redis for consumption by your delivery layer.
+
+By implementing a custom `ContentReleaseWriter`, you can specify how the rendered content is stored in Redis.
+
+Again, this is registered in `Settings.yaml`:
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    extensions:
+      contentReleaseWriters:
+        'yourMetadataReleaseWriter':
+          className: 'Your\Extra\MetadataWriter'
+```
+
+### Writing Custom Data to the Content Release
+
+In case you write custom data to the content release (using `$contentReleaseIdentifier->redisKey('foo')`), you need to register
+the custom key also in the settings:
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    redisKeyPostfixesForEachRelease:
+      foo: true
+```
+
+This is needed so that the system knows which keys should be synchronized between the different content stores,
+and what data to delete if a release is removed.
 
 ## TODO
 
 clean up of old content releases
 error handling better
 tests
+force-switch
 
+## Missing Features from old
+
+data-url-next-page (or so) not supported
 
 ## License
 

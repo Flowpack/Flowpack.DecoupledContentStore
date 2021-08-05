@@ -9,6 +9,7 @@ use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Http\BaseUriProvider;
 use Neos\Flow\Http\Helper\RequestInformationHelper;
+use Neos\Flow\Http\Helper\ResponseInformationHelper;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Mvc\ActionResponse;
 use Neos\Flow\Mvc\Controller\Arguments;
@@ -20,6 +21,7 @@ use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Neos\Domain\Service\ContentContext;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * @Flow\Scope("singleton")
@@ -27,10 +29,18 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
 class DocumentRenderer
 {
     /**
-     * @Flow\InjectConfiguration("publishing.useRelativeResourceUris")
+     * @Flow\InjectConfiguration("nodeRendering.useRelativeResourceUris")
      * @var bool
      */
     protected $useRelativeResourceUris;
+
+    /**
+     * Add HTTP message if rendering full content
+     *
+     * @Flow\InjectConfiguration("nodeRendering.addHttpMessage")
+     * @var bool
+     */
+    protected $addHttpMessage;
 
     /**
      * @Flow\Inject
@@ -51,7 +61,7 @@ class DocumentRenderer
     protected $configurationManager;
 
     /**
-     * @Flow\Inject
+     * @Flow\Inject(lazy=false)
      * @var ResourceManager
      */
     protected $resourceManager;
@@ -99,19 +109,21 @@ class DocumentRenderer
      *
      * @param NodeInterface $node
      * @param array $arguments Request arguments when rendering the node
+     * @return string the rendered document (not needed inside this package, but might be useful for others who want to trigger the rendering)
      * @throws Exception\RenderingException
      */
-    public function renderDocumentNodeVariant(NodeInterface $node, array $arguments, ContentReleaseLogger $contentReleaseLogger): void
+    public function renderDocumentNodeVariant(NodeInterface $node, array $arguments, ContentReleaseLogger $contentReleaseLogger): string
     {
         $this->cacheUrlMappingAspect->setContentReleaseLoggerForThisRendering($contentReleaseLogger);
         $nodeUri = $this->buildNodeUri($node, $arguments);
-        $this->cacheUrlMappingAspect->resetContentReleaseLogger();
 
         try {
             $arguments['node'] = $node->getContextPath();
-            $this->renderDocumentView($node, $nodeUri, $arguments, $contentReleaseLogger);
+            return $this->renderDocumentView($node, $nodeUri, $arguments, $contentReleaseLogger);
         } catch (\Exception $exception) {
             throw new Exception\RenderingException('Error rendering document view', $node, $nodeUri, 1491378709, $exception);
+        } finally {
+            $this->cacheUrlMappingAspect->resetContentReleaseLogger();
         }
     }
 
@@ -184,30 +196,6 @@ class DocumentRenderer
     }
 
     /**
-     * Override the baseUri of resource publishing targets
-     *
-     * This is needed because the rendering might be executed in a CLI request that doesn't have
-     * a "current" base URI. It's also needed to render nodes for multiple sites.
-     *
-     * @param string $baseUri
-     * @throws \Neos\Utility\Exception\PropertyNotAccessibleException
-     */
-    protected function injectBaseUriIntoResourcePublishingTargets($baseUri)
-    {
-        // Make sure the base URI ends with a slash
-        $baseUri = rtrim($baseUri, '/') . '/';
-
-        $collections = $this->resourceManager->getCollections();
-        /** @var \Neos\Flow\ResourceManagement\Collection $collection */
-        foreach ($collections as $collection) {
-            $target = $collection->getTarget();
-            if ($target instanceof MultisiteFileSystemSymlinkTarget) {
-                $target->setOverrideHttpBaseUri($baseUri);
-            }
-        }
-    }
-
-    /**
      * Render the view of a document node
      *
      * This will set up a simulated request for rendering the view. If the output contains a "next link"
@@ -216,15 +204,12 @@ class DocumentRenderer
      * @param NodeInterface $node
      * @param string $uri The URI for the node
      * @param array $requestArguments Plain request arguments (e.g. node by context path), could come from routing match results
-     * @param array $renderedUris Collect rendered URIs
-     * @return void
+     * @return string the rendered output
      * @throws Exception\InvalidSiteConfigurationException
      */
-    protected function renderDocumentView(NodeInterface $node, $uri, array $requestArguments, ContentReleaseLogger $contentReleaseLogger): void
+    protected function renderDocumentView(NodeInterface $node, $uri, array $requestArguments, ContentReleaseLogger $contentReleaseLogger): string
     {
         $this->isRendering = true;
-
-        $output = '';
 
         try {
             /** @var ContentContext $contentContext */
@@ -247,17 +232,50 @@ class DocumentRenderer
 
             $resourceBaseUri = $this->useRelativeResourceUris ? '' : $baseUri;
 
-            $this->injectBaseUriIntoResourcePublishingTargets($resourceBaseUri);
+            MultisiteFileSystemSymlinkTarget::injectBaseUriIntoRelevantResourcePublishingTargets($resourceBaseUri, $this->resourceManager);
 
             $this->fusionView->setFusionPath('documentRendering');
             $this->fusionView->setControllerContext($controllerContext);
             $this->fusionView->assign('value', $node);
 
-            $this->fusionView->render();
+            $output = $this->fusionView->render();
+            if ($this->addHttpMessage) {
+                if ($output instanceof ResponseInterface) {
+                    $output = implode("\r\n", ResponseInformationHelper::prepareHeaders($output)) . "\r\n" . $output->getBody()->getContents();
+                } else {
+                    $output = self::wrapInHttpMessage($output, $controllerContext->getResponse());
+                }
+            } else {
+                if ($output instanceof ResponseInterface) {
+                    $output = $output->getBody()->getContents();
+                }
+            }
+            return $output;
         } finally {
             $this->isRendering = false;
         }
     }
+
+    /**
+     * Because of PSR-7, it is more difficult to extract the HTTP Headers from the ActionResponse. See inline comments for detailed explanations.
+     *
+     * @param string $output
+     * @param ActionResponse $response
+     * @return string
+     */
+    private static function wrapInHttpMessage(string $output, ActionResponse $response): string
+    {
+        $headerLines = [];
+        foreach ($response->buildHttpResponse()->getHeaders() as $name => $values) {
+            foreach ($values as $value) {
+                $headerLines[] = $name . ": " . $value;
+            }
+        }
+
+        // Finally, we build the HTTP response.
+        return "HTTP/1.1" . (empty($headerLines) ? "\r\n" : implode("\r\n", $headerLines)) . "\r\n" . $output;
+    }
+
 
     /**
      * @param NodeInterface $node

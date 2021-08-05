@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
@@ -27,16 +26,26 @@ final class DocumentNodeCacheValues implements \JsonSerializable
      */
     protected $url;
 
-    private function __construct(string $rootIdentifier, string $url)
+    /**
+     * @var array
+     */
+    protected $metadata;
+
+    private function __construct(string $rootIdentifier, string $url, array $metadata)
     {
         $this->rootIdentifier = $rootIdentifier;
         $this->url = $url;
+        $this->metadata = $metadata;
     }
 
+    public static function empty(): self
+    {
+        return new self('', '', []);
+    }
 
     public static function create(string $rootIdentifier, string $url): self
     {
-        return new self($rootIdentifier, $url);
+        return new self($rootIdentifier, $url, []);
     }
 
     public static function fromJsonString($jsonString): self
@@ -45,7 +54,7 @@ final class DocumentNodeCacheValues implements \JsonSerializable
         if (!is_array($tmp)) {
             throw new \Exception('DocumentNodeCacheValues cannot be constructed from: ' . $jsonString);
         }
-        return new self($tmp['rootIdentifier'], $tmp['url']);
+        return new self($tmp['rootIdentifier'], $tmp['url'], $tmp['metadata']);
     }
 
     /**
@@ -64,12 +73,32 @@ final class DocumentNodeCacheValues implements \JsonSerializable
         return $this->url;
     }
 
+    /**
+     * @return array
+     */
+    public function getMetadata(): array
+    {
+        return $this->metadata;
+    }
+
+
     public function jsonSerialize()
     {
-        return [
-            'rootIdentifier' => $this->rootIdentifier,
-            'url' => $this->url
-        ];
+        return ['rootIdentifier' => $this->rootIdentifier, 'url' => $this->url, 'metadata' => $this->metadata];
+    }
+
+    /**
+     * add additional metadata
+     *
+     * @param string $key
+     * @param $value
+     * @return $this
+     */
+    public function withMetadata(string $key, $value): self
+    {
+        $metadata = $this->metadata;
+        $metadata[$key] = $value;
+        return new self($this->rootIdentifier, $this->url, $metadata);
     }
 
 

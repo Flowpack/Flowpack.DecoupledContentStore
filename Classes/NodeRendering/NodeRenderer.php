@@ -17,8 +17,6 @@ use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQu
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
-use Neos\ContentRepository\Domain\Utility\NodePaths;
-use Neos\Flow\Persistence\Doctrine\PersistenceManager;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Neos\Domain\Repository\SiteRepository;
 

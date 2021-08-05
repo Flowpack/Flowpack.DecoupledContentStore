@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Resource\RemoteResourceSynchronizer;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
@@ -14,8 +16,18 @@ use Neos\Flow\Cli\CommandController;
  */
 class ContentReleaseSwitchCommandController extends CommandController
 {
-    public function switchActiveContentReleaseCommand(string $redisContentStoreIdentifier, string $contentReleaseIdentifier)
-    {
+    /**
+     * @Flow\Inject
+     * @var RedisReleaseSwitchService
+     */
+    protected $redisReleaseSwitchService;
 
+    public function switchActiveContentReleaseCommand(string $redisInstanceIdentifier, string $contentReleaseIdentifier)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
+
+        $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
+        $this->redisReleaseSwitchService->switchContentRelease($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
     }
 }
