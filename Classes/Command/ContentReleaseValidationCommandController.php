@@ -53,17 +53,25 @@ class ContentReleaseValidationCommandController extends CommandController
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
         $currentlyLiveReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease(RedisInstanceIdentifier::primary());
-        if ($currentlyLiveReleaseIdentifier === false) {
+        if ($currentlyLiveReleaseIdentifier === null) {
+            $logger->info('Did not find a previous Content Release; thus exiting early (OK).');
             return;
         }
+        $logger->info('Previous Content Release: ' . $currentlyLiveReleaseIdentifier->getIdentifier());
 
         $currentUrlsCount = $this->redisEnumerationRepository->count($currentlyLiveReleaseIdentifier);
         $newUrlsCount = $this->redisEnumerationRepository->count($contentReleaseIdentifier);
+
+        $logger->info('Previous URL Count: ' . $currentUrlsCount);
+        $logger->info('New URL Count: ' . $newUrlsCount);
 
         if ($newUrlsCount < $this->validReleaseUrlCountThreshold * $currentUrlsCount) {
             $message = sprintf('Invalid release due to low URL count: (has %d of currently %d, need at least %d for automatic switch)', $newUrlsCount, $currentUrlsCount, $this->validReleaseUrlCountThreshold * $currentUrlsCount);
             $logger->error($message);
             $this->redisRenderingErrorManager->registerRenderingError($contentReleaseIdentifier, [], new Exception($message, 1493387482));
+            exit(1);
+        } else {
+            $logger->info('All OK.');
         }
     }
 
