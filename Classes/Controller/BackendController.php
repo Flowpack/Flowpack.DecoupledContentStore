@@ -4,7 +4,7 @@ namespace Flowpack\DecoupledContentStore\Controller;
 use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\Prunner\PrunnerApiService;
-use Flowpack\Prunner\ValueObject\PipelineName;
+use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Neos\Fusion\View\FusionView;
 
@@ -36,9 +36,13 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->view->assign('overviewData', $this->backendUiDataService->loadBackendOverviewData());
     }
 
-    public function detailsAction(string $jobIdentifier)
+    public function detailsAction(string $jobIdentifier, ?string $detailTaskName = '')
     {
+        $jobIdentifier = JobId::create($jobIdentifier);
         $this->view->assign('detailsData', $this->backendUiDataService->loadDetailsData($jobIdentifier));
+
+        $this->prunnerApiService->loadJobDetail($jobIdentifier);
+
     }
 
 

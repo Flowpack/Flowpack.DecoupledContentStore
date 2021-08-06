@@ -7,16 +7,282 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Details) < prototype
         @apply.parent = ${props}
 
         renderer = afx`
-            <Flowpack.DecoupledContentStore:Integration.StylesAndScripts />
-            <h1 class="text-2xl">{props.detailsData.contentReleaseIdentifier.identifier}</h1>
-            <p>
-                Prunner Job ID: {props.detailsData.job.id}<br />
-                Enumerated Documents Count: {props.detailsData.enumeratedDocumentNodesCount}<br />
-                Render Progress: {props.detailsData.renderingProgress.renderedJobs} / {props.detailsData.renderingProgress.totalJobs}<br />
+            <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
+            <h1 class="text-3xl py-5">Content Release {props.detailsData.contentReleaseIdentifier.identifier}</h1>
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps {...props}/>
 
-                rendered pages per second over time: {props.detailsData.svgSparkline}
+            <h2 class="text-3xl py-5">Errors</h2>
+            <h2 class="text-3xl py-5">Log Output for render_louis_brandshops</h2>
+            <p>
+                Prunner Job ID: {props.detailsData.job.id}<br/>
+                Enumerated Documents Count: {props.detailsData.enumeratedDocumentNodesCount}<br/>
+                Render Progress: {props.detailsData.renderingProgress.renderedJobs}
+                / {props.detailsData.renderingProgress.totalJobs}<br/>
+
+                rendered pages per second over time:
             </p>
         `
     }
     @process.debugDump = Neos.Fusion:DebugDump
+}
+
+
+prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.Fusion:Component) {
+    // API, ContentReleaseDetails
+    detailsData = null
+    _taskResults = ${this.detailsData.job.taskResults}
+
+    renderer = afx`
+        <ol class="border border-gray-300 rounded-md divide-y divide-gray-300 md:flex md:divide-y-0 bg-gray-700">
+            <!-- Enumerate -->
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
+                    number="1"
+                    title="Enumeration"
+                    status={props._taskResults.filteredByPrefix('enumerate_').aggregatedStatus}>
+                <div class="pl-5 pr-10 flex-1 leading-6">
+                    <Neos.Fusion:Loop
+                            items={props._taskResults.filteredByPrefix('enumerate_').withoutTasks('enumerate_finished')}
+                            itemName="task">
+                        <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                                task={task}
+                                title={String.replace(task.name, 'enumerate_', '')}/>
+                    </Neos.Fusion:Loop>
+                </div>
+                <div class="pl-5 pr-10 py-2 flex justify-end">
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                            task={props._taskResults.get('enumerate_finished')}
+                            title="all ok?"/>
+                </div>
+            </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
+
+            <!-- Render -->
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
+                    number="2"
+                    title="Rendering"
+                    status={props._taskResults.filteredByPrefix('render_').aggregatedStatus}>
+                <div class="pl-5 pr-10 flex-1 leading-6">
+                    <Neos.Fusion:Loop
+                            items={props._taskResults.filteredByPrefix('render_').withoutTasks('render_finished', 'render_orchestrator')}
+                            itemName="task">
+                        <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                                task={task}
+                                title={String.replace(task.name, 'render_', '')}/>
+                    </Neos.Fusion:Loop>
+                </div>
+                <div class="pl-5 pr-10 py-2 flex justify-end">
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                            task={props._taskResults.get('render_orchestrator')}
+                            title="orchestrator"/>
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                            task={props._taskResults.get('render_finished')}
+                            title="all ok?"/>
+                </div>
+            </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
+
+            <!-- Validation -->
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
+                    number="3"
+                    title="Validation"
+                    status={props._taskResults.filteredByPrefix('validate_').aggregatedStatus}>
+                <div class="pl-5 pr-10 flex-1 leading-6">
+                    <Neos.Fusion:Loop
+                            items={props._taskResults.filteredByPrefix('validate_').withoutTasks('validate_finished')}
+                            itemName="task">
+                        <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                                task={task}
+                                title={String.replace(task.name, 'validate_', '')}/>
+                    </Neos.Fusion:Loop>
+                </div>
+                <div class="pl-5 pr-10 py-2 flex justify-end">
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                            task={props._taskResults.get('validate_finished')}
+                            title="all ok?"/>
+                </div>
+            </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
+
+            <!-- Transfer -->
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
+                    number="4"
+                    title="Transfer"
+                    status={props._taskResults.filteredByPrefix('transfer_').aggregatedStatus}>
+                <div class="pl-5 pr-10 flex-1 leading-6">
+                    <Neos.Fusion:Loop
+                            items={props._taskResults.filteredByPrefix('transfer_').withoutTasks('transfer_finished')}
+                            itemName="task">
+                        <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                                task={task}
+                                title={String.replace(task.name, 'transfer_', '')}/>
+                    </Neos.Fusion:Loop>
+                </div>
+                <div class="pl-5 pr-10 py-2 flex justify-end">
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                            task={props._taskResults.get('transfer_finished')}
+                            title="all ok?"/>
+                </div>
+            </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
+
+            <!-- Switch -->
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
+                    number="5"
+                    title="Switch"
+                    status={props._taskResults.filteredByPrefix('switch_').aggregatedStatus}
+                    isLast={true}>
+                <div class="pl-5 pr-10 flex-1 leading-6">
+                    <Neos.Fusion:Loop
+                            items={props._taskResults.filteredByPrefix('switch_').withoutTasks('switch_finished')}
+                            itemName="task">
+                        <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                                task={task}
+                                title={String.replace(task.name, 'switch_', '')}/>
+                    </Neos.Fusion:Loop>
+                </div>
+                <div class="pl-5 pr-10 py-2 flex justify-end">
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                            task={props._taskResults.get('switch_finished')}
+                            title="all ok?"/>
+                </div>
+            </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
+        </ol>
+
+
+        <dl class="md:flex md:divide-y-0 divide-y">
+            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Enumerated Pages">
+                    {props.detailsData.enumeratedDocumentNodesCount}
+                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+            </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Rendered Pages">
+                    {props.detailsData.renderingProgress.renderedJobs}
+                    / {props.detailsData.renderingProgress.totalJobs}
+                    {props.detailsData.svgSparkline}
+                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Rendering Iterations">
+                    TODO
+                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+            </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Errors">
+                    TODO
+                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+            </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Total Content Release Size">
+                    TODO
+                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+            </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Is currently live?">
+                    TODO
+                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+            </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+        </dl>
+    `
+}
+
+prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.Step) < prototype(Neos.Fusion:Component) {
+    number = '00'
+    title = "Foo"
+    isLast = false
+
+    status = 'running'
+    _statusClass = ${this.status}
+    _statusClass.@process.replace = Flowpack.DecoupledContentStore:StatusToClassMapping
+
+    renderer = afx`
+        <li class="relative md:flex-1 md:flex">
+            <span class="flex flex-col w-full">
+                <span class="w-full flex items-center">
+                    <span class="px-6 py-4 flex items-center text-sm font-medium">
+                        <span class={"flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full border-2 " + props._statusClass}
+                              title={props.status}>
+                            <span class="text-white">{props.number}</span>
+                        </span>
+
+                        {props._status}
+                        <span class="ml-4 text-sm font-medium text-white">{props.title}</span>
+
+                    </span>
+                </span>
+                {props.content}
+                <!-- Arrow Right -->
+                <div @if.isTrue={!props.isLast}
+                     class="hidden md:block absolute top-0 right-0 bottom-0 w-5 overflow-hidden" aria-hidden="true">
+                    <svg class="w-full text-gray-300" viewBox="0 0 22 600" fill="none" preserveAspectRatio="none">
+                        <path d="M0 -2L20 40L0 82L0 600" stroke-width="2" vector-effect="non-scaling-stroke"
+                              stroke="currentcolor" stroke-linejoin="round" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </span>
+        </li>
+    `
+}
+
+
+prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask) < prototype(Neos.Fusion:Component) {
+    title = "Foo"
+
+    // TaskResult DTO object
+    task = null
+    _statusClass = ${this.task.status}
+    _statusClass.@process.replace = Flowpack.DecoupledContentStore:StatusToClassMapping
+
+    _href = ${this.task.name}
+    _href.@process.convertToUri = Neos.Fusion:UriBuilder {
+        action = 'details'
+        arguments.detailTaskName = ${value}
+        addQueryString = true
+    }
+
+
+    renderer = afx`
+        <a href={props._href} title={props.task.status}
+           class={"inline-flex items-center mx-1 px-2.5 py-0.5 rounded-full border-2 text-xs font-medium text-white " + props._statusClass}>
+            {props.title}
+        </a>
+    `
+}
+
+prototype(Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox) < prototype(Neos.Fusion:Component) {
+    renderer = afx`
+        <div class="flex-1 mr-5 my-5 bg-white shadow rounded-lg overflow-hidden py-3 px-6">
+            {props.content}
+        </div>
+    `
+}
+
+prototype(Flowpack.DecoupledContentStore:StatusToClassMapping) < prototype(Neos.Fusion:Case) {
+    done.condition = ${value == 'done'}
+    done.renderer = 'bg-green-400 border-green-400'
+
+    running.condition = ${value == 'running'}
+    running.renderer = 'bg-yellow-400 border-yellow-400 animate-pulse'
+
+    error.condition = ${value == 'error'}
+    error.renderer = 'bg-red-500 border-red-500'
+
+    waiting.condition = ${value == 'waiting'}
+    waiting.renderer = 'border-gray-300'
+
+    canceled.condition = ${value == 'canceled'}
+    canceled.renderer = 'bg-gray-300 border-gray-500'
+
+    skipped.condition = ${value == 'skipped'}
+    skipped.renderer = 'bg-gray-300 border-gray-500'
+
+    unknown.condition = ${value == 'unknown'}
+    unknown.renderer = 'bg-blue-300'
+}
+
+prototype(Flowpack.DecoupledContentStore:ContentReleaseStats.Stat) < prototype(Neos.Fusion:Component) {
+    title = "Foo"
+
+    renderer = afx`
+        <dt class="pt-2 text-sm font-medium text-gray-500 truncate">
+            {props.title}
+        </dt>
+        <dd class="mt-1 mb-2 text-3xl font-semibold text-gray-900">
+            {props.content}
+        </dd>
+    `
 }

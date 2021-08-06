@@ -158,7 +158,7 @@ pipelines:
       ################################################################################
       # 5) SWITCH
       ################################################################################
-      switch:
+      switch_primary:
         script:
           - ./flow contentReleaseSwitch:switchActiveContentRelease primary {{ .contentReleaseId }}
           # in case you need want to switch the active content release in another content store,
@@ -167,4 +167,9 @@ pipelines:
           #- ./flow contentReleaseSwitch:switchActiveContentRelease live {{ .contentReleaseId }}
         depends_on:
           - transfer_finished
+
+      switch_finished:
+        script: [""]
+        depends_on:
+          - switch_primary
 

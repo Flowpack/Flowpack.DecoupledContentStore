@@ -77,9 +77,9 @@ class BackendUiDataService
         return $result;
     }
 
-    public function loadDetailsData(string $jobIdentifier): ContentReleaseDetails
+    public function loadDetailsData(JobId $jobIdentifier): ContentReleaseDetails
     {
-        $contentReleaseJob = $this->prunnerApiService->loadJobDetail(JobId::create($jobIdentifier));
+        $contentReleaseJob = $this->prunnerApiService->loadJobDetail($jobIdentifier);
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseJob->getVariables()['contentReleaseId']);
 
         $renderingsPerSecond = $this->redisRenderingStatisticsStore->getRenderingsPerSecondSamples($contentReleaseIdentifier);

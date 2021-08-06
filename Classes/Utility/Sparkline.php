@@ -26,12 +26,12 @@ class Sparkline
         return $element;
     }
 
-    public static function sparkline($svgClass, $values, $lineColor = 'red', $fillColor = 'none', $options = null): string
+    public static function sparkline($svgClass, $values, $lineColor = '#aaa', $fillColor = 'none', $options = null): string
     {
         if (count($values) <= 1) {
             return '';
         }
-        $options = $options ?? ['strokeWidth' => 3, 'width' => 100, 'height' => 30,];
+        $options = $options ?? ['strokeWidth' => 2, 'width' => 150, 'height' => 30,];
         $svg = '<svg style="width:' . $options['width'] . 'px;height:' . $options['height'] . 'px" class="' . $svgClass . '">';
         $strokeWidth = $options['strokeWidth'];
         $width = $options['width'];
