@@ -53,7 +53,7 @@ class NodeRenderingExtensionManager
     public function runDocumentMetadataGenerators(NodeInterface $node, array $arguments, ControllerContext $controllerContext, DocumentNodeCacheValues $cacheValues): DocumentNodeCacheValues
     {
         if (!isset($this->documentMetadataGenerators)) {
-            $this->documentMetadataGenerators = $this->instantiateExtensions($this->configuredDocumentMetadataGenerators, DocumentMetadataGeneratorInterface::class);
+            $this->documentMetadataGenerators = self::instantiateExtensions($this->configuredDocumentMetadataGenerators, DocumentMetadataGeneratorInterface::class);
         }
         foreach ($this->documentMetadataGenerators as $documentMetadataGenerator) {
             assert($documentMetadataGenerator instanceof DocumentMetadataGeneratorInterface);
@@ -71,7 +71,7 @@ class NodeRenderingExtensionManager
     public function addRenderedDocumentToContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
         if (!isset($this->contentReleaseWriters)) {
-            $this->contentReleaseWriters = $this->instantiateExtensions($this->configuredContentReleaseWriters, ContentReleaseWriterInterface::class);
+            $this->contentReleaseWriters = self::instantiateExtensions($this->configuredContentReleaseWriters, ContentReleaseWriterInterface::class);
         }
         foreach ($this->contentReleaseWriters as $contentReleaseWriter) {
             assert($contentReleaseWriter instanceof ContentReleaseWriterInterface);
@@ -79,10 +79,10 @@ class NodeRenderingExtensionManager
         }
     }
 
-    private function instantiateExtensions(array $configuration, string $extensionInterfaceName): array
+    static private function instantiateExtensions(array $configuration, string $extensionInterfaceName): array
     {
         $instanciatedExtensions = [];
-        foreach ($this->configuredDocumentMetadataGenerators as $extensionConfig) {
+        foreach ($configuration as $extensionConfig) {
             $className = $extensionConfig['className'];
             $instance = new $className();
             if (!($instance instanceof $extensionInterfaceName)) {
