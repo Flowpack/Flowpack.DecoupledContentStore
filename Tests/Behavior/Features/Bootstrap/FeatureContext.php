@@ -16,6 +16,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
 use Neos\Behat\Tests\Behat\FlowContextTrait;
+use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
@@ -25,8 +26,10 @@ use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\DomainRepository;
 use Neos\Neos\Domain\Repository\SiteRepository;
 use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
+use Neos\Utility\Arrays;
 use PHPUnit\Framework\Assert;
 use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Yaml\Yaml;
 
 require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.Behat/Tests/Behat/FlowContextTrait.php');
 require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php');
@@ -181,6 +184,41 @@ class FeatureContext implements Context
         }
     }
 
+    private const DEFAULT_NODETYPES_CONFIG = <<<EOF
+unstructured:
+  abstract: true
+
+Neos.Neos:FallbackNode:
+  abstract: true
+
+Neos.Neos:Document:
+  abstract: true
+
+Neos.Neos:Content:
+  abstract: true
+
+Neos.Neos:ContentCollection:
+  abstract: true
+
+
+EOF;
+
+
+    /**
+     * @Given /^I have the following (additional |)NodeTypes configuration:$/
+     */
+    public function iHaveTheFollowingNodetypesConfiguration($additional, $nodeTypesConfiguration)
+    {
+        if (strlen($additional) > 0) {
+            $configuration = Arrays::arrayMergeRecursiveOverrule($this->nodeTypesConfiguration, Yaml::parse($nodeTypesConfiguration->getRaw()));
+        } else {
+            $combined = self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw();
+            $this->nodeTypesConfiguration = Yaml::parse(self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw());
+            $configuration = $this->nodeTypesConfiguration;
+        }
+        $this->getObjectManager()->get(NodeTypeManager::class)->overrideNodeTypes($configuration);
+    }
+
 
     /**
      * @Then I expect the content release :contentReleaseIdentifier to contain the following content for URI :uri at CSS selector :cssSelector:
@@ -190,13 +228,23 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
         $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('renderedDocuments'), $uri);
+        Assert::assertIsString($actualContent, "Did not find rendered document");
         $actualContentDecompressed = gzdecode($actualContent);
 
         $domCrawler = new Symfony\Component\DomCrawler\Crawler($actualContentDecompressed);
-
         $actual = $domCrawler->filter($cssSelector)->text();
         Assert::assertSame($expected->getRaw(), $actual, 'Full Output was: ' . $actualContentDecompressed);
+    }
 
+    /**
+     * @Then I expect the content release :contentReleaseIdentifier to not contain anything for URI :uri
+     */
+    public function iExpectTheContentReleaseToNotContainAnythingForUri($contentReleaseIdentifier, $uri)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('renderedDocuments'), $uri);
+        Assert::assertFalse($actualContent);
     }
 
     /**
@@ -205,9 +253,10 @@ class FeatureContext implements Context
     public function iFlushTheContentCacheDependingOnTheModifiedNodes()
     {
         $contentCacheFlusher = $this->getObjectManager()->get(ContentCacheFlusher::class);
-        $contentCacheFlusher->shutdownObject();
         $tagsToFlushReflection = new \ReflectionProperty($contentCacheFlusher, 'tagsToFlush');
         $tagsToFlushReflection->setAccessible(true);
+
+        $contentCacheFlusher->shutdownObject();
         $tagsToFlushReflection->setValue($contentCacheFlusher, []);
     }
 }
