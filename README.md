@@ -346,6 +346,14 @@ and what data to delete if a release is removed.
 
 We use esbuild combined with tailwind.css for building.
 
+### Rendering Deep Dive
+
+
+
+### Testing the Rendering
+
+
+
 ## TODO
 
 clean up of old content releases

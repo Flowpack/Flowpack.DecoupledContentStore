@@ -8,9 +8,11 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingProgress;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentCacheReader;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentReleaseWriter;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingIterationCompletedEvent;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -85,14 +87,22 @@ class NodeRenderOrchestrator
     protected $nodeRenderingExtensionManager;
 
 
-    public function renderContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger)
+    /**
+     * !!! You need to wrap this in the {@see InterruptibleProcessRuntime} so that it works correctly.
+     *
+     * @param ContentReleaseIdentifier $contentReleaseIdentifier
+     * @param ContentReleaseLogger $contentReleaseLogger
+     */
+    public function renderContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger): \Generator
     {
         $completionStatus = $this->redisRenderingQueue->getCompletionStatus($contentReleaseIdentifier);
 
         if ($completionStatus !== null) {
             $contentReleaseLogger->error('Release has already completed with status ' . $completionStatus->jsonSerialize() . ', so we cannot render again.');
+            yield ExitEvent::createWithStatusCode(1);
             return;
         }
+
         // Ensure we start with an empty queue here, in case this command is called multiple times.
         $this->redisRenderingQueue->flush($contentReleaseIdentifier);
         $this->redisRenderingErrorManager->flush($contentReleaseIdentifier);
@@ -101,7 +111,8 @@ class NodeRenderOrchestrator
         if ($this->redisEnumerationRepository->count($contentReleaseIdentifier) === 0) {
             $contentReleaseLogger->error('Content Enumeration is empty. This is dangerous; we never want this to go live. Exiting.');
             $this->redisRenderingQueue->setCompletionStatus($contentReleaseIdentifier, NodeRenderingCompletionStatus::failed());
-            exit(1);
+            yield ExitEvent::createWithStatusCode(1);
+            return;
         }
 
         $currentEnumeration = $this->redisEnumerationRepository->findAll($contentReleaseIdentifier);
@@ -112,12 +123,30 @@ class NodeRenderOrchestrator
             if ($i > 10) {
                 $contentReleaseLogger->error('FAILED to build a complete content release after 10 rendering attempts. Exiting.');
                 $this->redisRenderingQueue->setCompletionStatus($contentReleaseIdentifier, NodeRenderingCompletionStatus::failed());
-                exit(1);
+                yield ExitEvent::createWithStatusCode(1);
+                return;
             }
 
             $contentReleaseLogger->info('Starting iteration ' . $i);
 
-            $nodesScheduledForRendering = $this->goTroughEnumeratedNodesFillContentReleaseAndCheckWhatStillNeedsToBeDone($currentEnumeration, $contentReleaseIdentifier, $contentReleaseLogger);
+            // goTroughEnumeratedNodesFillContentReleaseAndCheckWhatStillNeedsToBeDone
+            $nodesScheduledForRendering = [];
+            foreach ($currentEnumeration as $enumeratedNode) {
+                assert($enumeratedNode instanceof EnumeratedNode);
+
+                $renderedDocumentFromContentCache = $this->redisContentCacheReader->tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey::fromEnumeratedNode($enumeratedNode));
+                if ($renderedDocumentFromContentCache->isComplete()) {
+                    $contentReleaseLogger->debug('Node fully rendered, adding to content release', ['node' => $enumeratedNode]);
+                    // NOTE: Eventually consistent (TODO describe)
+                    // If wanted more fully consistent, move to bottom....
+                    $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
+                } else {
+                    $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: '. $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
+                    // the rendered document was not found, or has holes. so we need to re-render.
+                    $nodesScheduledForRendering[] = $enumeratedNode;
+                    $this->redisRenderingQueue->appendRenderingJob($contentReleaseIdentifier, $enumeratedNode);
+                }
+            }
 
             if (count($nodesScheduledForRendering) === 0) {
                 // we have NO nodes scheduled for rendering anymore, so that means we FINISHED successfully.
@@ -125,7 +154,8 @@ class NodeRenderOrchestrator
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
                 $this->redisRenderingQueue->setCompletionStatus($contentReleaseIdentifier, NodeRenderingCompletionStatus::success());
                 // Exit successfully.
-                exit(0);
+                yield ExitEvent::createWithStatusCode(0);
+                return;
             }
 
             // at this point, we have:
@@ -133,6 +163,7 @@ class NodeRenderOrchestrator
             // - for everything else (stuff not rendered at all or not fully rendered), we enqueued them for rendering.
             //
             // Now, we need to wait for the rendering to complete.
+            yield RenderingQueueFilledEvent::create();
             $contentReleaseLogger->info('Waiting for renderings to complete...');
             $waitTimer = 0;
 
@@ -158,6 +189,7 @@ class NodeRenderOrchestrator
             }
 
             $this->redisRenderingStatisticsStore->updateRenderingProgress($contentReleaseIdentifier, RenderingProgress::create(0, $totalJobsCount));
+            yield RenderingIterationCompletedEvent::create();
 
             $contentReleaseLogger->info('Rendering iteration completed. Continuing with next iteration.');
             // here, the rendering has completed. in the next iteration, we try to copy the
@@ -165,29 +197,5 @@ class NodeRenderOrchestrator
             // just-rendered nodes.
             $currentEnumeration = $nodesScheduledForRendering;
         } while(!empty($currentEnumeration));
-    }
-
-    protected function goTroughEnumeratedNodesFillContentReleaseAndCheckWhatStillNeedsToBeDone(iterable $currentEnumeration, ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger): array
-    {
-        $nodesScheduledForRendering = [];
-        foreach ($currentEnumeration as $enumeratedNode) {
-            assert($enumeratedNode instanceof EnumeratedNode);
-
-            $renderedDocumentFromContentCache = $this->redisContentCacheReader->tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey::fromEnumeratedNode($enumeratedNode));
-
-            if ($renderedDocumentFromContentCache->isComplete()) {
-                $contentReleaseLogger->debug('Node fully rendered, adding to content release', ['node' => $enumeratedNode]);
-                // NOTE: Eventually consistent (TODO describe)
-                // If wanted more fully consistent, move to bottom....
-                $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
-            } else {
-                $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: '. $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
-                // the rendered document was not found, or has holes. so we need to re-render.
-                $nodesScheduledForRendering[] = $enumeratedNode;
-                $this->redisRenderingQueue->appendRenderingJob($contentReleaseIdentifier, $enumeratedNode);
-            }
-        }
-
-        return $nodesScheduledForRendering;
     }
 }

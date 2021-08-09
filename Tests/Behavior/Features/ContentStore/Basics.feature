@@ -1,4 +1,5 @@
 @fixtures
+@resetRedis
 Feature: Basic Rendering
 
   Scenario: Initial Test
@@ -28,8 +29,6 @@ Feature: Basic Rendering
         'Neos.Neos:Content': true
 
     """
-    # Site content
-    #Given I have a site for Site Node "test" with name "Test"
     Given I am authenticated with role "Neos.Neos:Editor"
     Given I have a site for Site Node "test" with site package key "Flowpack.DecoupledContentStore" with domain "test.de"
     And I have the following nodes:
@@ -38,6 +37,7 @@ Feature: Basic Rendering
       | /sites/test         | Flowpack.DecoupledContentStore.Test:Document.StartPage | {"title":"Startseite","uriPathSegment":"startseite"} | false         | de       |
       | /sites/test/main    | Neos.Neos:ContentCollection                            | {}                                                   | false         | de       |
       | /sites/test/main/t1 | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Hallo - this is rendered."}                | false         | de       |
+    And I flush the content cache depending on the modified nodes
 
     # build content release
     When I enumerate all nodes for content release "5"
@@ -48,8 +48,8 @@ Feature: Basic Rendering
     Then during rendering of content release "5", no errors occured
     # for filling the rendered content release
     When I run the render-orchestrator control loop once for content release "5"
-    Then I expect the content release "5" to contain the following content for URI "http://test.de/de" at CSS selector "body":
+    Then I expect the content release "5" to contain the following content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
     """
-    Foo
+    BEFOREHallo - this is rendered.AFTER
     """
 

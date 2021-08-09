@@ -2,20 +2,18 @@
 
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
-use Behat\Gherkin\Node\TableNode;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\Persistence\ObjectManager;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
+use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntime;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
 use Neos\Behat\Tests\Behat\FlowContextTrait;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
@@ -26,10 +24,9 @@ use Neos\Neos\Domain\Model\Domain;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\DomainRepository;
 use Neos\Neos\Domain\Repository\SiteRepository;
-use Neos\Neos\Domain\Service\FusionService;
+use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use PHPUnit\Framework\Assert;
 use Symfony\Component\Console\Output\BufferedOutput;
-use function PHPUnit\Framework\assertEquals;
 
 require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.Behat/Tests/Behat/FlowContextTrait.php');
 require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php');
@@ -72,6 +69,17 @@ class FeatureContext implements Context
     }
 
     /**
+     * @BeforeScenario @resetRedis
+     */
+    public function resetRedis($event): void
+    {
+        /** @var RedisClientManager $redisClientManager */
+        $redisClientManager = $this->objectManager->get(RedisClientManager::class);
+        $redisClientManager->getPrimaryRedis()->flushAll();
+    }
+
+
+    /**
      * @Given I have a site for Site Node :siteNodeName with site package key :sitePackageKey with domain :domainName
      */
     public function iHaveASite($siteNodeName, $sitePackageKey, $domainName)
@@ -89,6 +97,7 @@ class FeatureContext implements Context
         $domain = new Domain();
         $domain->setSite($site);
         $domain->setHostname($domainName);
+        $domain->setScheme('http');
 
 
         $domainRepository = $this->objectManager->get(DomainRepository::class);
@@ -133,21 +142,11 @@ class FeatureContext implements Context
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $nodeRenderOrchestrator = $this->getObjectManager()->get(NodeRenderOrchestrator::class);
-        $redisRenderingQueue = $this->getObjectManager()->get(RedisRenderingQueue::class);
-        $redisEnumerationRepository = $this->getObjectManager()->get(RedisEnumerationRepository::class);
-        $redisRenderingErrorManager = $this->getObjectManager()->get(RedisRenderingErrorManager::class);
 
         $bufferedOutput = new BufferedOutput();
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
-
-        $reflMethod = new \ReflectionMethod(NodeRenderOrchestrator::class, 'goTroughEnumeratedNodesFillContentReleaseAndCheckWhatStillNeedsToBeDone');
-        $reflMethod->setAccessible(true);
-
-        $redisRenderingErrorManager->flush($contentReleaseIdentifier);
-        $redisRenderingQueue->flush($contentReleaseIdentifier);
-        $currentEnumeration = $redisEnumerationRepository->findAll($contentReleaseIdentifier);
-
-        $reflMethod->invoke($nodeRenderOrchestrator, $currentEnumeration, $contentReleaseIdentifier, $contentReleaseLogger);
+        $renderOrchestratorProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $contentReleaseLogger));
+        $renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
 
         echo $bufferedOutput->fetch();
     }
@@ -163,12 +162,8 @@ class FeatureContext implements Context
         $bufferedOutput = new BufferedOutput();
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
 
-        $reflMethod = new \ReflectionMethod(NodeRenderer::class, 'singleRenderIteration');
-        $reflMethod->setAccessible(true);
-
-        do {
-            $foundRenderingJob = $reflMethod->invoke($nodeRenderer, $contentReleaseIdentifier, $contentReleaseLogger, RendererIdentifier::fromString('foo'));
-        } while ($foundRenderingJob === true);
+        $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render($contentReleaseIdentifier, $contentReleaseLogger, RendererIdentifier::fromString('rdr')));
+        $renderProcess->runUntilEventEncountered(QueueEmptyEvent::class);
 
         echo $bufferedOutput->fetch();
     }
@@ -193,9 +188,26 @@ class FeatureContext implements Context
     public function iExpectTheContentReleaseToContainTheFollowingContentForUriAtCssSelector($contentReleaseIdentifier, $uri, $cssSelector, PyStringNode $expected)
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
-        $redisClient = $this->getObjectManager()->get(\Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager::class);
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('result:renderedDocuments'), $uri);
+        $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('renderedDocuments'), $uri);
+        $actualContentDecompressed = gzdecode($actualContent);
 
-        Assert::assertSame($expected->getRaw(), $actualContent);
+        $domCrawler = new Symfony\Component\DomCrawler\Crawler($actualContentDecompressed);
+
+        $actual = $domCrawler->filter($cssSelector)->text();
+        Assert::assertSame($expected->getRaw(), $actual, 'Full Output was: ' . $actualContentDecompressed);
+
+    }
+
+    /**
+     * @Given /^I flush the content cache depending on the modified nodes$/
+     */
+    public function iFlushTheContentCacheDependingOnTheModifiedNodes()
+    {
+        $contentCacheFlusher = $this->getObjectManager()->get(ContentCacheFlusher::class);
+        $contentCacheFlusher->shutdownObject();
+        $tagsToFlushReflection = new \ReflectionProperty($contentCacheFlusher, 'tagsToFlush');
+        $tagsToFlushReflection->setAccessible(true);
+        $tagsToFlushReflection->setValue($contentCacheFlusher, []);
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Neos\ContentRepository\Domain\Factory\NodeFactory;
 use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\Flow\Annotations as Flow;
@@ -104,51 +106,38 @@ class NodeRenderer
         while (true) {
             if ($this->redisRenderingQueue->getCompletionStatus($contentReleaseIdentifier) !== null) {
                 $contentReleaseLogger->info('Content release completed; so we terminate ourselves gracefully.');
-                exit(0);
+                yield ExitEvent::createWithStatusCode(0);
+                return;
             }
 
-            $hasFoundNodeToRender = $this->singleRenderIteration($contentReleaseIdentifier, $contentReleaseLogger, $rendererIdentifier);
-            if ($hasFoundNodeToRender) {
-                $i++;
-                if ($i % 20 === 0) {
-                    $contentReleaseLogger->info('Restarting after 20 renders.');
-                    exit(193);
-                }
-            } else {
+            $enumeratedNode = $this->redisRenderingQueue->fetchAndReserveNextRenderingJob($contentReleaseIdentifier, $rendererIdentifier);
+            if ($enumeratedNode === null) {
+                yield QueueEmptyEvent::create();
                 // the queue is currently empty, but this does not necessarily mean that rendering is finished. Maybe the NodeRenderOrchestrator is still
                 // determining what needs to be done. We just need to wait a bit and retry.
                 $contentReleaseLogger->debug('Rendering queue currently empty; we wait a bit see if there is work for us.');
                 sleep(2);
                 continue;
             }
-        }
-    }
 
-    /**
-     * @param ContentReleaseIdentifier $contentReleaseIdentifier
-     * @param RendererIdentifier $rendererIdentifier
-     * @return bool TRUE if node was attempted to be rendered; FALSE if no node was found from queue.
-     * @throws \Exception
-     */
-    protected function singleRenderIteration(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger, RendererIdentifier $rendererIdentifier): bool
-    {
-        $enumeratedNode = $this->redisRenderingQueue->fetchAndReserveNextRenderingJob($contentReleaseIdentifier, $rendererIdentifier);
-        if ($enumeratedNode === null) {
-            return false;
-        }
+            try {
+                $this->renderDocumentNodeVariant($enumeratedNode, $contentReleaseIdentifier, $contentReleaseLogger);
+            } finally {
+                $removalSuccess = $this->redisRenderingQueue->removeRenderingJobFromReservedList($contentReleaseIdentifier, $enumeratedNode, $rendererIdentifier);
+                if ($removalSuccess === false) {
+                    $contentReleaseLogger->warn('Node could not be removed from reserved-list, because it was claimed by some other worker in the meantime. We don not know yet how this case might happen.', [
+                        'node' => $enumeratedNode->debugString(),
+                    ]);
+                }
+            }
 
-        try {
-            $this->renderDocumentNodeVariant($enumeratedNode, $contentReleaseIdentifier, $contentReleaseLogger);
-        } finally {
-            $removalSuccess = $this->redisRenderingQueue->removeRenderingJobFromReservedList($contentReleaseIdentifier, $enumeratedNode, $rendererIdentifier);
-            if ($removalSuccess === false) {
-                $contentReleaseLogger->warn('Node could not be removed from reserved-list, because it was claimed by some other worker in the meantime. We don not know yet how this case might happen.', [
-                    'node' => $enumeratedNode->debugString(),
-                ]);
+            $i++;
+            if ($i % 20 === 0) {
+                $contentReleaseLogger->info('Restarting after 20 renders.');
+                yield ExitEvent::createWithStatusCode(193);
+                return;
             }
         }
-
-        return true;
     }
 
     // if node context path does not exist anymore, this is because between the enumeration and the rendering,

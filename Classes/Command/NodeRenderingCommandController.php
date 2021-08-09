@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Command;
 
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
+use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntime;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
 use Neos\Flow\Annotations as Flow;
@@ -34,7 +35,7 @@ class NodeRenderingCommandController extends CommandController
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
-        $this->nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $logger);
+        InterruptibleProcessRuntime::create($this->nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $logger))->runUntilEnd();
     }
 
     public function renderWorkerCommand(string $contentReleaseIdentifier, string $rendererIdentifier)
@@ -43,6 +44,6 @@ class NodeRenderingCommandController extends CommandController
         $rendererIdentifier = RendererIdentifier::fromString($rendererIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
-        $this->nodeRenderer->render($contentReleaseIdentifier, $logger, $rendererIdentifier);
+        InterruptibleProcessRuntime::create($this->nodeRenderer->render($contentReleaseIdentifier, $logger, $rendererIdentifier))->runUntilEnd();
     }
 }
