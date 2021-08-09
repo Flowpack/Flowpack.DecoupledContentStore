@@ -4,4 +4,6 @@ Flowpack.DecoupledContentStore.BackendController.index = Flowpack.DecoupledConte
 
 Flowpack.DecoupledContentStore.BackendController.details = Flowpack.DecoupledContentStore:Controller.Backend.Details {
     detailsData = ${detailsData}
+    detailTaskName = ${detailTaskName}
+    jobLogs = ${jobLogs}
 }

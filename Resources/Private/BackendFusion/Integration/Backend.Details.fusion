@@ -3,6 +3,13 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Details) < prototype
     // API, ContentReleaseDetails
     detailsData = null
 
+    // string, optional
+    detailTaskName = null
+
+    // JobLogs, optional
+    jobLogs = null
+
+
     renderer = Neos.Fusion:Component {
         @apply.parent = ${props}
 
@@ -11,16 +18,13 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Details) < prototype
             <h1 class="text-3xl py-5">Content Release {props.detailsData.contentReleaseIdentifier.identifier}</h1>
             <Flowpack.DecoupledContentStore:ContentReleaseSteps {...props}/>
 
-            <h2 class="text-3xl py-5">Errors</h2>
-            <h2 class="text-3xl py-5">Log Output for render_louis_brandshops</h2>
-            <p>
-                Prunner Job ID: {props.detailsData.job.id}<br/>
-                Enumerated Documents Count: {props.detailsData.enumeratedDocumentNodesCount}<br/>
-                Render Progress: {props.detailsData.renderingProgress.renderedJobs}
-                / {props.detailsData.renderingProgress.totalJobs}<br/>
-
-                rendered pages per second over time:
-            </p>
+            <h2 @if.isTrue={props.detailTaskName} class="text-3xl py-5">Log Output for {props.detailTaskName}</h2>
+            <pre>
+                {jobLogs.stderr}
+            </pre>
+            <pre>
+                {jobLogs.stdout}
+            </pre>
         `
     }
     @process.debugDump = Neos.Fusion:DebugDump

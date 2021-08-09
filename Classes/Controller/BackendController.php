@@ -40,9 +40,10 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
     {
         $jobIdentifier = JobId::create($jobIdentifier);
         $this->view->assign('detailsData', $this->backendUiDataService->loadDetailsData($jobIdentifier));
-
-        $this->prunnerApiService->loadJobDetail($jobIdentifier);
-
+        if ($detailTaskName !== '') {
+            $this->view->assign('detailTaskName', $detailTaskName);
+            $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs($jobIdentifier, $detailTaskName));
+        }
     }
 
 
