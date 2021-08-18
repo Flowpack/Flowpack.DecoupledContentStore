@@ -114,7 +114,7 @@ class DocumentRenderer
      */
     public function renderDocumentNodeVariant(NodeInterface $node, array $arguments, ContentReleaseLogger $contentReleaseLogger): string
     {
-        $this->cacheUrlMappingAspect->setContentReleaseLoggerForThisRendering($contentReleaseLogger);
+        $this->cacheUrlMappingAspect->beforeDocumentRendering($contentReleaseLogger);
         $nodeUri = $this->buildNodeUri($node, $arguments);
 
         try {
@@ -123,7 +123,7 @@ class DocumentRenderer
         } catch (\Exception $exception) {
             throw new Exception\RenderingException('Error rendering document view', $node, $nodeUri, 1491378709, $exception);
         } finally {
-            $this->cacheUrlMappingAspect->resetContentReleaseLogger();
+            $this->cacheUrlMappingAspect->afterDocumentRendering    ();
         }
     }
 

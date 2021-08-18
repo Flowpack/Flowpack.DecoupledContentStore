@@ -348,6 +348,12 @@ We use esbuild combined with tailwind.css for building.
 
 ### Rendering Deep Dive
 
+TODO write
+
+CacheUrlMappingAspect - * NOTE: This aspect is NOT active during interactive page rendering; but only when a content release is built
+* through Batch Rendering (so when {@see DocumentRenderer} has invoked the rendering. This is to keep complexity lower
+* and code paths simpler: The system NEVER re-uses content cache entries created by editors while browsing the page; but
+* ONLY re-uses content cache entries created by previous Batch Renderings.
 
 
 ### Testing the Rendering
@@ -356,10 +362,15 @@ We use esbuild combined with tailwind.css for building.
 
 ## TODO
 
-clean up of old content releases
-error handling better
-tests
-force-switch
+- "which content releases exist?" -> solve independently of prunner - maintain list of IDs in Redis, + for every entry another "meta" entry with starttime, endtime, ... (incl. Metadata like "when has it run,  prunner job ID")
+- clean up of old content releases
+  - in Content Store / Redis
+  - (SK) in prunner
+- generate the old content format
+- (SK) error handling tests
+- force-switch possibility
+- (AM) UI
+- check for TODOs :)
 
 ## Missing Features from old
 

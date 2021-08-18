@@ -9,6 +9,7 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheValues;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
+use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\RenderExceptionExtractor;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Aop\JoinPointInterface;
@@ -17,11 +18,24 @@ use Neos\Utility\ObjectAccess;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 
 /**
+ * This aspect creates the root cache entry which maps the URL to the root cache identifier during rendering.
+ *
+ * NOTE: This aspect is NOT active during interactive page rendering; but only when a content release is built
+ * through Batch Rendering (so when {@see DocumentRenderer} has invoked the rendering. This is to keep complexity lower
+ * and code paths simpler: The system NEVER re-uses content cache entries created by editors while browsing the page; but
+ * ONLY re-uses content cache entries created by previous Batch Renderings.
+ *
  * @Flow\Aspect
  * @Flow\Scope("singleton")
  */
 class CacheUrlMappingAspect
 {
+    /**
+     * are we currently rendering the page from within a Content Release? {@see DocumentRenderer}
+     *
+     * @var bool
+     */
+    protected $isActive = false;
 
     /**
      * @var array
@@ -79,6 +93,9 @@ class CacheUrlMappingAspect
      */
     public function storeRootCacheIdentifier(JoinPointInterface $joinPoint)
     {
+        if (!$this->isActive) {
+            return;
+        }
         if (!isset($this->currentEvaluateContext['cacheIdentifierValues']['node']) || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof NodeInterface) {
             return;
         }
@@ -181,13 +198,15 @@ class CacheUrlMappingAspect
         return preg_match($this->urlExcludelistRegex, $url) === 1;
     }
 
-    public function setContentReleaseLoggerForThisRendering(ContentReleaseLogger $contentReleaseLogger): void
+    public function beforeDocumentRendering(ContentReleaseLogger $contentReleaseLogger): void
     {
+        $this->isActive = true;
         $this->contentReleaseLogger = $contentReleaseLogger;
     }
 
-    public function resetContentReleaseLogger(): void
+    public function afterDocumentRendering(): void
     {
+        $this->isActive = false;
         $this->contentReleaseLogger = null;
     }
 }
