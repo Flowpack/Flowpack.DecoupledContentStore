@@ -8,18 +8,17 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
             items = ${props.overviewData}
             itemRenderer = Neos.Fusion:Component {
                 // item instanceof ContentReleaseOverviewRow
-                identifier = ${item.contentReleaseIdentifier.identifier}
-                jobIdentifier = ${item.job.id}
+                contentReleaseIdentifier = ${item.contentReleaseIdentifier.identifier}
 
                 enumeratedDocumentNodesCount = ${item.enumeratedDocumentNodesCount}
                 renderedJobs = ${item.renderingProgress.renderedJobs}
                 totalJobs = ${item.renderingProgress.totalJobs}
-                start = ${Date.format(item.job.start, 'd.m.Y H:i:s')}
+                start = ${Date.format(item.metadata.startTime, 'd.m.Y H:i:s')}
                 renderer = afx`
                     <tr>
                         <td>
-                            <Neos.Fusion:Link.Action href.action="details" href.arguments={{jobIdentifier: props.jobIdentifier}}>
-                                {props.identifier}
+                            <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: props.contentReleaseIdentifier}}>
+                                {props.contentReleaseIdentifier}
                             </Neos.Fusion:Link.Action>
                         </td>
                         <td>{props.renderedJobs} / {props.totalJobs}</td>

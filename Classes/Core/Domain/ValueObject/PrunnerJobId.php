@@ -2,12 +2,13 @@
 
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
-use Flowpack\DecoupledContentStore\Exception;
+use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
+
 /**
  * @Flow\Proxy(false)
  */
-final class ContentReleaseIdentifier implements \JsonSerializable
+final class PrunnerJobId implements \JsonSerializable
 {
 
     /**
@@ -17,9 +18,6 @@ final class ContentReleaseIdentifier implements \JsonSerializable
 
     private function __construct(string $identifier)
     {
-        if (!preg_match('/^[0-9]+$/', $identifier)) {
-            throw new Exception('Content release identifier malformed; must be numeric only. Given: ' . $identifier);
-        }
         $this->identifier = $identifier;
     }
 
@@ -27,18 +25,6 @@ final class ContentReleaseIdentifier implements \JsonSerializable
     {
         return new self($identifier);
     }
-
-    public static function create(): self
-    {
-        return new self("" . time());
-    }
-
-    public function redisKey(string $postfix): string
-    {
-        // TODO: contentrelease:
-        return 'cs:' . $this->identifier . ':' . $postfix;
-    }
-
 
     public function jsonSerialize(): string
     {
@@ -51,5 +37,10 @@ final class ContentReleaseIdentifier implements \JsonSerializable
     public function getIdentifier(): string
     {
         return $this->identifier;
+    }
+
+    public function toJobId(): JobId
+    {
+        return JobId::create($this->identifier);
     }
 }

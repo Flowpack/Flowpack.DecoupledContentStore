@@ -362,7 +362,6 @@ CacheUrlMappingAspect - * NOTE: This aspect is NOT active during interactive pag
 
 ## TODO
 
-- "which content releases exist?" -> solve independently of prunner - maintain list of IDs in Redis, + for every entry another "meta" entry with starttime, endtime, ... (incl. Metadata like "when has it run,  prunner job ID")
 - clean up of old content releases
   - in Content Store / Redis
   - (SK) in prunner
@@ -371,6 +370,7 @@ CacheUrlMappingAspect - * NOTE: This aspect is NOT active during interactive pag
 - force-switch possibility
 - (AM) UI
 - check for TODOs :)
+- prunner: if a task is aborted, abort all other tasks (optional)
 
 ## Missing Features from old
 

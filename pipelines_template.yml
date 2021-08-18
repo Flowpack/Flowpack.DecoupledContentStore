@@ -19,11 +19,19 @@ pipelines:
 
     tasks:
       ################################################################################
+      # 0) PREPARE
+      ################################################################################
+      prepare_finished:
+        script:
+          - ./flow contentReleasePrepare:createContentRelease {{ .contentReleaseId }} {{ .__jobID }}
+
+      ################################################################################
       # 1) ENUMERATION
       ################################################################################
       enumerate_nodes:
         script:
           - ./flow nodeEnumeration:enumerateAllNodes {{ .contentReleaseId }}
+        depends_on: [prepare_finished]
 
       # Extension Point: If you want to enumerate additional things (not just nodes)
       # add a new enumerate_* task here.

@@ -38,6 +38,27 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
 
     renderer = afx`
         <ol class="border border-gray-300 rounded-md divide-y divide-gray-300 md:flex md:divide-y-0 bg-gray-700">
+            <!-- Prepare -->
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
+                    number="0"
+                    title="Prepare"
+                    status={props._taskResults.filteredByPrefix('prepare_').aggregatedStatus}>
+                <div class="pl-5 pr-10 flex-1 leading-6">
+                    <Neos.Fusion:Loop
+                            items={props._taskResults.filteredByPrefix('prepare_').withoutTasks('prepare_finished')}
+                            itemName="task">
+                        <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                                task={task}
+                                title={String.replace(task.name, 'prepare_', '')}/>
+                    </Neos.Fusion:Loop>
+                </div>
+                <div class="pl-5 pr-10 py-2 flex justify-end">
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
+                            task={props._taskResults.get('prepare_finished')}
+                            title="all ok?"/>
+                </div>
+            </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
+
             <!-- Enumerate -->
             <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
                     number="1"

@@ -9,12 +9,10 @@ use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\Sparkline;
-use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
-use Flowpack\Prunner\ValueObject\PipelineName;
-use Neos\Fusion\Core\Cache\ContentCache;
 
 /**
  * @Flow\Scope("singleton")
@@ -33,6 +31,11 @@ class BackendUiDataService
      */
     protected $redisEnumerationRepository;
 
+    /**
+     * @Flow\Inject
+     * @var RedisContentReleaseService
+     */
+    protected $redisContentReleaseService;
 
     /**
      * @Flow\Inject
@@ -42,44 +45,30 @@ class BackendUiDataService
 
     public function loadBackendOverviewData()
     {
-        $result = $this->prunnerApiService->loadPipelinesAndJobs();
-        $contentReleaseJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'));
-
-
-        $contentReleases = [];
-        foreach ($contentReleaseJobs as $contentReleaseJob) {
-            $variables = $contentReleaseJob->getVariables();
-            if (isset($variables['contentReleaseId'])) {
-                // TODO: only for legacy that the if can be false.
-                $contentReleases[] = ContentReleaseIdentifier::fromString((string)$variables['contentReleaseId']);
-            }
-        }
+        $contentReleases = $this->redisContentReleaseService->fetchAllReleaseIds();
 
         $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
+        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(...$contentReleases);
         $renderingProgresses = $this->redisRenderingStatisticsStore->getMultipleRenderingProgress(...$contentReleases);
+        $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
 
         $result = [];
-        foreach ($contentReleaseJobs as $contentReleaseJob) {
-            $variables = $contentReleaseJob->getVariables();
-            if (isset($variables['contentReleaseId'])) {
-                // TODO: only for legacy that the if can be false.
-                $contentRelease = ContentReleaseIdentifier::fromString((string)$variables['contentReleaseId']);
-
-                $result[] = new ContentReleaseOverviewRow(
-                    $contentRelease,
-                    $contentReleaseJob,
-                    $counts->getResultForContentRelease($contentRelease),
-                    $renderingProgresses->getResultForContentRelease($contentRelease)
-                );
-            }
+        foreach ($contentReleases as $contentRelease) {
+            $result[] = new ContentReleaseOverviewRow(
+                $contentRelease,
+                $metadata->getResultForContentRelease($contentRelease),
+                $counts->getResultForContentRelease($contentRelease),
+                $renderingProgresses->getResultForContentRelease($contentRelease)
+            );
         }
 
         return $result;
     }
 
-    public function loadDetailsData(JobId $jobIdentifier): ContentReleaseDetails
+    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier): ContentReleaseDetails
     {
-        $contentReleaseJob = $this->prunnerApiService->loadJobDetail($jobIdentifier);
+        $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
+        $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseJob->getVariables()['contentReleaseId']);
 
         $renderingsPerSecond = $this->redisRenderingStatisticsStore->getRenderingsPerSecondSamples($contentReleaseIdentifier);
