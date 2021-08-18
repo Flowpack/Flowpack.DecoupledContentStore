@@ -3,7 +3,7 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 use Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect;
 use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
-use Flowpack\DecoupledContentStore\Resource\Target\MultisiteFileSystemSymlinkTarget;
+use Flowpack\DecoupledContentStore\Transfer\Resource\Target\MultisiteFileSystemSymlinkTarget;
 use GuzzleHttp\Psr7\ServerRequest;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\ConfigurationManager;

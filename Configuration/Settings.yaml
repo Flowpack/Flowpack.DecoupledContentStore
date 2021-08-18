@@ -88,9 +88,9 @@ Neos:
     resource:
       targets:
         localWebDirectoryStaticResourcesTarget:
-          target: Flowpack\DecoupledContentStore\Resource\Target\MultisiteFileSystemSymlinkTarget
+          target: Flowpack\DecoupledContentStore\Transfer\Resource\Target\MultisiteFileSystemSymlinkTarget
         localWebDirectoryPersistentResourcesTarget:
-          target: Flowpack\DecoupledContentStore\Resource\Target\MultisiteFileSystemSymlinkTarget
+          target: Flowpack\DecoupledContentStore\Transfer\Resource\Target\MultisiteFileSystemSymlinkTarget
 
     security:
       authentication:

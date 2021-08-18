@@ -1,5 +1,5 @@
 <?php
-namespace Flowpack\DecoupledContentStore\Resource;
+namespace Flowpack\DecoupledContentStore\Transfer\Resource;
 
 use AFM\Rsync\Rsync;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;

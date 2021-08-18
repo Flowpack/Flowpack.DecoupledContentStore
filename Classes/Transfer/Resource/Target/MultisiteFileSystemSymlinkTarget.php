@@ -1,6 +1,6 @@
 <?php
 
-namespace Flowpack\DecoupledContentStore\Resource\Target;
+namespace Flowpack\DecoupledContentStore\Transfer\Resource\Target;
 
 use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Flow\ResourceManagement\Target\FileSystemSymlinkTarget;

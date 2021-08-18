@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
-use Flowpack\DecoupledContentStore\Resource\RemoteResourceSynchronizer;
+use Flowpack\DecoupledContentStore\Transfer\Resource\RemoteResourceSynchronizer;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -29,6 +29,6 @@ class ContentReleaseTransferCommandController extends CommandController
 
     public function transferToContentStoreCommand(string $redisContentStoreIdentifier, string $contentReleaseIdentifier)
     {
-
+        
     }
 }

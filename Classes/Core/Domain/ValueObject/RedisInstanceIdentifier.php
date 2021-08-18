@@ -33,6 +33,11 @@ final class RedisInstanceIdentifier
         return new self($identifier);
     }
 
+    public function isPrimary(): bool
+    {
+        return $this->identifier === self::PRIMARY;
+    }
+
     /**
      * @return string
      */
