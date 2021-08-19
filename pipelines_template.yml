@@ -17,6 +17,14 @@ pipelines:
     queue_limit: 1
     queue_strategy: replace
 
+    # we want to keep the last 10 releases. You can adjust this to a setting which makes sense
+    # for your project.
+    #
+    # Alternatively, you can specify a timespan in hours using `retention_period_hours`:
+    # retention_period_hours: 72
+    retention_count: 10
+
+
     tasks:
       ################################################################################
       # 0) PREPARE
