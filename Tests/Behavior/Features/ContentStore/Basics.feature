@@ -2,7 +2,7 @@
 @resetRedis
 Feature: Basic Rendering
 
-  Background: Initial Test
+  Background:
     Given I have the following NodeTypes configuration:
     """
     Flowpack.DecoupledContentStore.Test:Document.StartPage:

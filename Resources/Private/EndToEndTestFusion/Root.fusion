@@ -3,11 +3,14 @@ prototype(Neos.Neos:Page).@process.checkForContentComments >
 
 
 
-prototype(Flowpack.DecoupledContentStore.Test:Document.StartPage) < prototype(Neos.Neos:Page) {
+prototype(Flowpack.DecoupledContentStore.Test:Document.StartPage) < prototype(Flowpack.DecoupledContentStore.Test:Document.Page)
+
+prototype(Flowpack.DecoupledContentStore.Test:Document.Page) < prototype(Neos.Neos:Page) {
     body = Neos.Neos:ContentCollection {
         nodePath = "main"
     }
 }
+
 
 prototype(Flowpack.DecoupledContentStore.Test:Content.Text) < prototype(Neos.Fusion:Component) {
     text = ${q(node).property('text')}

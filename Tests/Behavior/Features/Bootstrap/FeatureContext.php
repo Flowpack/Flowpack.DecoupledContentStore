@@ -9,6 +9,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumer
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
 use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntime;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
@@ -27,7 +28,9 @@ use Neos\Neos\Domain\Repository\DomainRepository;
 use Neos\Neos\Domain\Repository\SiteRepository;
 use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Neos\Utility\Arrays;
+use Neos\Utility\ObjectAccess;
 use PHPUnit\Framework\Assert;
+use Psr\Log\Test\TestLogger;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Yaml\Yaml;
 
@@ -253,10 +256,26 @@ EOF;
     public function iFlushTheContentCacheDependingOnTheModifiedNodes()
     {
         $contentCacheFlusher = $this->getObjectManager()->get(ContentCacheFlusher::class);
-        $tagsToFlushReflection = new \ReflectionProperty($contentCacheFlusher, 'tagsToFlush');
-        $tagsToFlushReflection->setAccessible(true);
 
+        $testLogger = new TestLogger();
+        ObjectAccess::setProperty($contentCacheFlusher, 'systemLogger', $testLogger, true);
         $contentCacheFlusher->shutdownObject();
-        $tagsToFlushReflection->setValue($contentCacheFlusher, []);
+        ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', [], true);
+        foreach ($testLogger->records as $record) {
+            echo $record['message'] . "\n";
+        }
+    }
+
+    /**
+     * @Then the rendering queue for content release :contentReleaseIdentifier contains :expectedCount document
+     * @Then the rendering queue for content release :contentReleaseIdentifier contains :expectedCount documents
+     */
+    public function theRenderingQueueContainsDocument($contentReleaseIdentifier, $expectedCount)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisRenderingQueue = $this->getObjectManager()->get(RedisRenderingQueue::class);
+        $actual = $redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier);
+
+        Assert::assertEquals($expectedCount, $actual, 'Count does not match');
     }
 }

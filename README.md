@@ -358,19 +358,41 @@ CacheUrlMappingAspect - * NOTE: This aspect is NOT active during interactive pag
 
 ### Testing the Rendering
 
+For executing behavioral tests, install the `neos/behat` package and run `./flow behat:setup`. Then:
 
+```bash
+cd Packages/Application/Flowpack.DecoupledContentStore/Tests/Behavior
+../../../../bin/behat -c behat.yml.dist
+```
+
+Behat also supports running single tests or single files - they need to be specified after the config file, e.g.
+
+```bash
+
+# run all scenarios in a given folder
+../../../../bin/behat -c behat.yml.dist Features/ContentStore/
+
+# run all scenarios in the single feature file
+../../../../bin/behat -c behat.yml.dist Features/ContentStore/Basics.feature
+
+# run the scenario starting at line 66
+../../../../bin/behat -c behat.yml.dist Features/ContentStore/Basics.feature:66
+```
+
+In case of exceptions, it might be helpful to run the tests with `--stop-on-failure`, which stops the test cases at the first
+error. Then, you can inspect the testing database and manually reproduce the bug.
+
+Additionally, `-vvv` is a helpful CLI flag (extra-verbose) - this displays the full exception stack trace in case of errors.
 
 ## TODO
 
 - clean up of old content releases
   - in Content Store / Redis
-  - (SK) in prunner
 - generate the old content format
 - (SK) error handling tests
 - force-switch possibility
 - (AM) UI
 - check for TODOs :)
-- prunner: if a task is aborted, abort all other tasks (optional)
 
 ## Missing Features from old
 
