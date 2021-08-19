@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
+use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Neos\ContentRepository\Domain\Factory\NodeFactory;
@@ -89,6 +90,12 @@ class NodeRenderer
      * @var NodeFactory
      */
     protected $nodeFactory;
+
+    /**
+     * @Flow\Inject
+     * @var ContentReleaseManager
+     */
+    protected $contentReleaseManager;
 
 
     /**
@@ -206,6 +213,7 @@ class NodeRenderer
             // we need to abort the content release altogether and start again with a fresh enumeration.
 
             $contentReleaseLogger->error('We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error.', ['node' => $enumeratedNode->debugString()]);
+            $this->contentReleaseManager->startIncrementalContentRelease();
             exit(1);
         }
     }
