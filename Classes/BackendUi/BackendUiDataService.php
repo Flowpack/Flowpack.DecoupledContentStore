@@ -69,7 +69,6 @@ class BackendUiDataService
     {
         $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
-        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseJob->getVariables()['contentReleaseId']);
 
         $renderingsPerSecond = $this->redisRenderingStatisticsStore->getRenderingsPerSecondSamples($contentReleaseIdentifier);
 

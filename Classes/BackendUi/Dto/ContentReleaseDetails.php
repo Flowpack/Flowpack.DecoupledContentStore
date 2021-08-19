@@ -19,12 +19,12 @@ use Neos\Fusion\Core\Cache\ContentCache;
 class ContentReleaseDetails
 {
     private ContentReleaseIdentifier $contentReleaseIdentifier;
-    private Job $job;
+    private ?Job $job;
     private int $enumeratedDocumentNodesCount;
     private RenderingProgress $renderingProgress;
     private string $svgSparkline;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, Job $job, int $enumeratedDocumentNodesCount, RenderingProgress $renderingProgress, string $svgSparkline)
+    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, RenderingProgress $renderingProgress, string $svgSparkline)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;
@@ -42,9 +42,9 @@ class ContentReleaseDetails
     }
 
     /**
-     * @return Job
+     * @return Job|null
      */
-    public function getJob(): Job
+    public function getJob(): ?Job
     {
         return $this->job;
     }
