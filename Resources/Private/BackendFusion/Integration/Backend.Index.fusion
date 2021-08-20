@@ -11,8 +11,6 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                 contentReleaseIdentifier = ${item.contentReleaseIdentifier.identifier}
 
                 enumeratedDocumentNodesCount = ${item.enumeratedDocumentNodesCount}
-                renderedJobs = ${item.renderingProgress.renderedJobs}
-                totalJobs = ${item.renderingProgress.totalJobs}
                 start = ${Date.format(item.metadata.startTime, 'd.m.Y H:i:s')}
                 renderer = afx`
                     <tr>
@@ -21,7 +19,7 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                                 {props.contentReleaseIdentifier}
                             </Neos.Fusion:Link.Action>
                         </td>
-                        <td>{props.renderedJobs} / {props.totalJobs}</td>
+                        <td>TODO renderedJobs/totalJobs</td>
                         <td>{props.enumeratedDocumentNodesCount}</td>
                         <td>{props.start}</td>
                     </tr>

@@ -8,6 +8,7 @@ use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseDetails;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
+use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\Sparkline;
@@ -49,7 +50,6 @@ class BackendUiDataService
 
         $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(...$contentReleases);
-        $renderingProgresses = $this->redisRenderingStatisticsStore->getMultipleRenderingProgress(...$contentReleases);
         $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
 
         $result = [];
@@ -58,7 +58,6 @@ class BackendUiDataService
                 $contentRelease,
                 $metadata->getResultForContentRelease($contentRelease),
                 $counts->getResultForContentRelease($contentRelease),
-                $renderingProgresses->getResultForContentRelease($contentRelease)
             );
         }
 
@@ -70,14 +69,15 @@ class BackendUiDataService
         $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
 
-        $renderingsPerSecond = $this->redisRenderingStatisticsStore->getRenderingsPerSecondSamples($contentReleaseIdentifier);
+        $renderingStatistics = array_map(function(string $item) {
+            return RenderingStatistics::fromJsonString($item);
+        }, $this->redisRenderingStatisticsStore->getRenderingStatistics($contentReleaseIdentifier));
 
         return new ContentReleaseDetails(
             $contentReleaseIdentifier,
             $contentReleaseJob,
             $this->redisEnumerationRepository->count($contentReleaseIdentifier),
-            $this->redisRenderingStatisticsStore->getRenderingProgress($contentReleaseIdentifier),
-            Sparkline::sparkline('', $renderingsPerSecond)
+            $renderingStatistics
         );
     }
 }
