@@ -18,3 +18,11 @@ prototype(Flowpack.DecoupledContentStore.Test:Content.Text) < prototype(Neos.Fus
         BEFORE{props.text}AFTER
     `
 }
+
+prototype(Flowpack.DecoupledContentStore.Test:Content.FusionWithRenderingException) {
+    @class = 'Flowpack\\DecoupledContentStore\\Tests\\Behavior\\Fixtures\\FusionWithRenderingExceptionImplementation'
+}
+
+prototype(Flowpack.DecoupledContentStore.Test:Content.MissingImplementationClass) {
+    @class = 'NonExistingClass'
+}

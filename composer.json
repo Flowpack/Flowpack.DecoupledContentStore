@@ -12,6 +12,11 @@
       "Flowpack\\DecoupledContentStore\\": "Classes/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Flowpack\\DecoupledContentStore\\Tests\\": "Tests/"
+    }
+  },
   "extra": {
     "neos": {
       "package-key": "Flowpack.DecoupledContentStore"
