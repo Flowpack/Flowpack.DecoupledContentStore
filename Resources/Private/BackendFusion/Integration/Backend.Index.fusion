@@ -21,7 +21,7 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                             {" "}
                             <span @if.errors={item.ErrorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                         </td>
-                        <td>TODO renderedJobs/totalJobs</td>
+                        <td>{item.progress}%</td>
                         <td>{item.iterationsCount}</td>
                         <td>{props.enumeratedDocumentNodesCount}</td>
                         <td>{props.start}</td>

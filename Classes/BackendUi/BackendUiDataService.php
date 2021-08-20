@@ -59,15 +59,19 @@ class BackendUiDataService
         $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
         $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics(...$contentReleases);
         $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors(...$contentReleases);
+        $lastRenderingStatistics = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry(...$contentReleases);
 
         $result = [];
         foreach ($contentReleases as $contentRelease) {
+            $lastRenderingStatistic = RenderingStatistics::fromJsonString($lastRenderingStatistics->getResultForContentRelease($contentRelease));
             $result[] = new ContentReleaseOverviewRow(
                 $contentRelease,
                 $metadata->getResultForContentRelease($contentRelease),
                 $counts->getResultForContentRelease($contentRelease),
                 $iterationsCounts->getResultForContentRelease($contentRelease),
-                $errorCounts->getResultForContentRelease($contentRelease)
+                $errorCounts->getResultForContentRelease($contentRelease),
+                $lastRenderingStatistic->getTotalJobs() > 0 ? round(RenderingStatistics::fromJsonString($lastRenderingStatistics->getResultForContentRelease($contentRelease))->getRenderedJobs()
+                    / RenderingStatistics::fromJsonString($lastRenderingStatistics->getResultForContentRelease($contentRelease))->getTotalJobs() * 100) : 0
             );
         }
 

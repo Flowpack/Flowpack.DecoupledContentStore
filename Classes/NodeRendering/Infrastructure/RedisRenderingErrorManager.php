@@ -39,7 +39,7 @@ class RedisRenderingErrorManager
 
     public function countMultipleErrors(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
     {
-        $result = []; // KEY == contentReleaseIdentifier. VALUE == RenderingStatistics
+        $result = []; // KEY == contentReleaseIdentifier. VALUE == count of error entries
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redis = $this->redisClientManager->getPrimaryRedis();
             $redisPipeline = $redis->pipeline();

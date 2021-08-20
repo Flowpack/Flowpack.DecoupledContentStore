@@ -44,12 +44,29 @@ class RedisRenderingStatisticsStore
 
     public function countMultipleRenderingStatistics(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
     {
-        $result = []; // KEY == contentReleaseIdentifier. VALUE == RenderingStatistics
+        $result = []; // KEY == contentReleaseIdentifier. VALUE == count of statistics entries (= count of iterations)
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redis = $this->redisClientManager->getPrimaryRedis();
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->llen($releaseIdentifier->redisKey('renderingStatistics'));
+            }
+            $res = $redisPipeline->exec();
+            foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
+                $result[$releaseIdentifier->jsonSerialize()] = $res[$i];
+            }
+        }
+        return ContentReleaseBatchResult::createFromArray($result);
+    }
+
+    public function getLastRenderingStatisticsEntry(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
+    {
+        $result = []; // KEY == contentReleaseIdentifier. VALUE == last rendering statistics entry)
+        foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
+            $redis = $this->redisClientManager->getPrimaryRedis();
+            $redisPipeline = $redis->pipeline();
+            foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
+                $redisPipeline->lindex($releaseIdentifier->redisKey('renderingStatistics'), -1);
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
