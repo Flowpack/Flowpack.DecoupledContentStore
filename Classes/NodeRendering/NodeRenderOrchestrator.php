@@ -146,6 +146,8 @@ class NodeRenderOrchestrator
                     // NOTE: Eventually consistent (TODO describe)
                     // If wanted more fully consistent, move to bottom....
                     $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
+
+                    $this->redisRenderingQueue->addRenderedUrl($contentReleaseIdentifier, $renderedDocumentFromContentCache->getUrl());
                 } else {
                     $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: ' . $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
                     // the rendered document was not found, or has holes. so we need to re-render.

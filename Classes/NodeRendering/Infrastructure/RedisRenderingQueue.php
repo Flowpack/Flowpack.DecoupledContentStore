@@ -118,4 +118,9 @@ class RedisRenderingQueue
         }
         return NodeRenderingCompletionStatus::fromJsonString($completionStatus);
     }
+
+    public function addRenderedUrl(ContentReleaseIdentifier $contentReleaseIdentifier, string $renderedUrl)
+    {
+        $this->redisClientManager->getPrimaryRedis()->zAdd($contentReleaseIdentifier->redisKey('meta:urls'), 0, $renderedUrl);
+    }
 }
