@@ -20,6 +20,7 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                             </Neos.Fusion:Link.Action>
                         </td>
                         <td>TODO renderedJobs/totalJobs</td>
+                        <td>{item.iterationsCount}</td>
                         <td>{props.enumeratedDocumentNodesCount}</td>
                         <td>{props.start}</td>
                     </tr>
@@ -42,6 +43,7 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                         <tr>
                             <th style="width: 240px">Identifier</th>
                             <th style="width: 200px">Render Progress</th>
+                            <th style="width: 200px">Iterations</th>
                             <th style="width: 200px">Page Count</th>
                             <th>Start</th>
                             <th>Switch </th>

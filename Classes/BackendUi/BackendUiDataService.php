@@ -55,9 +55,9 @@ class BackendUiDataService
     {
         $contentReleases = $this->redisContentReleaseService->fetchAllReleaseIds();
 
-        $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(...$contentReleases);
         $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
+        $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics(...$contentReleases);
 
         $result = [];
         foreach ($contentReleases as $contentRelease) {
@@ -65,6 +65,7 @@ class BackendUiDataService
                 $contentRelease,
                 $metadata->getResultForContentRelease($contentRelease),
                 $counts->getResultForContentRelease($contentRelease),
+                $iterationsCounts->getResultForContentRelease($contentRelease)
             );
         }
 

@@ -42,19 +42,18 @@ class RedisRenderingStatisticsStore
         $this->redisClientManager->getPrimaryRedis()->del($contentReleaseIdentifier->redisKey('renderingStatistics'));
     }
 
-    // TODO
-    public function getMultipleRenderingStatistics(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
+    public function countMultipleRenderingStatistics(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
     {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == RenderingStatistics
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redis = $this->redisClientManager->getPrimaryRedis();
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
-                $redisPipeline->get($releaseIdentifier->redisKey('renderingStatistics'));
+                $redisPipeline->llen($releaseIdentifier->redisKey('renderingStatistics'));
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
-                $result[$releaseIdentifier->jsonSerialize()] = RenderingStatistics::fromJsonString($res[$i]);
+                $result[$releaseIdentifier->jsonSerialize()] = $res[$i];
             }
         }
         return ContentReleaseBatchResult::createFromArray($result);
