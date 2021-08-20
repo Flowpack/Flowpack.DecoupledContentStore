@@ -171,20 +171,20 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
 
 
         <dl class="md:flex md:divide-y-0 divide-y">
+            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox/>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Enumerated Pages">
                     {props.detailsData.enumeratedDocumentNodesCount}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
-                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Rendered Pages">
-                    {props.detailsData.renderingProgress.renderedJobs}
-                    / {props.detailsData.renderingProgress.totalJobs}
-                    {props.detailsData.svgSparkline}
-                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
-                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Rendering Iterations">
-                    TODO
-                </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+                <Neos.Fusion:Loop items={props.detailsData.renderingStatistics}>
+                    <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title={"Rendered Pages Iteration " + (iterator.index + 1)}>
+                        {item.renderedJobs}
+                        / {item.totalJobs}
+                        {item.svgSparkline}
+                    </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
+                </Neos.Fusion:Loop>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Errors">

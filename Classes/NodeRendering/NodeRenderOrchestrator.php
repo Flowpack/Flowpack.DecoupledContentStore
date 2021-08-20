@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingProgress;
+use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentCacheReader;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -133,6 +133,8 @@ class NodeRenderOrchestrator
 
             $contentReleaseLogger->info('Starting iteration ' . $i);
 
+            $this->redisRenderingStatisticsStore->addStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create(0, 0, []));
+
             // goTroughEnumeratedNodesFillContentReleaseAndCheckWhatStillNeedsToBeDone
             $nodesScheduledForRendering = [];
             foreach ($currentEnumeration as $enumeratedNode) {
@@ -145,7 +147,7 @@ class NodeRenderOrchestrator
                     // If wanted more fully consistent, move to bottom....
                     $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
                 } else {
-                    $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: '. $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
+                    $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: ' . $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
                     // the rendered document was not found, or has holes. so we need to re-render.
                     $nodesScheduledForRendering[] = $enumeratedNode;
                     $this->redisRenderingQueue->appendRenderingJob($contentReleaseIdentifier, $enumeratedNode);
@@ -162,6 +164,12 @@ class NodeRenderOrchestrator
                 return;
             }
 
+            // we remember the $totalJobsCount for displaying the rendering progress
+            $totalJobsCount = count($nodesScheduledForRendering);
+            // $remainingJobsCount is needed to figure out
+            $remainingJobsCount = $this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier);
+            $renderingsPerSecondDataPoints = [];
+
             // at this point, we have:
             // - copied everything to the content release which was already fully rendered
             // - for everything else (stuff not rendered at all or not fully rendered), we enqueued them for rendering.
@@ -171,19 +179,17 @@ class NodeRenderOrchestrator
             $contentReleaseLogger->info('Waiting for renderings to complete...');
             $waitTimer = 0;
 
-            // we remember the $totalJobsCount for displaying the rendering progress
-            $totalJobsCount = $this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier);
-            // $remainingJobsCount is needed to figure out
-            $remainingJobsCount = $totalJobsCount;
             while ($this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier) > 0 || $this->redisRenderingQueue->numberOfRenderingsInProgress($contentReleaseIdentifier) > 0) {
+                $this->redisRenderingStatisticsStore->replaceLastStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create($remainingJobsCount, $totalJobsCount, $renderingsPerSecondDataPoints));
+
                 sleep(1);
                 $waitTimer++;
                 if ($waitTimer % 10 === 0) {
                     $previousRemainingJobs = $remainingJobsCount;
                     $remainingJobsCount = $this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier);
                     $jobsWorkedThroughOverLastTenSeconds = $previousRemainingJobs - $remainingJobsCount;
-                    $this->redisRenderingStatisticsStore->addDataPointForRenderingsPerSecond($contentReleaseIdentifier, $jobsWorkedThroughOverLastTenSeconds / 10);
-                    $this->redisRenderingStatisticsStore->updateRenderingProgress($contentReleaseIdentifier, RenderingProgress::create($remainingJobsCount, $totalJobsCount));
+                    $renderingsPerSecondDataPoints[] = $jobsWorkedThroughOverLastTenSeconds / 10;
+
 
                     $contentReleaseLogger->debug('Waiting... ', [
                         'numberOfQueuedJobs' => $remainingJobsCount,
@@ -191,6 +197,7 @@ class NodeRenderOrchestrator
                     ]);
                 }
             }
+
 
             // NOTE: we do not abort rendering inside NodeRenderer when we encounter the first error, but we try to render
             // all pages in the full iteration until we stop the content release here.
@@ -205,7 +212,9 @@ class NodeRenderOrchestrator
                 return;
             }
 
-            $this->redisRenderingStatisticsStore->updateRenderingProgress($contentReleaseIdentifier, RenderingProgress::create(0, $totalJobsCount));
+            $remainingJobsCount = $this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier);
+            $this->redisRenderingStatisticsStore->replaceLastStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create($remainingJobsCount, $totalJobsCount, $renderingsPerSecondDataPoints));
+
             yield RenderingIterationCompletedEvent::create();
 
             $contentReleaseLogger->info('Rendering iteration completed. Continuing with next iteration.');
@@ -213,6 +222,6 @@ class NodeRenderOrchestrator
             // nodes which have been rendered in this iteration to the content store - so we iterate over the
             // just-rendered nodes.
             $currentEnumeration = $nodesScheduledForRendering;
-        } while(!empty($currentEnumeration));
+        } while (!empty($currentEnumeration));
     }
 }

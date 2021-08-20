@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\BackendUi\Dto;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingProgress;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Neos\Flow\Annotations as Flow;
 
@@ -17,14 +16,12 @@ class ContentReleaseOverviewRow
     private ContentReleaseIdentifier $contentReleaseIdentifier;
     private ContentReleaseMetadata $metadata;
     private int $enumeratedDocumentNodesCount;
-    private RenderingProgress $renderingProgress;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, int $enumeratedDocumentNodesCount, RenderingProgress $renderingProgress)
+    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, int $enumeratedDocumentNodesCount)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->metadata = $metadata;
         $this->enumeratedDocumentNodesCount = $enumeratedDocumentNodesCount;
-        $this->renderingProgress = $renderingProgress;
     }
 
     /**
@@ -51,11 +48,4 @@ class ContentReleaseOverviewRow
         return $this->enumeratedDocumentNodesCount;
     }
 
-    /**
-     * @return RenderingProgress
-     */
-    public function getRenderingProgress(): RenderingProgress
-    {
-        return $this->renderingProgress;
-    }
 }

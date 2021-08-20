@@ -3,14 +3,11 @@
 namespace Flowpack\DecoupledContentStore\NodeRendering\Infrastructure;
 
 use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingProgress;
+use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
-use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 
 /**
  * @Flow\Scope("singleton")
@@ -24,45 +21,40 @@ class RedisRenderingStatisticsStore
      */
     protected $redisClientManager;
 
-    public function addDataPointForRenderingsPerSecond(ContentReleaseIdentifier $contentReleaseIdentifier, float $renderingsPerSecond)
+    public function addStatisticsIteration(ContentReleaseIdentifier $contentReleaseIdentifier, ?RenderingStatistics $renderingStatistics)
     {
-        $this->redisClientManager->getPrimaryRedis()->rPush($contentReleaseIdentifier->redisKey('renderingTimings'), $renderingsPerSecond);
+        $this->redisClientManager->getPrimaryRedis()->rPush($contentReleaseIdentifier->redisKey('renderingStatistics'), json_encode($renderingStatistics));
     }
 
-    public function getRenderingsPerSecondSamples(ContentReleaseIdentifier $contentReleaseIdentifier): array
+    public function replaceLastStatisticsIteration(ContentReleaseIdentifier $contentReleaseIdentifier, RenderingStatistics $renderingStatistics)
     {
-        return $this->redisClientManager->getPrimaryRedis()->lRange($contentReleaseIdentifier->redisKey('renderingTimings'), 0, -1);
+        $this->redisClientManager->getPrimaryRedis()->rPop($contentReleaseIdentifier->redisKey('renderingStatistics'));
+        $this->addStatisticsIteration($contentReleaseIdentifier, $renderingStatistics);
     }
 
-    public function updateRenderingProgress(ContentReleaseIdentifier $contentReleaseIdentifier, RenderingProgress $renderingProgress)
+    public function getRenderingStatistics(ContentReleaseIdentifier $contentReleaseIdentifier): array
     {
-        $this->redisClientManager->getPrimaryRedis()->set($contentReleaseIdentifier->redisKey('renderingProgress'), json_encode($renderingProgress));
+        return $this->redisClientManager->getPrimaryRedis()->lRange($contentReleaseIdentifier->redisKey('renderingStatistics'), 0, -1);
     }
 
     public function flush(ContentReleaseIdentifier $contentReleaseIdentifier)
     {
-        $this->redisClientManager->getPrimaryRedis()->del($contentReleaseIdentifier->redisKey('renderingTimings'));
+        $this->redisClientManager->getPrimaryRedis()->del($contentReleaseIdentifier->redisKey('renderingStatistics'));
     }
 
-    public function getRenderingProgress(ContentReleaseIdentifier $releaseIdentifier): RenderingProgress
+    // TODO
+    public function getMultipleRenderingStatistics(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
     {
-        $redis = $this->redisClientManager->getPrimaryRedis();
-        return RenderingProgress::fromJsonString($redis->get($releaseIdentifier->redisKey('renderingProgress')));
-    }
-
-    public function getMultipleRenderingProgress(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
-    {
-        $result = []; // KEY == contentReleaseIdentifier. VALUE == RenderingProgress
+        $result = []; // KEY == contentReleaseIdentifier. VALUE == RenderingStatistics
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redis = $this->redisClientManager->getPrimaryRedis();
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
-                $redisPipeline->get($releaseIdentifier->redisKey('renderingProgress'));
-
+                $redisPipeline->get($releaseIdentifier->redisKey('renderingStatistics'));
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
-                $result[$releaseIdentifier->jsonSerialize()] = RenderingProgress::fromJsonString($res[$i]);
+                $result[$releaseIdentifier->jsonSerialize()] = RenderingStatistics::fromJsonString($res[$i]);
             }
         }
         return ContentReleaseBatchResult::createFromArray($result);

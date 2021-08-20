@@ -35,8 +35,7 @@ final class ContentReleaseIdentifier implements \JsonSerializable
 
     public function redisKey(string $postfix): string
     {
-        // TODO: contentrelease:
-        return 'cs:' . $this->identifier . ':' . $postfix;
+        return 'contentStore:' . $this->identifier . ':' . $postfix;
     }
 
 

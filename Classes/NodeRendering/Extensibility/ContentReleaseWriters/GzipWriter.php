@@ -27,6 +27,6 @@ class GzipWriter implements ContentReleaseWriterInterface
     public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
         $compressedContent = gzencode($renderedDocumentFromContentCache->getFullContent(), 9);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('renderedDocuments'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
     }
 }
