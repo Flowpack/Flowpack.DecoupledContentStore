@@ -46,6 +46,9 @@ final class InterruptibleProcessRuntime
 
     private bool $inTestingMode;
 
+    private bool $encounteredExitEvent = false;
+    private bool $generatorIsPaused = false;
+
     private function __construct(\Generator $generator, bool $inTestingMode)
     {
         $this->generator = $generator;
@@ -84,32 +87,46 @@ final class InterruptibleProcessRuntime
 
     /**
      * This is useful in testcases, to run the generator up to a certain point in time.
-     * @param string $eventClassName
-     * @throws \ReflectionException
+     * @param string ...$eventClassNames
+     * @return InterruptibleProcessRuntimeEventInterface|null the event of type $eventClassName
      */
-    public function runUntilEventEncountered(string $eventClassName): void
+    public function runUntilEventEncountered(string ...$eventClassNames): ?InterruptibleProcessRuntimeEventInterface
     {
+        if ($this->encounteredExitEvent) {
+            throw new \RuntimeException('Cannot continue running the Process, as we received an Exit Event already.');
+        }
+
+        if ($this->generatorIsPaused) {
+            // we need to continue with the NEXT event, otherwise, we read the same event twice.
+            $this->generator->next();
+        }
+
         while ($this->generator->valid()) {
             $currentEvent = $this->generator->current();
             if ($currentEvent instanceof ExitEvent) {
-                $this->handleExitEvent($currentEvent);
+                $this->encounteredExitEvent = true;
                 // stop iterating the iterator in all cases
-                return;
+                return $this->handleExitEvent($currentEvent);
             }
             $shortName = (new \ReflectionClass($currentEvent))->getShortName();
-            if ($eventClassName === $shortName || is_a($currentEvent, $eventClassName)) {
-                // stop here, can be restarted lateron.
-                return;
+            foreach ($eventClassNames as $eventClassName) {
+                if ($eventClassName === $shortName || is_a($currentEvent, $eventClassName)) {
+                    // stop here, can be restarted lateron. We still need to continue to the next event here.
+                    $this->generatorIsPaused = true;
+
+                    return $currentEvent;
+                }
             }
             // try to read next event (if not stopped)
             $this->generator->next();
         }
+        return null;
     }
 
-    protected function handleExitEvent(ExitEvent $event)
+    protected function handleExitEvent(ExitEvent $event): InterruptibleProcessRuntimeEventInterface
     {
         if ($this->inTestingMode === true) {
-            return;
+            return $event;
         }
         exit($event->getStatusCode());
     }

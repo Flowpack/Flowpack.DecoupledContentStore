@@ -122,9 +122,7 @@ class NodeContextCombinator
         yield $node;
 
         foreach ($node->getChildNodes('Neos.Neos:Document') as $node) {
-            foreach ($this->recurseDocumentChildNodes($node) as $childNode) {
-                yield $childNode;
-            }
+            yield from $this->recurseDocumentChildNodes($node);
         }
     }
 

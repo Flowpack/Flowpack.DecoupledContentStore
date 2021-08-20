@@ -33,7 +33,9 @@ Feature: Basic Rendering
     And I run the renderer for content release "5" until the queue is empty
     Then during rendering of content release "5", no errors occured
     # for filling the rendered content release
-    When I run the render-orchestrator control loop once for content release "5"
+    When I continue running the render-orchestrator control loop
+    Then I expect the render-orchestrator control loop to exit with status code 0
+    And I expect the content release "5" to have the completion status success
     Then I expect the content release "5" to contain the following content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
     """
     BEFOREHallo - this is rendered.AFTER
@@ -57,7 +59,9 @@ Feature: Basic Rendering
     And I flush the content cache depending on the modified nodes
 
     # for filling the rendered content release
-    When I run the render-orchestrator control loop once for content release "5"
+    When I continue running the render-orchestrator control loop
+    Then I expect the render-orchestrator control loop to exit with status code 0
+    And I expect the content release "5" to have the completion status success
     Then I expect the content release "5" to contain the following content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
     """
     BEFOREHallo - this is rendered.AFTER
@@ -81,13 +85,15 @@ Feature: Basic Rendering
 
     # because a modification has happened, the rendered node cannot be copied over to the finished content release;
     # thus the content release cannot contain anything at this position yet.
-    When I run the render-orchestrator control loop once for content release "5"
+    When I continue running the render-orchestrator control loop
     Then I expect the content release "5" to not contain anything for URI "http://test.de/de"
 
     # however, when we re-run the rendering (in the next iteration), the rendering should converge and work out.
     And I run the renderer for content release "5" until the queue is empty
     Then during rendering of content release "5", no errors occured
-    When I run the render-orchestrator control loop once for content release "5"
+    When I continue running the render-orchestrator control loop
+    Then I expect the render-orchestrator control loop to exit with status code 0
+    And I expect the content release "5" to have the completion status success
     Then I expect the content release "5" to contain the following content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
     """
     BEFORENew TextAFTER

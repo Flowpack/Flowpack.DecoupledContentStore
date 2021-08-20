@@ -86,6 +86,10 @@ class NodeRenderOrchestrator
      */
     protected $nodeRenderingExtensionManager;
 
+    private const EXIT_ERRORSTATUSCODE_RELEASE_ALREADY_COMPLETED = 1;
+    private const EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION = 2;
+    private const EXIT_ERRORSTATUSCODE_RETRY_LIMIT_REACHED = 3;
+    private const EXIT_ERRORSTATUSCODE_RENDERING_ERRORS = 4;
 
     /**
      * !!! You need to wrap this in the {@see InterruptibleProcessRuntime} so that it works correctly.
@@ -99,7 +103,7 @@ class NodeRenderOrchestrator
 
         if ($completionStatus !== null) {
             $contentReleaseLogger->error('Release has already completed with status ' . $completionStatus->jsonSerialize() . ', so we cannot render again.');
-            yield ExitEvent::createWithStatusCode(1);
+            yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RELEASE_ALREADY_COMPLETED);
             return;
         }
 
@@ -111,7 +115,7 @@ class NodeRenderOrchestrator
         if ($this->redisEnumerationRepository->count($contentReleaseIdentifier) === 0) {
             $contentReleaseLogger->error('Content Enumeration is empty. This is dangerous; we never want this to go live. Exiting.');
             $this->redisRenderingQueue->setCompletionStatus($contentReleaseIdentifier, NodeRenderingCompletionStatus::failed());
-            yield ExitEvent::createWithStatusCode(1);
+            yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION);
             return;
         }
 
@@ -123,7 +127,7 @@ class NodeRenderOrchestrator
             if ($i > 10) {
                 $contentReleaseLogger->error('FAILED to build a complete content release after 10 rendering attempts. Exiting.');
                 $this->redisRenderingQueue->setCompletionStatus($contentReleaseIdentifier, NodeRenderingCompletionStatus::failed());
-                yield ExitEvent::createWithStatusCode(1);
+                yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RETRY_LIMIT_REACHED);
                 return;
             }
 
@@ -186,6 +190,19 @@ class NodeRenderOrchestrator
                         'numberOfRenderingsInProgress' => $this->redisRenderingQueue->numberOfRenderingsInProgress($contentReleaseIdentifier),
                     ]);
                 }
+            }
+
+            // NOTE: we do not abort rendering inside NodeRenderer when we encounter the first error, but we try to render
+            // all pages in the full iteration until we stop the content release here.
+            // This is to gain better visibility into all errors currently happening; and thus maybe being able to see
+            // patterns among the errors.
+            // We also do NOT start a new incremental release, as this would lead very likely to the same errors.
+            $amountOfRenderingErrors = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
+            if ($amountOfRenderingErrors > 0) {
+                $this->redisRenderingQueue->setCompletionStatus($contentReleaseIdentifier, NodeRenderingCompletionStatus::failed());
+                $contentReleaseLogger->error('In this iteration, there happened ' . $amountOfRenderingErrors . ' rendering errors. EXITING now, as there is no chance of completing the content release successfully.');
+                yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RENDERING_ERRORS);
+                return;
             }
 
             $this->redisRenderingStatisticsStore->updateRenderingProgress($contentReleaseIdentifier, RenderingProgress::create(0, $totalJobsCount));

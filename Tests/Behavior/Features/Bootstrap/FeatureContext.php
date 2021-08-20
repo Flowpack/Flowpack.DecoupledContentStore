@@ -11,8 +11,10 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
 use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntime;
+use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntimeEventInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
@@ -54,6 +56,9 @@ class FeatureContext implements Context
      */
     protected $objectManager;
 
+    private ?InterruptibleProcessRuntime $renderOrchestratorProcess;
+    private ?InterruptibleProcessRuntimeEventInterface $renderOrchestratorProcessLastEvent;
+
     public function __construct()
     {
         if (self::$bootstrap === null) {
@@ -64,6 +69,16 @@ class FeatureContext implements Context
 
         // for testing, we use Private/EndToEndTestFusion as fusion folder to load.
         CustomFusionView::$useCustomSiteRootFusionPatternEntryPointForBehavioralTests = true;
+    }
+
+    /**
+     * @AfterScenario @fixtures
+     */
+    public function resetNodeTypeManagerFully()
+    {
+        $nodeTypeManager = $this->getObjectManager()->get(NodeTypeManager::class);
+        // This is a WORKAROUND, and should be done in NodeTypeManager::overrideNodeTypes().
+        ObjectAccess::setProperty($nodeTypeManager, 'cachedSubNodeTypes', [], true);
     }
 
     /**
@@ -82,6 +97,8 @@ class FeatureContext implements Context
         /** @var RedisClientManager $redisClientManager */
         $redisClientManager = $this->objectManager->get(RedisClientManager::class);
         $redisClientManager->getPrimaryRedis()->flushAll();
+
+
     }
 
 
@@ -151,10 +168,56 @@ class FeatureContext implements Context
 
         $bufferedOutput = new BufferedOutput();
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
-        $renderOrchestratorProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $contentReleaseLogger));
-        $renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
+        $this->renderOrchestratorProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $contentReleaseLogger));
+        $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
 
         echo $bufferedOutput->fetch();
+    }
+
+    /**
+     * @When I continue running the render-orchestrator control loop
+     */
+    public function iContinueRunningTheRenderOrchestratorControlLoop()
+    {
+        $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
+    }
+
+    /**
+     * @Then I expect the render-orchestrator control loop to exit with status code :expectedStatusCode
+     */
+    public function iExpectTheRenderOrchestratorControlLoopToExitWithStatusCode($expectedStatusCode)
+    {
+        Assert::assertNotNull($this->renderOrchestratorProcessLastEvent, 'renderOrchestratorProcessLastEvent cannot be null');
+        Assert::assertInstanceOf(ExitEvent::class, $this->renderOrchestratorProcessLastEvent, 'renderOrchestratorProcessLastEvent needs to be an ExitEvent');
+        assert($this->renderOrchestratorProcessLastEvent instanceof ExitEvent);
+        Assert::assertEquals($expectedStatusCode, $this->renderOrchestratorProcessLastEvent->getStatusCode(), 'Status Code Mismatch');
+    }
+
+    /**
+     * @Then I expect the content release :contentReleaseIdentifier to have the completion status failed
+     */
+    public function iExpectTheContentReleaseToHaveTheCompletionStatusFailed($contentReleaseIdentifier)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisRenderingQueue = $this->objectManager->get(RedisRenderingQueue::class);
+        assert($redisRenderingQueue instanceof RedisRenderingQueue);
+        $completionStatus = $redisRenderingQueue->getCompletionStatus($contentReleaseIdentifier);
+        Assert::isTrue($completionStatus->isFailed(), 'Completion Status should be failed');
+        Assert::isFalse($completionStatus->isSuccessful(), 'Completion Status should not be successful');
+    }
+
+
+    /**
+     * @Then I expect the content release :contentReleaseIdentifier to have the completion status success
+     */
+    public function iExpectTheContentReleaseToHaveTheCompletionStatusSuccess($contentReleaseIdentifier)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisRenderingQueue = $this->objectManager->get(RedisRenderingQueue::class);
+        assert($redisRenderingQueue instanceof RedisRenderingQueue);
+        $completionStatus = $redisRenderingQueue->getCompletionStatus($contentReleaseIdentifier);
+        Assert::isTrue($completionStatus->isSuccessful(), 'Completion Status should be success');
+        Assert::isFalse($completionStatus->isFailed(), 'Completion Status should not be failed');
     }
 
     /**
@@ -186,6 +249,23 @@ class FeatureContext implements Context
             Assert::fail(implode("\n", $renderingErrors));
         }
     }
+
+    /**
+     * @Then /^during rendering of content release "([^"].*)", ([0-9]+) errors? occured$/
+     */
+    public function duringRenderingOfContentReleaseSomeErrorsOccured($contentReleaseIdentifier, $expectedNumberOfErrors)
+    {
+        if ($expectedNumberOfErrors === 'no') {
+            $this->duringRenderingOfContentReleaseNoErrorsOccured($contentReleaseIdentifier);
+            return;
+        }
+
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisRenderingErrorManager = $this->getObjectManager()->get(RedisRenderingErrorManager::class);
+        $renderingErrors = $redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier);
+        Assert::assertCount($expectedNumberOfErrors, $renderingErrors);
+    }
+
 
     private const DEFAULT_NODETYPES_CONFIG = <<<EOF
 unstructured:

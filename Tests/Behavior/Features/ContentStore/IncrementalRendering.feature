@@ -84,7 +84,10 @@ Feature: Incremental Rendering
     # however, when we re-run the rendering (in the next iteration), the rendering should converge and work out.
     And I run the renderer for content release "6" until the queue is empty
     Then during rendering of content release "6", no errors occured
-    When I run the render-orchestrator control loop once for content release "6"
+    When I continue running the render-orchestrator control loop
+    Then I expect the render-orchestrator control loop to exit with status code 0
+    And I expect the content release "6" to have the completion status success
+
     Then I expect the content release "6" to contain the following content for URI "http://test.de/de/nested" at CSS selector "body .neos-contentcollection":
     """
     BEFORENew TextAFTER

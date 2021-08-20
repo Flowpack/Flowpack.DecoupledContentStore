@@ -179,6 +179,10 @@ class NodeRenderer
                 $this->documentRenderer->renderDocumentNodeVariant($node, $enumeratedNode->getArguments(), $contentReleaseLogger);
 
             }
+            // NOTE: we do not abort rendering directly, when we encounter any error, but we try to render
+            // all pages in the full iteration (and then, if errors exist, we stop).
+            // This is to gain better visibility into all errors currently happening; and thus maybe being able to see
+            // patterns among the errors.
         } catch (\Neos\Flow\Property\Exception $exception) {
             $contentReleaseLogger->logException($exception->getPrevious(), 'Exception getting document node variant for rendering', array(
                 'node' => $enumeratedNode->debugString(),
