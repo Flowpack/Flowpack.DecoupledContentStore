@@ -17,13 +17,15 @@ class ContentReleaseOverviewRow
     private ContentReleaseMetadata $metadata;
     private int $enumeratedDocumentNodesCount;
     private int $iterationsCount;
+    private int $errorCount;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, int $enumeratedDocumentNodesCount, int $iterationsCount)
+    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, int $enumeratedDocumentNodesCount, int $iterationsCount, int $errorCount)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->metadata = $metadata;
         $this->enumeratedDocumentNodesCount = $enumeratedDocumentNodesCount;
         $this->iterationsCount = $iterationsCount;
+        $this->errorCount = $errorCount;
     }
 
     /**
@@ -56,6 +58,14 @@ class ContentReleaseOverviewRow
     public function getIterationsCount(): int
     {
         return $this->iterationsCount;
+    }
+
+    /**
+     * @return int
+     */
+    public function getErrorCount(): int
+    {
+        return $this->errorCount;
     }
 
 }

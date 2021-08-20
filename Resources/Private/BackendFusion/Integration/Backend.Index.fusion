@@ -18,6 +18,8 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                             <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: props.contentReleaseIdentifier}}>
                                 {props.contentReleaseIdentifier}
                             </Neos.Fusion:Link.Action>
+                            {" "}
+                            <span @if.errors={item.ErrorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                         </td>
                         <td>TODO renderedJobs/totalJobs</td>
                         <td>{item.iterationsCount}</td>
