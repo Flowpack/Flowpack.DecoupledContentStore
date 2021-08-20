@@ -9,6 +9,7 @@ use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\Sparkline;
@@ -44,6 +45,12 @@ class BackendUiDataService
      */
     protected $redisRenderingStatisticsStore;
 
+    /**
+     * @Flow\Inject
+     * @var RedisRenderingErrorManager
+     */
+    protected $redisRenderingErrorManager;
+
     public function loadBackendOverviewData()
     {
         $contentReleases = $this->redisContentReleaseService->fetchAllReleaseIds();
@@ -73,11 +80,14 @@ class BackendUiDataService
             return RenderingStatistics::fromJsonString($item);
         }, $this->redisRenderingStatisticsStore->getRenderingStatistics($contentReleaseIdentifier));
 
+        $renderingErrors = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
+
         return new ContentReleaseDetails(
             $contentReleaseIdentifier,
             $contentReleaseJob,
             $this->redisEnumerationRepository->count($contentReleaseIdentifier),
-            $renderingStatistics
+            $renderingStatistics,
+            $renderingErrors
         );
     }
 }

@@ -17,18 +17,20 @@ class ContentReleaseDetails
     private ContentReleaseIdentifier $contentReleaseIdentifier;
     private ?Job $job;
     private int $enumeratedDocumentNodesCount;
+    private int $renderingErrorCount;
 
     /**
      * @var RenderingStatistics[]
      */
     private array $renderingStatistics;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics)
+    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;
         $this->enumeratedDocumentNodesCount = $enumeratedDocumentNodesCount;
         $this->renderingStatistics = $renderingStatistics;
+        $this->renderingErrorCount = $renderingErrorCount;
     }
 
     /**
@@ -62,4 +64,13 @@ class ContentReleaseDetails
     {
         return $this->renderingStatistics;
     }
+
+    /**
+     * @return int
+     */
+    public function getRenderingErrorCount(): int
+    {
+        return $this->renderingErrorCount;
+    }
+    
 }

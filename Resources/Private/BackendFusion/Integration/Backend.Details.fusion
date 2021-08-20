@@ -188,7 +188,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Errors">
-                    TODO
+                    {props.detailsData.renderingErrorCount}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
