@@ -75,4 +75,21 @@ class RedisRenderingStatisticsStore
         }
         return ContentReleaseBatchResult::createFromArray($result);
     }
+
+    public function getFirstRenderingStatisticsEntry(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
+    {
+        $result = []; // KEY == contentReleaseIdentifier. VALUE == first rendering statistics entry)
+        foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
+            $redis = $this->redisClientManager->getPrimaryRedis();
+            $redisPipeline = $redis->pipeline();
+            foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
+                $redisPipeline->lindex($releaseIdentifier->redisKey('renderingStatistics'), 0);
+            }
+            $res = $redisPipeline->exec();
+            foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
+                $result[$releaseIdentifier->jsonSerialize()] = $res[$i];
+            }
+        }
+        return ContentReleaseBatchResult::createFromArray($result);
+    }
 }

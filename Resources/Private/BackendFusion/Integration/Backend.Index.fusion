@@ -21,10 +21,18 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                             {" "}
                             <span @if.errors={item.ErrorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                         </td>
-                        <td>{item.progress}%</td>
+                        <td>
+                            <span class="neos-badge neos-badge-success" title="rendered" data-neos-toggle="tooltip">{item.renderedUrlCount}</span>
+                            / <span class="neos-badge" title="total" data-neos-toggle="tooltip">{props.enumeratedDocumentNodesCount}</span>
+                        </td>
+                        <td>
+                            <span>{item.progress}%</span>
+                        </td>
                         <td>{item.iterationsCount}</td>
-                        <td>{props.enumeratedDocumentNodesCount}</td>
                         <td>{props.start}</td>
+                        <td>TODO</td>
+                        <td>TODO</td>
+                        <td>TODO</td>
                     </tr>
                 `
             }
@@ -44,12 +52,13 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                         <thead>
                         <tr>
                             <th style="width: 240px">Identifier</th>
+                            <th style="width: 200px">Page Count</th>
                             <th style="width: 200px">Render Progress</th>
                             <th style="width: 200px">Iterations</th>
-                            <th style="width: 200px">Page Count</th>
                             <th>Start</th>
-                            <th>Switch </th>
                             <th>Stop</th>
+                            <th>Switch</th>
+                            <th>Release Size</th>
                             <th>&nbsp;</th>
                         </tr>
                         </thead>

@@ -53,25 +53,29 @@ class BackendUiDataService
 
     public function loadBackendOverviewData()
     {
-        $contentReleases = $this->redisContentReleaseService->fetchAllReleaseIds();
+        $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds();
 
-        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(...$contentReleases);
-        $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleases);
-        $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics(...$contentReleases);
-        $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors(...$contentReleases);
-        $lastRenderingStatistics = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry(...$contentReleases);
+        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(...$contentReleaseIds);
+        $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleaseIds);
+        $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics(...$contentReleaseIds);
+        $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors(...$contentReleaseIds);
+        $lastRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry(...$contentReleaseIds);
+        $firstRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getFirstRenderingStatisticsEntry(...$contentReleaseIds);
 
         $result = [];
-        foreach ($contentReleases as $contentRelease) {
-            $lastRenderingStatistic = RenderingStatistics::fromJsonString($lastRenderingStatistics->getResultForContentRelease($contentRelease));
+        foreach ($contentReleaseIds as $contentReleaseId) {
+            $lastRendering = RenderingStatistics::fromJsonString($lastRenderingStatisticsEntries->getResultForContentRelease($contentReleaseId));
+            $firstRendering = RenderingStatistics::fromJsonString($firstRenderingStatisticsEntries->getResultForContentRelease($contentReleaseId));
+
             $result[] = new ContentReleaseOverviewRow(
-                $contentRelease,
-                $metadata->getResultForContentRelease($contentRelease),
-                $counts->getResultForContentRelease($contentRelease),
-                $iterationsCounts->getResultForContentRelease($contentRelease),
-                $errorCounts->getResultForContentRelease($contentRelease),
-                $lastRenderingStatistic->getTotalJobs() > 0 ? round(RenderingStatistics::fromJsonString($lastRenderingStatistics->getResultForContentRelease($contentRelease))->getRenderedJobs()
-                    / RenderingStatistics::fromJsonString($lastRenderingStatistics->getResultForContentRelease($contentRelease))->getTotalJobs() * 100) : 0
+                $contentReleaseId,
+                $metadata->getResultForContentRelease($contentReleaseId),
+                $counts->getResultForContentRelease($contentReleaseId),
+                $iterationsCounts->getResultForContentRelease($contentReleaseId),
+                $errorCounts->getResultForContentRelease($contentReleaseId),
+                $lastRendering->getTotalJobs() > 0 ? round($lastRendering->getRenderedJobs()
+                    / $lastRendering->getTotalJobs() * 100) : 100,
+                $firstRendering->getRenderedJobs(),
             );
         }
 
