@@ -8,6 +8,9 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
+use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeConstraintFactory;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeName;
@@ -29,6 +32,12 @@ class NodeEnumerator
     protected $redisEnumerationRepository;
 
     /**
+     * @Flow\Inject
+     * @var RedisContentReleaseService
+     */
+    protected $redisContentReleaseService;
+
+    /**
      * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
      * @var string
      */
@@ -38,6 +47,12 @@ class NodeEnumerator
     public function enumerateAndStoreInRedis(?Site $site, ContentReleaseLogger $contentReleaseLogger, ContentReleaseIdentifier $releaseIdentifier)
     {
         $contentReleaseLogger->info('Starting content release', ['contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize()]);
+
+        // set content release status to running
+        $currentMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($releaseIdentifier);
+        $newMetadata = $currentMetadata->withStatus(NodeRenderingCompletionStatus::running());
+        $this->redisContentReleaseService->setContentReleaseMetadata($releaseIdentifier, $newMetadata);
+
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
         foreach (GeneratorUtility::createArrayBatch($this->enumerateAll($site, $contentReleaseLogger), 100) as $enumeration) {
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.

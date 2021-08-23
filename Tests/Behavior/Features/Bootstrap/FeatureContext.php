@@ -18,6 +18,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\Behat\Tests\Behat\FlowContextTrait;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
@@ -199,11 +200,11 @@ class FeatureContext implements Context
     public function iExpectTheContentReleaseToHaveTheCompletionStatusFailed($contentReleaseIdentifier)
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
-        $redisRenderingQueue = $this->objectManager->get(RedisRenderingQueue::class);
-        assert($redisRenderingQueue instanceof RedisRenderingQueue);
-        $completionStatus = $redisRenderingQueue->getCompletionStatus($contentReleaseIdentifier);
-        Assert::isTrue($completionStatus->isFailed(), 'Completion Status should be failed');
-        Assert::isFalse($completionStatus->isSuccessful(), 'Completion Status should not be successful');
+        $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
+        assert($redisContentReleaseService instanceof RedisContentReleaseService);
+        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->getStatus();
+        Assert::isTrue($renderStatus->isFailed(), 'Completion Status should be failed');
+        Assert::isFalse($renderStatus->isSuccessful(), 'Completion Status should not be successful');
     }
 
 
@@ -213,11 +214,11 @@ class FeatureContext implements Context
     public function iExpectTheContentReleaseToHaveTheCompletionStatusSuccess($contentReleaseIdentifier)
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
-        $redisRenderingQueue = $this->objectManager->get(RedisRenderingQueue::class);
-        assert($redisRenderingQueue instanceof RedisRenderingQueue);
-        $completionStatus = $redisRenderingQueue->getCompletionStatus($contentReleaseIdentifier);
-        Assert::isTrue($completionStatus->isSuccessful(), 'Completion Status should be success');
-        Assert::isFalse($completionStatus->isFailed(), 'Completion Status should not be failed');
+        $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
+        assert($redisContentReleaseService instanceof RedisContentReleaseService);
+        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->getStatus();
+        Assert::isTrue($renderStatus->isSuccessful(), 'Completion Status should be success');
+        Assert::isFalse($renderStatus->isFailed(), 'Completion Status should not be failed');
     }
 
     /**

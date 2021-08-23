@@ -7,6 +7,7 @@ namespace Flowpack\DecoupledContentStore\NodeRendering;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\ContentRepository\Domain\Factory\NodeFactory;
 use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\Flow\Annotations as Flow;
@@ -69,6 +70,12 @@ class NodeRenderer
 
     /**
      * @Flow\Inject
+     * @var RedisContentReleaseService
+     */
+    protected $redisContentReleaseService;
+
+    /**
+     * @Flow\Inject
      * @var SiteRepository
      */
     protected $siteRepository;
@@ -111,7 +118,8 @@ class NodeRenderer
 
         $i = 0;
         while (true) {
-            if ($this->redisRenderingQueue->getCompletionStatus($contentReleaseIdentifier) !== null) {
+            $renderStatus = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->getStatus();
+            if ($renderStatus->hasCompleted()) {
                 $contentReleaseLogger->info('Content release completed; so we terminate ourselves gracefully.');
                 yield ExitEvent::createWithStatusCode(0);
                 return;

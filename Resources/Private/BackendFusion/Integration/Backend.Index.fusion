@@ -19,14 +19,18 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                                 {props.contentReleaseIdentifier}
                             </Neos.Fusion:Link.Action>
                             {" "}
+                            <span class="neos-badge" title="status" data-neos-toggle="tooltip">{item.metadata.status.displayName}</span>
                             <span @if.errors={item.ErrorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                         </td>
                         <td>
-                            <span class="neos-badge neos-badge-success" title="rendered" data-neos-toggle="tooltip">{item.renderedUrlCount}</span>
-                            / <span class="neos-badge" title="total" data-neos-toggle="tooltip">{props.enumeratedDocumentNodesCount}</span>
+                            {props.enumeratedDocumentNodesCount}
                         </td>
                         <td>
-                            <span>{item.progress}%</span>
+                            <span @if.isRunning={item.metadata.status.displayName == "running"}>{item.progress}%</span>
+                            <span @if.isNotRunning={item.metadata.status.displayName != "running"}>
+                                <span class="neos-badge neos-badge-success" title="rendered" data-neos-toggle="tooltip">{item.renderedUrlCount}</span>
+                                / <span class="neos-badge" title="total" data-neos-toggle="tooltip">{props.enumeratedDocumentNodesCount}</span>
+                            </span>
                         </td>
                         <td>{item.iterationsCount}</td>
                         <td>{props.start}</td>

@@ -12,6 +12,8 @@ use Neos\Flow\Annotations as Flow;
 final class NodeRenderingCompletionStatus implements \JsonSerializable
 {
 
+    private const SCHEDULED = 'scheduled';
+    private const RUNNING = 'running';
     private const SUCCESS = 'success';
     private const FAILED = 'failed';
 
@@ -22,7 +24,7 @@ final class NodeRenderingCompletionStatus implements \JsonSerializable
 
     private function __construct(string $status)
     {
-        if (!in_array($status, [self::SUCCESS, self::FAILED])) {
+        if (!in_array($status, [self::SCHEDULED, self::RUNNING, self::SUCCESS, self::FAILED])) {
             throw new \InvalidArgumentException('NodeRenderingCompletionStatus "' . $status . '" not found.');
         }
         $this->status = $status;
@@ -31,6 +33,16 @@ final class NodeRenderingCompletionStatus implements \JsonSerializable
     public static function fromString(string $status): self
     {
         return new self($status);
+    }
+
+    public static function scheduled(): self
+    {
+        return new self(self::SCHEDULED);
+    }
+
+    public static function running(): self
+    {
+        return new self(self::RUNNING);
     }
 
     public static function success(): self
@@ -58,9 +70,19 @@ final class NodeRenderingCompletionStatus implements \JsonSerializable
         return $this->status === self::FAILED;
     }
 
+    public function getDisplayName(): string
+    {
+        return $this->status;
+    }
+
+    public function hasCompleted(): bool
+    {
+        return $this->isSuccessful() || $this->isFailed();
+    }
 
     public function jsonSerialize()
     {
         return $this->status;
     }
+
 }

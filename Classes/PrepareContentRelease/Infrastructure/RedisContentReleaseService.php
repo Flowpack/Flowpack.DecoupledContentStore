@@ -29,7 +29,7 @@ class RedisContentReleaseService
         $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable());
         $redis->multi();
         try {
-            $redis->lPush('contentReleaseIds', $contentReleaseIdentifier->getIdentifier());
+            $redis->lPush('contentStore:releases', $contentReleaseIdentifier->getIdentifier());
             $redis->set($contentReleaseIdentifier->redisKey('meta'), json_encode($metadata));
             $redis->exec();
         } catch (\Exception $e) {
@@ -41,6 +41,11 @@ class RedisContentReleaseService
         ]);
     }
 
+    public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata)
+    {
+        $this->redisClientManager->getPrimaryRedis()->set($contentReleaseIdentifier->redisKey('meta'), json_encode($metadata));
+    }
+
     /**
      * @return ContentReleaseIdentifier[]
      * @throws \Exception
@@ -48,7 +53,7 @@ class RedisContentReleaseService
     public function fetchAllReleaseIds(): array
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $contentReleaseIds = $redis->lRange('contentReleaseIds', 0, -1);
+        $contentReleaseIds = $redis->lRange('contentStore:releases', 0, -1);
 
         $result = [];
         foreach ($contentReleaseIds as $contentReleaseId) {
@@ -80,6 +85,5 @@ class RedisContentReleaseService
         }
         return ContentReleaseBatchResult::createFromArray($result);
     }
-
 
 }

@@ -105,20 +105,6 @@ class RedisRenderingQueue
         $this->redisClientManager->getPrimaryRedis()->del($contentReleaseIdentifier->redisKey('renderingJobQueue'), $contentReleaseIdentifier->redisKey('inProgressRenderings'));
     }
 
-    public function setCompletionStatus(ContentReleaseIdentifier $contentReleaseIdentifier, \Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus $completionStatus): void
-    {
-        $this->redisClientManager->getPrimaryRedis()->set($contentReleaseIdentifier->redisKey('completionStatus'), json_encode($completionStatus));
-    }
-
-    public function getCompletionStatus(ContentReleaseIdentifier $contentReleaseIdentifier): ?NodeRenderingCompletionStatus
-    {
-        $completionStatus = $this->redisClientManager->getPrimaryRedis()->get($contentReleaseIdentifier->redisKey('completionStatus'));
-        if ($completionStatus === false) {
-            return null;
-        }
-        return NodeRenderingCompletionStatus::fromJsonString($completionStatus);
-    }
-
     public function addRenderedUrl(ContentReleaseIdentifier $contentReleaseIdentifier, string $renderedUrl)
     {
         $this->redisClientManager->getPrimaryRedis()->zAdd($contentReleaseIdentifier->redisKey('meta:urls'), 0, $renderedUrl);
