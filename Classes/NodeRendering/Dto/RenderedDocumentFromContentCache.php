@@ -60,6 +60,16 @@ final class RenderedDocumentFromContentCache
         return $this->documentNodeCacheValues->getUrl();
     }
 
+    public function getLegacyUrlKey(): string
+    {
+        return "url--" . str_replace('.', '%2E', urlencode($this->documentNodeCacheValues->getUrl()));
+    }
+
+    public function getLegacyMetadataKey(): string
+    {
+        return $this->getLegacyUrlKey() . '%2Emetadata%2Ejson';
+    }
+
     public function getMetadata(): array
     {
         return $this->documentNodeCacheValues->getMetadata();

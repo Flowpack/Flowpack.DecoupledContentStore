@@ -49,7 +49,7 @@ Flowpack:
       #  (must implement ContentReleaseWriterInterface)
       contentReleaseWriters:
         gzipCompressed:
-          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
+          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\LegacyWriter
 
     redisKeyPostfixesForEachRelease:
       # each content release starts with a fixed prefix "contentRelease:[releaseId]:", and afterwards
