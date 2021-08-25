@@ -9,13 +9,14 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriterInterface;
+use Ramsey\Uuid\Uuid;
 
 /**
  * Takes the fully rendered document and writes it to the content release.
  *
  * This is extensible to control the format of the content releases, and to add additional metadata.
  */
-class GzipWriter implements ContentReleaseWriterInterface
+class LegacyWriter implements ContentReleaseWriterInterface
 {
 
     /**
@@ -24,9 +25,22 @@ class GzipWriter implements ContentReleaseWriterInterface
      */
     protected $redisClientManager;
 
+    /**
+     * @Flow\Inject
+     * @var \Neos\Fusion\Core\Cache\ContentCache
+     */
+    protected $contentCache;
+
     public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
-        $compressedContent = gzencode($renderedDocumentFromContentCache->getFullContent(), 9);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('renderedDocuments'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
+        $rootKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, 'content')->toString();
+        $rootMetadataKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, 'metadata')->toString();
+
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getLegacyUrlKey(), $rootKey);
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootKey, $renderedDocumentFromContentCache->getFullContent());
+
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getLegacyMetadataKey(), $rootMetadataKey);
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootMetadataKey, json_encode($renderedDocumentFromContentCache->getMetadata()));
     }
+
 }
