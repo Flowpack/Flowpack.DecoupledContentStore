@@ -40,7 +40,7 @@ class LegacyWriter implements ContentReleaseWriterInterface
         $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootKey, $renderedDocumentFromContentCache->getFullContent());
 
         $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getLegacyMetadataKey(), $rootMetadataKey);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootMetadataKey, json_encode($renderedDocumentFromContentCache->getMetadata()));
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
     }
 
 }

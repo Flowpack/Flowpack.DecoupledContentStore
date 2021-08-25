@@ -26,7 +26,7 @@ class RedisReleaseSwitchService
         $current = $redis->get('contentStore:current');
         $redis->set('contentStore:current', $contentReleaseIdentifier->getIdentifier());
 
-        $contentReleaseLogger->info(sprintf('Switched redis %s from content release %s to %s', $redisInstanceIdentifier->getIdentifier(), $current, $contentReleaseIdentifier));
+        $contentReleaseLogger->info(sprintf('Switched redis %s from content release %s to %s', $redisInstanceIdentifier->getIdentifier(), $current, $contentReleaseIdentifier->getIdentifier()));
     }
 
     public function getCurrentRelease(RedisInstanceIdentifier $redisInstanceIdentifier): ?ContentReleaseIdentifier

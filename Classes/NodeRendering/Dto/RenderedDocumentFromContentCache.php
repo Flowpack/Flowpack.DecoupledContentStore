@@ -75,6 +75,11 @@ final class RenderedDocumentFromContentCache
         return $this->documentNodeCacheValues->getMetadata();
     }
 
+    public function getLegacyMetadataString(): string
+    {
+        return isset($this->documentNodeCacheValues->getMetadata()['louisMetadata']) ? json_encode($this->documentNodeCacheValues->getMetadata()['louisMetadata']) : '';
+    }
+
     public function isComplete(): bool
     {
         return $this->isComplete;
