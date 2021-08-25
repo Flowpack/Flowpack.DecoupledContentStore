@@ -12,6 +12,9 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
 
                 enumeratedDocumentNodesCount = ${item.enumeratedDocumentNodesCount}
                 start = ${Date.format(item.metadata.startTime, 'd.m.Y H:i:s')}
+                end = ${item.metadata.endTime ? Date.format(item.metadata.endTime, 'd.m.Y H:i:s') : ''}
+                switch = ${item.metadata.switchTime ? Date.format(item.metadata.switchTime, 'd.m.Y H:i:s') : ''}
+
                 renderer = afx`
                     <tr>
                         <td>
@@ -34,8 +37,8 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                         </td>
                         <td>{item.iterationsCount}</td>
                         <td>{props.start}</td>
-                        <td>TODO</td>
-                        <td>TODO</td>
+                        <td>{props.end}</td>
+                        <td>{props.switch}</td>
                         <td>TODO</td>
                     </tr>
                 `

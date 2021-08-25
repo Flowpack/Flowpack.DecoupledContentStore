@@ -169,7 +169,7 @@ class NodeRenderOrchestrator
                 $contentReleaseLogger->info('Everything rendered completely. Finishing RenderOrchestrator');
 
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success()));
+                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable()));
 
                 // Exit successfully.
                 yield ExitEvent::createWithStatusCode(0);
