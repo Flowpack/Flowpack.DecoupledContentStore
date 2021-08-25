@@ -43,6 +43,9 @@ final class ContentReleaseMetadata implements \JsonSerializable
 
     public static function fromJsonString($metadataEncoded): self
     {
+        if (!is_string($metadataEncoded)) {
+            throw new \Exception('Metadata is no string...');
+        }
         $tmp = json_decode($metadataEncoded, true);
         if (!is_array($tmp)) {
             throw new \Exception('ContentReleaseMetadata cannot be constructed from: ' . $metadataEncoded);

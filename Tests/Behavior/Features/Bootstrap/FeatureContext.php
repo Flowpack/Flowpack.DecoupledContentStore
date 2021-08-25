@@ -3,6 +3,7 @@
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
@@ -130,6 +131,19 @@ class FeatureContext implements Context
         $this->persistAll();
     }
 
+    /**
+     * @When I create a content release :contentReleaseIdentifier
+     */
+    public function iCreateAContentRelease($contentReleaseIdentifier)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisContentReleaseService = $this->getObjectManager()->get(RedisContentReleaseService::class);
+        $bufferedOutput = new BufferedOutput();
+        $prunnerJobId = PrunnerJobId::fromString("...");
+        $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
+        $redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger);
+        echo $bufferedOutput->fetch();
+    }
 
     /**
      * @When I enumerate all nodes for content release :contentReleaseIdentifier

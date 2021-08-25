@@ -26,6 +26,7 @@ Feature: Basic Rendering
 
   Scenario: Basic successful render
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 1 node
     # for filling the render queue:
@@ -44,6 +45,7 @@ Feature: Basic Rendering
 
   Scenario: No Re-Render because Editor did a modification in his user workspace
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 1 node
     # for filling the render queue:
@@ -69,6 +71,7 @@ Feature: Basic Rendering
 
   Scenario: Re-Render because Editor did a modification in the live workspace
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 1 node
     # for filling the render queue:

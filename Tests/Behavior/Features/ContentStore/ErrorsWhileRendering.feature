@@ -34,6 +34,7 @@ Feature: Errors while rendering
       | /sites/test/main/t1 | Flowpack.DecoupledContentStore.Test:Content.NotExistingInFusion | {"text": "Hallo - this is rendered."} | false         | de       |
 
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 1 node
     # for filling the render queue:
@@ -58,6 +59,7 @@ Feature: Errors while rendering
       | /sites/test/sub | Flowpack.DecoupledContentStore.Test:Document.NotExistingInFusion | {"title":"foo","uriPathSegment":"sub"} | false         | de       |
 
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 2 nodes
     # for filling the render queue:
@@ -82,6 +84,7 @@ Feature: Errors while rendering
       | /sites/test/main/ex | Flowpack.DecoupledContentStore.Test:Content.FusionWithRenderingException | {}         | false         | de       |
 
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 1 node
     # for filling the render queue:
@@ -107,6 +110,7 @@ Feature: Errors while rendering
       | /sites/test/main/ex | Flowpack.DecoupledContentStore.Test:Content.MissingImplementationClass | {}         | false         | de       |
 
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 1 node
     # for filling the render queue:

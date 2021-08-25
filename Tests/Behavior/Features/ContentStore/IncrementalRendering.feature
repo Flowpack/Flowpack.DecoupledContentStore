@@ -37,6 +37,7 @@ Feature: Incremental Rendering
     And I flush the content cache depending on the modified nodes
 
     # build content release
+    When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 3 node
     # for filling the render queue:
@@ -67,6 +68,7 @@ Feature: Incremental Rendering
     And I set the node property "text" to "New Text"
     And I flush the content cache depending on the modified nodes
 
+    When I create a content release "6"
     When I enumerate all nodes for content release "6"
     When I run the render-orchestrator control loop once for content release "6"
     # no rerendering of the sub2 branch needed
