@@ -57,7 +57,41 @@ Flowpack:
       # each content release starts with a fixed prefix "contentRelease:[releaseId]:", and afterwards
       # follows a part which needs to be registered here. This is needed for synchronization between different
       # content stores and cleanup of old releases.
-      renderedContent: true
+      data:
+        redisKeyPostfix: 'data'
+        enabled: true
+        transferMode: 'hash_incremental'
+        isRequired: true
+      enumerationDocumentNodes:
+        redisKeyPostfix: 'enumeration:documentNodes'
+        enabled: true
+        transferMode: 'dump'
+        isRequired: true
+      meta:
+        redisKeyPostfix: 'meta'
+        enabled: true
+        transferMode: 'dump'
+        isRequired: true
+      metaUrls:
+        redisKeyPostfix: 'meta:urls'
+        enabled: true
+        transferMode: 'dump'
+        isRequired: true
+      renderedDocuments:
+        redisKeyPostfix: 'renderedDocuments'
+        enabled: true
+        transferMode: 'hash_incremental'
+        isRequired: true
+      renderedMetadata:
+        redisKeyPostfix: 'renderedMetadata'
+        enabled: true
+        transferMode: 'hash_incremental'
+        isRequired: true
+      renderingStatistics:
+        redisKeyPostfix: 'renderingStatistics'
+        enabled: true
+        transferMode: 'dump'
+        isRequired: true
 
 
 

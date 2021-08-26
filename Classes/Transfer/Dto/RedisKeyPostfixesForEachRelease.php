@@ -25,8 +25,8 @@ class RedisKeyPostfixesForEachRelease
     public static function fromArray(array $in): self
     {
         $result = [];
-        foreach ($in as $key => $config) {
-            $result[] = RedisKeyPostfixForEachRelease::fromArray($key, $config);
+        foreach ($in as $config) {
+            $result[] = RedisKeyPostfixForEachRelease::fromArray($config);
         }
         return new self($result);
     }
@@ -41,5 +41,13 @@ class RedisKeyPostfixesForEachRelease
                 yield $redisKeyPostfix;
             }
         }
+    }
+
+    /**
+     * @return RedisKeyPostfixForEachRelease[]
+     */
+    public function getRedisKeyPostfixes(): array
+    {
+        return $this->redisKeyPostfixes;
     }
 }

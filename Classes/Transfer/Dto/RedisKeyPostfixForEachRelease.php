@@ -5,14 +5,12 @@ namespace Flowpack\DecoupledContentStore\Transfer\Dto;
 class RedisKeyPostfixForEachRelease
 {
 
-    protected string $redisKeyPostfix;
-
-    protected bool $enabled;
-
     private const TRANSFER_MODE_HASH_INCREMENTAL = 'hash_incremental';
     private const TRANSFER_MODE_DUMP = 'dump';
-    protected string $transferMode;
 
+    protected string $redisKeyPostfix;
+    protected bool $enabled;
+    protected string $transferMode;
     protected bool $isRequired;
 
     /**
@@ -34,10 +32,10 @@ class RedisKeyPostfixForEachRelease
     }
 
 
-    public static function fromArray(string $key, array $in): self
+    public static function fromArray(array $in): self
     {
         return new self(
-            $key,
+            $in['redisKeyPostfix'],
             $in['enabled'],
             $in['transferMode'],
             $in['isRequired']
@@ -59,5 +57,17 @@ class RedisKeyPostfixForEachRelease
         return $this->redisKeyPostfix;
     }
 
+    /**
+     * @return string
+     */
+    public function getTransferMode(): string
+    {
+        return $this->transferMode;
+    }
+
+    public function hasTransferModeHashIncremental(): bool
+    {
+        return $this->transferMode === self::TRANSFER_MODE_HASH_INCREMENTAL;
+    }
 
 }
