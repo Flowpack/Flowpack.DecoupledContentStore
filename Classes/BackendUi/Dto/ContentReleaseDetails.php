@@ -18,19 +18,21 @@ class ContentReleaseDetails
     private ?Job $job;
     private int $enumeratedDocumentNodesCount;
     private int $renderingErrorCount;
+    private bool $isActive;
 
     /**
      * @var RenderingStatistics[]
      */
     private array $renderingStatistics;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount)
+    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount, bool $isActive)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;
         $this->enumeratedDocumentNodesCount = $enumeratedDocumentNodesCount;
         $this->renderingStatistics = $renderingStatistics;
         $this->renderingErrorCount = $renderingErrorCount;
+        $this->isActive = $isActive;
     }
 
     /**
@@ -72,5 +74,13 @@ class ContentReleaseDetails
     {
         return $this->renderingErrorCount;
     }
-    
+
+    /**
+     * @return bool
+     */
+    public function isActive(): bool
+    {
+        return $this->isActive;
+    }
+
 }

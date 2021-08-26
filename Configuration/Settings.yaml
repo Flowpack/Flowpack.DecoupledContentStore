@@ -49,6 +49,8 @@ Flowpack:
       #  (must implement ContentReleaseWriterInterface)
       contentReleaseWriters:
         gzipCompressed:
+          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
+        legacy:
           className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\LegacyWriter
 
     redisKeyPostfixesForEachRelease:

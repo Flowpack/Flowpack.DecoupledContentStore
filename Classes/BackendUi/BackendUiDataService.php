@@ -7,11 +7,13 @@ namespace Flowpack\DecoupledContentStore\BackendUi;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseDetails;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
+use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Utility\Sparkline;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
@@ -50,6 +52,12 @@ class BackendUiDataService
      * @var RedisRenderingErrorManager
      */
     protected $redisRenderingErrorManager;
+
+    /**
+     * @Flow\Inject
+     * @var RedisReleaseSwitchService
+     */
+    protected $redisReleaseSwitchService;
 
     public function loadBackendOverviewData()
     {
@@ -91,14 +99,18 @@ class BackendUiDataService
             return RenderingStatistics::fromJsonString($item);
         }, $this->redisRenderingStatisticsStore->getRenderingStatistics($contentReleaseIdentifier));
 
-        $renderingErrors = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
+        $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
+
+        // TODO: distinct backend views for each redis instance
+        $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease(RedisInstanceIdentifier::primary())->getIdentifier();
 
         return new ContentReleaseDetails(
             $contentReleaseIdentifier,
             $contentReleaseJob,
             $this->redisEnumerationRepository->count($contentReleaseIdentifier),
             $renderingStatistics,
-            $renderingErrors
+            $renderingErrorCount,
+            $contentReleaseIdentifier->getIdentifier() === $currentReleaseIdentifier
         );
     }
 }

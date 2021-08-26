@@ -33,13 +33,16 @@ class LegacyWriter implements ContentReleaseWriterInterface
 
     public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
-        $rootKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, 'content')->toString();
-        $rootMetadataKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, 'metadata')->toString();
+        $urlKey = $renderedDocumentFromContentCache->getLegacyUrlKey();
+        $metadataUrlKey = $renderedDocumentFromContentCache->getLegacyMetadataKey();
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getLegacyUrlKey(), $rootKey);
+        $rootKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, $urlKey)->toString();
+        $rootMetadataKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, $metadataUrlKey)->toString();
+
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $urlKey, $rootKey);
         $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootKey, $renderedDocumentFromContentCache->getFullContent());
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getLegacyMetadataKey(), $rootMetadataKey);
+        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $metadataUrlKey, $rootMetadataKey);
         $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
     }
 
