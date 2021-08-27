@@ -46,6 +46,7 @@ Feature: Errors while rendering
     Then I expect the render-orchestrator control loop to exit with status code 4
     Then I expect the content release "5" to not contain anything for URI "http://test.de/de"
     And I expect the content release "5" to have the completion status failed
+    And no next content release was triggered
 
   Scenario: Non-Existing Fusion Prototype for a document Node
     Given I have the following additional NodeTypes configuration:
@@ -71,6 +72,7 @@ Feature: Errors while rendering
     Then I expect the render-orchestrator control loop to exit with status code 4
     Then I expect the content release "5" to not contain anything for URI "http://test.de/de/sub"
     And I expect the content release "5" to have the completion status failed
+    And no next content release was triggered
 
   Scenario: Exception during Fusion invocation
     Given I have the following additional NodeTypes configuration:
@@ -96,6 +98,7 @@ Feature: Errors while rendering
     Then I expect the render-orchestrator control loop to exit with status code 4
     Then I expect the content release "5" to not contain anything for URI "http://test.de/de"
     And I expect the content release "5" to have the completion status failed
+    And no next content release was triggered
 
 
   Scenario: Missing Fusion Implementation Class
@@ -122,3 +125,4 @@ Feature: Errors while rendering
     Then I expect the render-orchestrator control loop to exit with status code 4
     Then I expect the content release "5" to not contain anything for URI "http://test.de/de"
     And I expect the content release "5" to have the completion status failed
+    And no next content release was triggered

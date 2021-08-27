@@ -12,6 +12,9 @@ Feature: Basic Rendering
     Flowpack.DecoupledContentStore.Test:Content.Text:
       superTypes:
         'Neos.Neos:Content': true
+      properties:
+        text:
+          type: string
 
     """
     Given I am authenticated with role "Neos.Neos:Editor"
@@ -41,6 +44,7 @@ Feature: Basic Rendering
     """
     BEFOREHallo - this is rendered.AFTER
     """
+    And no next content release was triggered
 
 
   Scenario: No Re-Render because Editor did a modification in his user workspace
@@ -68,23 +72,26 @@ Feature: Basic Rendering
     """
     BEFOREHallo - this is rendered.AFTER
     """
+    And no next content release was triggered
 
   Scenario: Re-Render because Editor did a modification in the live workspace
     # build content release
     When I create a content release "5"
     When I enumerate all nodes for content release "5"
     Then the enumeration for content release "5" contains 1 node
-    # for filling the render queue:
+    # rendering
     When I run the render-orchestrator control loop once for content release "5"
     And I run the renderer for content release "5" until the queue is empty
     Then during rendering of content release "5", no errors occured
 
-    # Now, the Editor does a modification, BUT IN THE LIVE. This should trigger a re-rendering
+    # Now, the Editor does a modification, BUT IN WORKSPACE AND PUBLISHES. This should trigger a re-rendering
     When I get a node by path "/sites/test/main/t1" with the following context:
-      | Workspace | Language |
-      | live      | de       |
+      | Workspace  | Language |
+      | user-admin | de       |
     And I set the node property "text" to "New Text"
+    And I publish unpublished nodes of workspace "user-admin"
     And I flush the content cache depending on the modified nodes
+    Then a next content release was triggered
 
     # because a modification has happened, the rendered node cannot be copied over to the finished content release;
     # thus the content release cannot contain anything at this position yet.
@@ -101,3 +108,5 @@ Feature: Basic Rendering
     """
     BEFORENew TextAFTER
     """
+    And no next content release was triggered
+

@@ -26,7 +26,7 @@ class IncrementalContentReleaseHandler
         $this->nodePublishedInThisRequest = true;
     }
 
-    public function startContentReleaseIfNotRunning()
+    public function startContentReleaseIfNodesWerePublishedBefore()
     {
         if ($this->nodePublishedInThisRequest === true) {
             $this->contentReleaseManager->startIncrementalContentRelease();

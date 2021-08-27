@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\DocumentRenderedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
@@ -145,6 +146,7 @@ class NodeRenderer
                     ]);
                 }
             }
+            yield DocumentRenderedEvent::create();
 
             $i++;
             if ($i % 20 === 0) {
@@ -192,7 +194,6 @@ class NodeRenderer
                 ]);
 
                 $this->documentRenderer->renderDocumentNodeVariant($node, $enumeratedNode->getArguments(), $contentReleaseLogger);
-
             }
             // NOTE: we do not abort rendering directly, when we encounter any error, but we try to render
             // all pages in the full iteration (and then, if errors exist, we stop).
@@ -222,11 +223,12 @@ class NodeRenderer
         if (!$nodeWasFound) {
             // A node which was part of the ContentEnumeration was not found.
             // It is not possible to complete the content release successfully after this point in time, so
-            // we need to abort the content release altogether and start again with a fresh enumeration.
-
-            $contentReleaseLogger->error('We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error.', ['node' => $enumeratedNode->debugString()]);
+            // we register a rendering error and ensure a new incremental content release is started.
+            //
+            // NOTE: we do not directly abort (via exit(1)) the pipeline, as we want to get a list of all missing pages (and not just the first one).
+            // Thus, we simply register a rendering error and ensure the next release will start after this one.s
+            $this->redisRenderingErrorManager->registerRenderingError($contentReleaseIdentifier, ['node' => $enumeratedNode->debugString()], new \Exception('We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error'));
             $this->contentReleaseManager->startIncrementalContentRelease();
-            exit(1);
         }
     }
 

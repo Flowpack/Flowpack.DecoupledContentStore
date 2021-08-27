@@ -31,7 +31,7 @@ class Package extends BasePackage
         // In our case, we want to ONLY listen to web requests, ignoring CLI requests. Thus, we check for the type of the Controller, which is CommandControllerInterface for CLI; and ControllerInterface for web.
         $dispatcher->connect('Neos\Flow\Mvc\Dispatcher', 'afterControllerInvocation', function($request, $response, $controller) use ($bootstrap) {
             if ($controller instanceof ControllerInterface) {
-                $bootstrap->getObjectManager()->get(IncrementalContentReleaseHandler::class)->startContentReleaseIfNotRunning();
+                $bootstrap->getObjectManager()->get(IncrementalContentReleaseHandler::class)->startContentReleaseIfNodesWerePublishedBefore();
             }
         });
     }

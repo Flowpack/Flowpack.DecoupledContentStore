@@ -16,6 +16,8 @@ final class EnumeratedNode implements \JsonSerializable
      * We extract the to-be-rendered dimensions and the current site from the context path. Other than that,
      * it is used NOT for rendering.
      *
+     * You are NOT ALLOWED to rely on this stored context path as a whole during rendering, because it might have changed because of a move.
+     *
      * @var string
      */
     protected $contextPath;

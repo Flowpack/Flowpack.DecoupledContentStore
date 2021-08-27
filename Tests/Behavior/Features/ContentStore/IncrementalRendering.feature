@@ -99,3 +99,4 @@ Feature: Incremental Rendering
     """
     BEFOREHallo - this is rendered.AFTER
     """
+      And no next content release was triggered

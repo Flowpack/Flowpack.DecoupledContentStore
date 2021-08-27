@@ -2,10 +2,12 @@
 
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
+use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\IncrementalContentReleaseHandler;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
@@ -15,12 +17,15 @@ use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntime;
 use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntimeEventInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
+use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\DocumentRenderedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
+use Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures\StubPrunnerApiService;
 use Neos\Behat\Tests\Behat\FlowContextTrait;
+use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
@@ -60,6 +65,8 @@ class FeatureContext implements Context
 
     private ?InterruptibleProcessRuntime $renderOrchestratorProcess;
     private ?InterruptibleProcessRuntimeEventInterface $renderOrchestratorProcessLastEvent;
+    private StubPrunnerApiService $stubPrunnerApiService;
+    private BufferedOutput $renderOrchestratorProcessBufferedOutput;
 
     public function __construct()
     {
@@ -71,6 +78,11 @@ class FeatureContext implements Context
 
         // for testing, we use Private/EndToEndTestFusion as fusion folder to load.
         CustomFusionView::$useCustomSiteRootFusionPatternEntryPointForBehavioralTests = true;
+
+        $contentReleaseManager = $this->objectManager->get(ContentReleaseManager::class);
+        assert($contentReleaseManager instanceof ContentReleaseManager);
+        $this->stubPrunnerApiService = new StubPrunnerApiService();
+        ObjectAccess::setProperty($contentReleaseManager, 'prunnerApiService', $this->stubPrunnerApiService, true);
     }
 
     /**
@@ -99,8 +111,6 @@ class FeatureContext implements Context
         /** @var RedisClientManager $redisClientManager */
         $redisClientManager = $this->objectManager->get(RedisClientManager::class);
         $redisClientManager->getPrimaryRedis()->flushAll();
-
-
     }
 
 
@@ -181,12 +191,12 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $nodeRenderOrchestrator = $this->getObjectManager()->get(NodeRenderOrchestrator::class);
 
-        $bufferedOutput = new BufferedOutput();
-        $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
+        $this->renderOrchestratorProcessBufferedOutput = new BufferedOutput();
+        $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($this->renderOrchestratorProcessBufferedOutput, $contentReleaseIdentifier);
         $this->renderOrchestratorProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $contentReleaseLogger));
         $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
 
-        echo $bufferedOutput->fetch();
+        echo $this->renderOrchestratorProcessBufferedOutput->fetch();
     }
 
     /**
@@ -195,6 +205,7 @@ class FeatureContext implements Context
     public function iContinueRunningTheRenderOrchestratorControlLoop()
     {
         $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
+        echo $this->renderOrchestratorProcessBufferedOutput->fetch();
     }
 
     /**
@@ -248,6 +259,26 @@ class FeatureContext implements Context
 
         $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render($contentReleaseIdentifier, $contentReleaseLogger, RendererIdentifier::fromString('rdr')));
         $renderProcess->runUntilEventEncountered(QueueEmptyEvent::class);
+
+        echo $bufferedOutput->fetch();
+    }
+
+    /**
+     * @When I run the renderer for content release :contentReleaseIdentifier for :expectedRenderCount renders
+     */
+    public function iRunTheRendererForContentReleaseForRenders($contentReleaseIdentifier, $expectedRenderCount)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $nodeRenderer = $this->getObjectManager()->get(NodeRenderer::class);
+
+        $bufferedOutput = new BufferedOutput();
+        $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
+
+        $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render($contentReleaseIdentifier, $contentReleaseLogger, RendererIdentifier::fromString('rdr')));
+
+        for ($i = 0; $i < $expectedRenderCount; $i++) {
+            $renderProcess->runUntilEventEncountered(DocumentRenderedEvent::class);
+        }
 
         echo $bufferedOutput->fetch();
     }
@@ -325,12 +356,29 @@ EOF;
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('data'), $uri);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('renderedDocuments'), $uri);
         Assert::assertIsString($actualContent, "Did not find rendered document");
         $actualContentDecompressed = gzdecode($actualContent);
 
         $domCrawler = new Symfony\Component\DomCrawler\Crawler($actualContentDecompressed);
         $actual = $domCrawler->filter($cssSelector)->text();
+        Assert::assertSame($expected->getRaw(), $actual, 'Full Output was: ' . $actualContentDecompressed);
+    }
+
+
+    /**
+     * @Then I expect the content release :contentReleaseIdentifier to contain the following HTML content for URI :uri at CSS selector :cssSelector:
+     */
+    public function iExpectTheContentReleaseToContainTheFollowingHtmlContentForUriAtCssSelector($contentReleaseIdentifier, $uri, $cssSelector, PyStringNode $expected)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('renderedDocuments'), $uri);
+        Assert::assertIsString($actualContent, "Did not find rendered document");
+        $actualContentDecompressed = gzdecode($actualContent);
+
+        $domCrawler = new Symfony\Component\DomCrawler\Crawler($actualContentDecompressed);
+        $actual = $domCrawler->filter($cssSelector)->html();
         Assert::assertSame($expected->getRaw(), $actual, 'Full Output was: ' . $actualContentDecompressed);
     }
 
@@ -341,7 +389,7 @@ EOF;
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('data'), $uri);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('renderedDocuments'), $uri);
         Assert::assertFalse($actualContent);
     }
 
@@ -373,4 +421,56 @@ EOF;
 
         Assert::assertEquals($expectedCount, $actual, 'Count does not match');
     }
+
+    /**
+     * @Then a next content release was triggered
+     */
+    public function aNextContentReleaseWasTriggered()
+    {
+        $incrementalContentReleaseHandler = $this->objectManager->get(IncrementalContentReleaseHandler::class);
+        $incrementalContentReleaseHandler->startContentReleaseIfNodesWerePublishedBefore();
+
+        Assert::assertTrue(count($this->stubPrunnerApiService->calls) > 0);
+
+        // reset all invocations
+        $this->stubPrunnerApiService->calls = [];
+        ObjectAccess::setProperty($incrementalContentReleaseHandler, 'nodePublishedInThisRequest', false, true);
+    }
+
+    /**
+     * @Then no next content release was triggered
+     */
+    public function noNextContentReleaseWasTriggered()
+    {
+        $incrementalContentReleaseHandler = $this->objectManager->get(IncrementalContentReleaseHandler::class);
+        $incrementalContentReleaseHandler->startContentReleaseIfNodesWerePublishedBefore();
+
+        Assert::assertCount(0, $this->stubPrunnerApiService->calls);
+
+        // reset all invocations
+        $this->stubPrunnerApiService->calls = [];
+        ObjectAccess::setProperty($incrementalContentReleaseHandler, 'nodePublishedInThisRequest', false, true);
+    }
+
+    /**
+     * @When I publish unpublished nodes of workspace :workspaceName
+     */
+    public function iPublishUnpublishedNodesOfWorkspace($workspaceName)
+    {
+        $publishingService = $this->getPublishingService();
+        $workspaceRepository = $this->getObjectManager()->get(WorkspaceRepository::class);
+        assert($workspaceRepository instanceof WorkspaceRepository);
+        $workspace = $workspaceRepository->findByIdentifier($workspaceName);
+
+        $unpublishedNodes = $publishingService->getUnpublishedNodes($workspace);
+        // NOTE: we explicitly need to specify the target workspace here, otherwise, the *node's workspace base workspace*
+        // $node->getWorkspace()->getBaseWorkspace() is used in PublishingService.
+        // This is WRONG I believe, I guess we would need $node->getContext()->getWorkspace()->getBaseWorkspace().
+        // By passing in the workspace explicitly here, we circumvent the issue.
+        $publishingService->publishNodes($unpublishedNodes, $workspace->getBaseWorkspace());
+        $this->objectManager->get(PersistenceManagerInterface::class)->persistAll();
+        $this->resetNodeInstances();
+
+    }
+
 }

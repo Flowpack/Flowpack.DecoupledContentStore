@@ -1,0 +1,9 @@
+Flowpack:
+  DecoupledContentStore:
+    extensions:
+      # Register additional content release writers, being called for every finished node which should be added
+      # to the content release.
+      #  (must implement ContentReleaseWriterInterface)
+      contentReleaseWriters:
+        gzipCompressed:
+          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
