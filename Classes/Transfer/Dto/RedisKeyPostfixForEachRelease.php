@@ -2,7 +2,13 @@
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer\Dto;
-class RedisKeyPostfixForEachRelease
+
+use Neos\Flow\Annotations as Flow;
+
+/**
+ * @Flow\Proxy(false)
+ */
+final class RedisKeyPostfixForEachRelease
 {
 
     private const TRANSFER_MODE_HASH_INCREMENTAL = 'hash_incremental';

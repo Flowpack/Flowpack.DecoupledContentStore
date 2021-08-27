@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters;
 
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -24,9 +25,15 @@ class GzipWriter implements ContentReleaseWriterInterface
      */
     protected $redisClientManager;
 
+    /**
+     * @Flow\Inject
+     * @var RedisKeyService
+     */
+    protected $redisKeyService;
+
     public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
         $compressedContent = gzencode($renderedDocumentFromContentCache->getFullContent(), 9);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('renderedDocuments'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
+        $this->redisClientManager->getPrimaryRedis()->hSet($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
     }
 }

@@ -356,6 +356,11 @@ CacheUrlMappingAspect - * NOTE: This aspect is NOT active during interactive pag
 * ONLY re-uses content cache entries created by previous Batch Renderings.
 
 
+### Debugging
+
+If you need to debug single steps of the pipeline just run the corresponding commands from CLI, 
+e.g. `./flow nodeEnumeration:enumerateAllNodes {{ .contentReleaseId }}`.
+
 ### Testing the Rendering
 
 For executing behavioral tests, install the `neos/behat` package and run `./flow behat:setup`. Then:

@@ -67,6 +67,11 @@ Flowpack:
         enabled: true
         transferMode: 'dump'
         isRequired: true
+      inProgressRenderings:
+        redisKeyPostfix: 'inProgressRenderings'
+        enabled: false
+        transferMode: 'dump'
+        isRequired: true
       meta:
         redisKeyPostfix: 'meta'
         enabled: true
@@ -81,6 +86,16 @@ Flowpack:
         redisKeyPostfix: 'renderedDocuments'
         enabled: true
         transferMode: 'hash_incremental'
+        isRequired: true
+      renderingErrors:
+        redisKeyPostfix: 'renderingErrors'
+        enabled: false
+        transferMode: 'dump'
+        isRequired: true
+      renderingJobQueue:
+        redisKeyPostfix: 'renderingJobQueue'
+        enabled: false
+        transferMode: 'dump'
         isRequired: true
       renderedMetadata:
         redisKeyPostfix: 'renderedMetadata'

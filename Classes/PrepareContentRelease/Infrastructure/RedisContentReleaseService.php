@@ -6,6 +6,7 @@ use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
@@ -23,6 +24,12 @@ class RedisContentReleaseService
      */
     protected $redisClientManager;
 
+    /**
+     * @Flow\Inject
+     * @var RedisKeyService
+     */
+    protected $redisKeyService;
+
     public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger)
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
@@ -30,7 +37,7 @@ class RedisContentReleaseService
         $redis->multi();
         try {
             $redis->lPush('contentStore:releases', $contentReleaseIdentifier->getIdentifier());
-            $redis->set($contentReleaseIdentifier->redisKey('meta'), json_encode($metadata));
+            $redis->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta'), json_encode($metadata));
             $redis->exec();
         } catch (\Exception $e) {
             $redis->discard();
@@ -43,7 +50,7 @@ class RedisContentReleaseService
 
     public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata)
     {
-        $this->redisClientManager->getPrimaryRedis()->set($contentReleaseIdentifier->redisKey('meta'), json_encode($metadata));
+        $this->redisClientManager->getPrimaryRedis()->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta'), json_encode($metadata));
     }
 
     /**
@@ -65,7 +72,7 @@ class RedisContentReleaseService
     public function fetchMetadataForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier): ContentReleaseMetadata
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $metadataEncoded = $redis->get($contentReleaseIdentifier->redisKey('meta'));
+        $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta'));
         return ContentReleaseMetadata::fromJsonString($metadataEncoded);
     }
 
@@ -76,7 +83,7 @@ class RedisContentReleaseService
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
-                $redisPipeline->get($releaseIdentifier->redisKey('meta'));
+                $redisPipeline->get($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'meta'));
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {

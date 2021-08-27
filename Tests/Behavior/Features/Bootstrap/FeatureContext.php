@@ -4,6 +4,7 @@ use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
@@ -325,7 +326,8 @@ EOF;
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('data'), $uri);
+        $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'data'), $uri);
         Assert::assertIsString($actualContent, "Did not find rendered document");
         $actualContentDecompressed = gzdecode($actualContent);
 
@@ -341,7 +343,8 @@ EOF;
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('data'), $uri);
+        $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'data'), $uri);
         Assert::assertFalse($actualContent);
     }
 

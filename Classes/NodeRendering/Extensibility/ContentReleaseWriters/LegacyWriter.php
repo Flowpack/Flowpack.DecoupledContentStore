@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters;
 
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -27,6 +28,12 @@ class LegacyWriter implements ContentReleaseWriterInterface
 
     /**
      * @Flow\Inject
+     * @var RedisKeyService
+     */
+    protected $redisKeyService;
+
+    /**
+     * @Flow\Inject
      * @var \Neos\Fusion\Core\Cache\ContentCache
      */
     protected $contentCache;
@@ -39,11 +46,13 @@ class LegacyWriter implements ContentReleaseWriterInterface
         $rootKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, $urlKey)->toString();
         $rootMetadataKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, $metadataUrlKey)->toString();
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $urlKey, $rootKey);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootKey, $renderedDocumentFromContentCache->getFullContent());
+        $redisDataKey = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'data');
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $metadataUrlKey, $rootMetadataKey);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
+        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $urlKey, $rootKey);
+        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $rootKey, $renderedDocumentFromContentCache->getFullContent());
+
+        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $metadataUrlKey, $rootMetadataKey);
+        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
     }
 
 }

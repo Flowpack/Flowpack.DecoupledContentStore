@@ -14,7 +14,6 @@ use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingEr
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
-use Flowpack\DecoupledContentStore\Utility\Sparkline;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
 

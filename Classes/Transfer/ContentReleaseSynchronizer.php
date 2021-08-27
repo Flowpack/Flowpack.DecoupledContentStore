@@ -7,6 +7,7 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Neos\Flow\Annotations as Flow;
 
@@ -27,6 +28,12 @@ class ContentReleaseSynchronizer
      */
     protected $redisKeyPostfixesForEachReleaseConfiguration;
 
+    /**
+     * @Flow\Inject
+     * @var RedisKeyService
+     */
+    protected $redisKeyService;
+
     public function syncToTarget(RedisInstanceIdentifier $targetRedisIdentifier, ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger): void
     {
         $contentReleaseLogger->info('Syncing Content Release ' . $contentReleaseIdentifier->getIdentifier() . ' to target ' . $targetRedisIdentifier->getIdentifier());
@@ -42,7 +49,7 @@ class ContentReleaseSynchronizer
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
 
         foreach ($redisKeyPostfixesForEachRelease->getAllEnabled() as $redisKeyPostfix) {
-            $redisKey = $contentReleaseIdentifier->redisKey($redisKeyPostfix->getRedisKeyPostfix());
+            $redisKey = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix());
             $contentReleaseLogger->info($redisKey);
             if ($redisKeyPostfix->isRequired()) {
                 if (!$sourceRedis->exists($redisKey)) {
@@ -51,9 +58,9 @@ class ContentReleaseSynchronizer
                 }
 
                 if ($redisKeyPostfix->hasTransferModeHashIncremental()) {
-                    $this->transferHashKeyIncrementally($sourceRedis, $targetRedis, $contentReleaseIdentifier->redisKey($redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
+                    $this->transferHashKeyIncrementally($sourceRedis, $targetRedis, $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
                 } else {
-                    $this->transferKey($sourceRedis, $targetRedis, $contentReleaseIdentifier->redisKey($redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
+                    $this->transferKey($sourceRedis, $targetRedis, $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
                 }
             }
         }
