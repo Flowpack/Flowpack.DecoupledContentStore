@@ -37,7 +37,7 @@ class RedisContentReleaseService
         $redis->multi();
         try {
             $redis->lPush('contentStore:releases', $contentReleaseIdentifier->getIdentifier());
-            $redis->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta'), json_encode($metadata));
+            $redis->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
             $redis->exec();
         } catch (\Exception $e) {
             $redis->discard();
@@ -50,7 +50,7 @@ class RedisContentReleaseService
 
     public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata)
     {
-        $this->redisClientManager->getPrimaryRedis()->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta'), json_encode($metadata));
+        $this->redisClientManager->getPrimaryRedis()->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:infoF'), json_encode($metadata));
     }
 
     /**
@@ -72,7 +72,7 @@ class RedisContentReleaseService
     public function fetchMetadataForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier): ContentReleaseMetadata
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta'));
+        $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'));
         return ContentReleaseMetadata::fromJsonString($metadataEncoded);
     }
 
@@ -83,7 +83,7 @@ class RedisContentReleaseService
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
-                $redisPipeline->get($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'meta'));
+                $redisPipeline->get($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'meta:info'));
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {

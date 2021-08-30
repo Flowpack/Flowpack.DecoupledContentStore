@@ -72,8 +72,8 @@ Flowpack:
         transfer: false
         transferMode: 'dump'
         isRequired: true
-      meta:
-        redisKeyPostfix: 'meta'
+      metainfo:
+        redisKeyPostfix: 'meta:info'
         transfer: true
         transferMode: 'dump'
         isRequired: true
