@@ -36,7 +36,7 @@ class RedisContentReleaseService
         $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable());
         $redis->multi();
         try {
-            $redis->lPush('contentStore:releases', $contentReleaseIdentifier->getIdentifier());
+            $redis->lPush('contentStore:registeredReleases', $contentReleaseIdentifier->getIdentifier());
             $redis->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
             $redis->exec();
         } catch (\Exception $e) {
@@ -50,7 +50,7 @@ class RedisContentReleaseService
 
     public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata)
     {
-        $this->redisClientManager->getPrimaryRedis()->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:infoF'), json_encode($metadata));
+        $this->redisClientManager->getPrimaryRedis()->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
     }
 
     /**
@@ -60,7 +60,7 @@ class RedisContentReleaseService
     public function fetchAllReleaseIds(): array
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $contentReleaseIds = $redis->lRange('contentStore:releases', 0, -1);
+        $contentReleaseIds = $redis->lRange('contentStore:registeredReleases', 0, -1);
 
         $result = [];
         foreach ($contentReleaseIds as $contentReleaseId) {

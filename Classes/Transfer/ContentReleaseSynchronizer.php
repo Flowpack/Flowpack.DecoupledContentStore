@@ -108,8 +108,7 @@ class ContentReleaseSynchronizer
             return;
         }
         if ($targetRedis->exists($keyToTransfer)) {
-            $contentReleaseLogger->warn('SYNC: (INCREMENTAL) Skipping ' . $keyToTransfer . ', as it DOES exist on the target side (and we do not override!)');
-            return;
+            $contentReleaseLogger->warn('SYNC: (INCREMENTAL) WARNING: ' . $keyToTransfer . ', exists on the target side; we try to copy all values into it.');
         }
 
         if ($sourceRedis->type($keyToTransfer) !== \Redis::REDIS_HASH) {
