@@ -7,3 +7,15 @@ Flowpack:
       contentReleaseWriters:
         gzipCompressed:
           className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
+
+    redisKeyPostfixesForEachRelease:
+      renderedDocuments:
+        redisKeyPostfix: 'renderedDocuments'
+        transfer: true
+        transferMode: 'hash_incremental'
+        isRequired: true
+      renderedMetadata:
+        redisKeyPostfix: 'renderedMetadata'
+        transfer: true
+        transferMode: 'hash_incremental'
+        isRequired: true

@@ -376,7 +376,9 @@ EOF;
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($contentReleaseIdentifier->redisKey('renderedDocuments'), $uri);
+        $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
+
+        $actualContent = $redisClient->getPrimaryRedis()->hGet($redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $uri);
         Assert::assertIsString($actualContent, "Did not find rendered document");
         $actualContentDecompressed = gzdecode($actualContent);
 
