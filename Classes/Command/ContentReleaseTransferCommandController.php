@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Command;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseSynchronizer;
 use Flowpack\DecoupledContentStore\Transfer\Resource\RemoteResourceSynchronizer;
 use Neos\Flow\Annotations as Flow;
@@ -28,6 +29,12 @@ class ContentReleaseTransferCommandController extends CommandController
      */
     protected $contentReleaseSynchronizer;
 
+    /**
+     * @Flow\Inject
+     * @var ContentReleaseCleaner
+     */
+    protected $contentReleaseCleaner;
+
     public function syncResourcesCommand(string $contentReleaseIdentifier)
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
@@ -41,5 +48,13 @@ class ContentReleaseTransferCommandController extends CommandController
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisContentStoreIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
         $this->contentReleaseSynchronizer->syncToTarget($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
+    }
+
+    public function removeOldReleasesCommand(string $redisContentStoreIdentifier, string $contentReleaseIdentifier)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisContentStoreIdentifier);
+        $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
+        $this->contentReleaseCleaner->removeOldReleases($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
     }
 }

@@ -46,4 +46,9 @@ final class ContentReleaseIdentifier implements \JsonSerializable
     {
         return $this->identifier;
     }
+
+    public function equals(?ContentReleaseIdentifier $other): bool
+    {
+        return $other !== null && $this->identifier === $other->identifier;
+    }
 }

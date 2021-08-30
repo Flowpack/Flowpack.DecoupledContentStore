@@ -147,7 +147,8 @@ pipelines:
           # and adjust the name of the redis instance you want to sync to ("live" in the
           # invocation below).
           - ""
-          # - ./flow contentReleaseTransfer:transferToContentStore live {{ .contentReleaseId }}
+          # - ./flow contentReleaseTransfer:removeOldReleases target_live {{ .contentReleaseId }}
+          # - ./flow contentReleaseTransfer:transferToContentStore target_live {{ .contentReleaseId }}
         depends_on: [validate_finished]
 
       transfer_resources:
@@ -164,9 +165,10 @@ pipelines:
       # 2) the task must include `depends_on: [validate_finished]` to be sorted at the correct pipeline step
       # 3) the task name must be included in transfer_finished.depends_on
 
-      # marker task to depend on all transfer jobs; as separation between transfer and switch stages
+      # task to depend on all transfer jobs; as separation between transfer and switch stages
       transfer_finished:
-        script: [""]
+        script:
+          - ./flow contentReleaseTransfer:removeOldReleases primary {{ .contentReleaseId }}
         depends_on:
           - transfer_content
           - transfer_resources

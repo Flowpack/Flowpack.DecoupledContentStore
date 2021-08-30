@@ -5,6 +5,7 @@ namespace Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure;
 use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
@@ -36,7 +37,7 @@ class RedisContentReleaseService
         $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable());
         $redis->multi();
         try {
-            $redis->lPush('contentStore:registeredReleases', $contentReleaseIdentifier->getIdentifier());
+            $redis->zAdd('contentStore:registeredReleases', 0, $contentReleaseIdentifier->getIdentifier());
             $redis->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
             $redis->exec();
         } catch (\Exception $e) {
@@ -57,10 +58,10 @@ class RedisContentReleaseService
      * @return ContentReleaseIdentifier[]
      * @throws \Exception
      */
-    public function fetchAllReleaseIds(): array
+    public function fetchAllReleaseIds(RedisInstanceIdentifier $redisInstanceIdentifier): array
     {
-        $redis = $this->redisClientManager->getPrimaryRedis();
-        $contentReleaseIds = $redis->lRange('contentStore:registeredReleases', 0, -1);
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
+        $contentReleaseIds = $redis->zRevRangeByLex('contentStore:registeredReleases', '+', '-');
 
         $result = [];
         foreach ($contentReleaseIds as $contentReleaseId) {

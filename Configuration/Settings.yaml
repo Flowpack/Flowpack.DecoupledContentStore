@@ -7,6 +7,10 @@ Flowpack:
         hostname: 127.0.0.1
         port: 6379
         database: 11
+
+        # How many content releases to keep before cleaning them up.
+        contentReleaseRetentionCount: 20
+
       # you can add additional, arbitrarily named, content stores here - they appear in the UI.
       # If you do this, see the hints in the README "Copy Content Releases to a different Redis instance".
 

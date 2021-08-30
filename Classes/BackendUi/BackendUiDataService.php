@@ -60,7 +60,7 @@ class BackendUiDataService
 
     public function loadBackendOverviewData()
     {
-        $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds();
+        $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds(RedisInstanceIdentifier::primary());
 
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(...$contentReleaseIds);
         $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleaseIds);
@@ -101,7 +101,7 @@ class BackendUiDataService
         $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
 
         // TODO: distinct backend views for each redis instance
-        $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease(RedisInstanceIdentifier::primary())->getIdentifier();
+        $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease(RedisInstanceIdentifier::primary());
 
         return new ContentReleaseDetails(
             $contentReleaseIdentifier,
@@ -109,7 +109,7 @@ class BackendUiDataService
             $this->redisEnumerationRepository->count($contentReleaseIdentifier),
             $renderingStatistics,
             $renderingErrorCount,
-            $contentReleaseIdentifier->getIdentifier() === $currentReleaseIdentifier
+            $contentReleaseIdentifier->equals($currentReleaseIdentifier)
         );
     }
 }

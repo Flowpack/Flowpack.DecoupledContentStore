@@ -61,8 +61,9 @@ class ContentReleaseSynchronizer
             } else {
                 $this->transferKey($sourceRedis, $targetRedis, $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
             }
-
         }
+
+        $targetRedis->zAdd('contentStore:registeredReleases', 0, $contentReleaseIdentifier->getIdentifier());
     }
 
     /**
