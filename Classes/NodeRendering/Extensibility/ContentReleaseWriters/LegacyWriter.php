@@ -48,11 +48,20 @@ class LegacyWriter implements ContentReleaseWriterInterface
 
         $redisDataKey = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'data');
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $urlKey, $rootKey);
-        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $rootKey, $renderedDocumentFromContentCache->getFullContent());
+        $redis = $this->redisClientManager->getPrimaryRedis();
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $metadataUrlKey, $rootMetadataKey);
-        $this->redisClientManager->getPrimaryRedis()->hSet($redisDataKey, $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
+        $redis->hSet($redisDataKey, $urlKey, $rootKey);
+        $redis->hSet($redisDataKey, $rootKey, $renderedDocumentFromContentCache->getFullContent());
+
+        $redis->hSet($redisDataKey, $metadataUrlKey, $rootMetadataKey);
+        $redis->hSet($redisDataKey, $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
+
+
+        // Published URLs, lexicographically sorted
+        // we use the same score "0" for all URLs, this way, they are lexicographically sorted
+        // as explained in https://redis.io/topics/data-types-intro#lexicographical-scores
+        $redis->zAdd($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'), 0, $renderedDocumentFromContentCache->getUrl());
+
     }
 
 }

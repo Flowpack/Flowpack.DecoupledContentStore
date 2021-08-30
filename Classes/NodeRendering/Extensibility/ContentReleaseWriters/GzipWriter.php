@@ -34,6 +34,12 @@ class GzipWriter implements ContentReleaseWriterInterface
     public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
         $compressedContent = gzencode($renderedDocumentFromContentCache->getFullContent(), 9);
-        $this->redisClientManager->getPrimaryRedis()->hSet($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
+        $redis = $this->redisClientManager->getPrimaryRedis();
+        $redis->hSet($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
+
+        // Published URLs, lexicographically sorted
+        // we use the same score "0" for all URLs, this way, they are lexicographically sorted
+        // as explained in https://redis.io/topics/data-types-intro#lexicographical-scores
+        $redis->zAdd($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'), 0, $renderedDocumentFromContentCache->getUrl());
     }
 }

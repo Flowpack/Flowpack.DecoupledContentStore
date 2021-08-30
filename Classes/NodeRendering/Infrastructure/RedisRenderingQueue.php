@@ -111,9 +111,4 @@ class RedisRenderingQueue
     {
         $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'), $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'));
     }
-
-    public function addRenderedUrl(ContentReleaseIdentifier $contentReleaseIdentifier, string $renderedUrl)
-    {
-        $this->redisClientManager->getPrimaryRedis()->zAdd($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'), 0, $renderedUrl);
-    }
 }
