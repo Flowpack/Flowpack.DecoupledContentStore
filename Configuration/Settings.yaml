@@ -59,52 +59,52 @@ Flowpack:
       # content stores and cleanup of old releases.
       data:
         redisKeyPostfix: 'data'
-        enabled: true
+        transfer: true
         transferMode: 'hash_incremental'
         isRequired: true
       enumerationDocumentNodes:
         redisKeyPostfix: 'enumeration:documentNodes'
-        enabled: true
+        transfer: true
         transferMode: 'dump'
         isRequired: true
       inProgressRenderings:
         redisKeyPostfix: 'inProgressRenderings'
-        enabled: false
+        transfer: false
         transferMode: 'dump'
         isRequired: true
       meta:
         redisKeyPostfix: 'meta'
-        enabled: true
+        transfer: true
         transferMode: 'dump'
         isRequired: true
       metaUrls:
         redisKeyPostfix: 'meta:urls'
-        enabled: true
+        transfer: true
         transferMode: 'dump'
         isRequired: true
       renderedDocuments:
         redisKeyPostfix: 'renderedDocuments'
-        enabled: true
+        transfer: true
         transferMode: 'hash_incremental'
         isRequired: true
       renderingErrors:
         redisKeyPostfix: 'renderingErrors'
-        enabled: false
+        transfer: false
         transferMode: 'dump'
         isRequired: true
       renderingJobQueue:
         redisKeyPostfix: 'renderingJobQueue'
-        enabled: false
+        transfer: false
         transferMode: 'dump'
         isRequired: true
       renderedMetadata:
         redisKeyPostfix: 'renderedMetadata'
-        enabled: true
+        transfer: true
         transferMode: 'hash_incremental'
         isRequired: true
       renderingStatistics:
         redisKeyPostfix: 'renderingStatistics'
-        enabled: true
+        transfer: true
         transferMode: 'dump'
         isRequired: true
 

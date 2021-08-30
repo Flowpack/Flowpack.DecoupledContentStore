@@ -15,24 +15,24 @@ final class RedisKeyPostfixForEachRelease
     private const TRANSFER_MODE_DUMP = 'dump';
 
     protected string $redisKeyPostfix;
-    protected bool $enabled;
+    protected bool $transfer;
     protected string $transferMode;
     protected bool $isRequired;
 
     /**
      * @param string $redisKeyPostfix
-     * @param bool $enabled
+     * @param bool $transfer
      * @param string $transferMode
      * @param bool $isRequired
      */
-    private function __construct(string $redisKeyPostfix, bool $enabled, string $transferMode, bool $isRequired)
+    private function __construct(string $redisKeyPostfix, bool $transfer, string $transferMode, bool $isRequired)
     {
         if (!in_array($transferMode, [self::TRANSFER_MODE_HASH_INCREMENTAL, self::TRANSFER_MODE_DUMP])) {
             throw new \RuntimeException('TransferMode ' . $transferMode . ' not supported.');
         }
 
         $this->redisKeyPostfix = $redisKeyPostfix;
-        $this->enabled = $enabled;
+        $this->transfer = $transfer;
         $this->transferMode = $transferMode;
         $this->isRequired = $isRequired;
     }
@@ -42,15 +42,18 @@ final class RedisKeyPostfixForEachRelease
     {
         return new self(
             $in['redisKeyPostfix'],
-            $in['enabled'],
+            $in['transfer'],
             $in['transferMode'],
             $in['isRequired']
         );
     }
 
-    public function isEnabled(): bool
+    /**
+     * @return bool
+     */
+    public function shouldTransfer(): bool
     {
-        return $this->enabled;
+        return $this->transfer;
     }
 
     public function isRequired(): bool

@@ -48,7 +48,7 @@ class ContentReleaseSynchronizer
 
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
 
-        foreach ($redisKeyPostfixesForEachRelease->getAllEnabled() as $redisKeyPostfix) {
+        foreach ($redisKeyPostfixesForEachRelease->getKeysToTransfer() as $redisKeyPostfix) {
             $redisKey = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix());
             $contentReleaseLogger->info($redisKey);
             if ($redisKeyPostfix->isRequired()) {
