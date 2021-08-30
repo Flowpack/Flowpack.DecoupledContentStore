@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Transfer\ContentReleaseSynchronizer;
 use Flowpack\DecoupledContentStore\Transfer\Resource\RemoteResourceSynchronizer;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
@@ -20,6 +22,12 @@ class ContentReleaseTransferCommandController extends CommandController
      */
     protected $remoteResourceSynchronizer;
 
+    /**
+     * @Flow\Inject
+     * @var ContentReleaseSynchronizer
+     */
+    protected $contentReleaseSynchronizer;
+
     public function syncResourcesCommand(string $contentReleaseIdentifier)
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
@@ -29,6 +37,9 @@ class ContentReleaseTransferCommandController extends CommandController
 
     public function transferToContentStoreCommand(string $redisContentStoreIdentifier, string $contentReleaseIdentifier)
     {
-        
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisContentStoreIdentifier);
+        $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
+        $this->contentReleaseSynchronizer->syncToTarget($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
     }
 }

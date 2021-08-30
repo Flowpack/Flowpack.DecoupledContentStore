@@ -154,8 +154,6 @@ class NodeRenderOrchestrator
                     // NOTE: Eventually consistent (TODO describe)
                     // If wanted more fully consistent, move to bottom....
                     $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
-
-                    $this->redisRenderingQueue->addRenderedUrl($contentReleaseIdentifier, $renderedDocumentFromContentCache->getUrl());
                 } else {
                     $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: ' . $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
                     // the rendered document was not found, or has holes. so we need to re-render.
@@ -169,7 +167,7 @@ class NodeRenderOrchestrator
                 $contentReleaseLogger->info('Everything rendered completely. Finishing RenderOrchestrator');
 
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success()));
+                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable()));
 
                 // Exit successfully.
                 yield ExitEvent::createWithStatusCode(0);

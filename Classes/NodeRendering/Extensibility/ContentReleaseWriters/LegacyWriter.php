@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters;
 
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -27,20 +28,40 @@ class LegacyWriter implements ContentReleaseWriterInterface
 
     /**
      * @Flow\Inject
+     * @var RedisKeyService
+     */
+    protected $redisKeyService;
+
+    /**
+     * @Flow\Inject
      * @var \Neos\Fusion\Core\Cache\ContentCache
      */
     protected $contentCache;
 
     public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
-        $rootKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, 'content')->toString();
-        $rootMetadataKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, 'metadata')->toString();
+        $urlKey = $renderedDocumentFromContentCache->getLegacyUrlKey();
+        $metadataUrlKey = $renderedDocumentFromContentCache->getLegacyMetadataKey();
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getLegacyUrlKey(), $rootKey);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootKey, $renderedDocumentFromContentCache->getFullContent());
+        $rootKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, $urlKey)->toString();
+        $rootMetadataKey = Uuid::uuid5(Uuid::NAMESPACE_DNS, $metadataUrlKey)->toString();
 
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $renderedDocumentFromContentCache->getLegacyMetadataKey(), $rootMetadataKey);
-        $this->redisClientManager->getPrimaryRedis()->hSet($contentReleaseIdentifier->redisKey('data'), $rootMetadataKey, json_encode($renderedDocumentFromContentCache->getMetadata()));
+        $redisDataKey = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'data');
+
+        $redis = $this->redisClientManager->getPrimaryRedis();
+
+        $redis->hSet($redisDataKey, $urlKey, $rootKey);
+        $redis->hSet($redisDataKey, $rootKey, $renderedDocumentFromContentCache->getFullContent());
+
+        $redis->hSet($redisDataKey, $metadataUrlKey, $rootMetadataKey);
+        $redis->hSet($redisDataKey, $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
+
+
+        // Published URLs, lexicographically sorted
+        // we use the same score "0" for all URLs, this way, they are lexicographically sorted
+        // as explained in https://redis.io/topics/data-types-intro#lexicographical-scores
+        $redis->zAdd($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'), 0, $renderedDocumentFromContentCache->getUrl());
+
     }
 
 }

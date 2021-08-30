@@ -325,14 +325,15 @@ Flowpack:
 
 ### Writing Custom Data to the Content Release
 
-In case you write custom data to the content release (using `$contentReleaseIdentifier->redisKey('foo')`), you need to register
+In case you write custom data to the content release (using `$redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'foo')`), you need to register
 the custom key also in the settings:
 
 ```yaml
 Flowpack:
   DecoupledContentStore:
     redisKeyPostfixesForEachRelease:
-      foo: true
+      foo:
+        transfer: true
 ```
 
 This is needed so that the system knows which keys should be synchronized between the different content stores,
@@ -355,6 +356,11 @@ CacheUrlMappingAspect - * NOTE: This aspect is NOT active during interactive pag
 * and code paths simpler: The system NEVER re-uses content cache entries created by editors while browsing the page; but
 * ONLY re-uses content cache entries created by previous Batch Renderings.
 
+
+### Debugging
+
+If you need to debug single steps of the pipeline just run the corresponding commands from CLI, 
+e.g. `./flow nodeEnumeration:enumerateAllNodes {{ .contentReleaseId }}`.
 
 ### Testing the Rendering
 

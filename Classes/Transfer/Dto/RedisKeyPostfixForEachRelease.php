@@ -2,51 +2,58 @@
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer\Dto;
-class RedisKeyPostfixForEachRelease
+
+use Neos\Flow\Annotations as Flow;
+
+/**
+ * @Flow\Proxy(false)
+ */
+final class RedisKeyPostfixForEachRelease
 {
-
-    protected string $redisKeyPostfix;
-
-    protected bool $enabled;
 
     private const TRANSFER_MODE_HASH_INCREMENTAL = 'hash_incremental';
     private const TRANSFER_MODE_DUMP = 'dump';
-    protected string $transferMode;
 
+    protected string $redisKeyPostfix;
+    protected bool $transfer;
+    protected string $transferMode;
     protected bool $isRequired;
 
     /**
      * @param string $redisKeyPostfix
-     * @param bool $enabled
+     * @param bool $transfer
      * @param string $transferMode
      * @param bool $isRequired
      */
-    private function __construct(string $redisKeyPostfix, bool $enabled, string $transferMode, bool $isRequired)
+    private function __construct(string $redisKeyPostfix, bool $transfer, string $transferMode, bool $isRequired)
     {
         if (!in_array($transferMode, [self::TRANSFER_MODE_HASH_INCREMENTAL, self::TRANSFER_MODE_DUMP])) {
             throw new \RuntimeException('TransferMode ' . $transferMode . ' not supported.');
         }
 
         $this->redisKeyPostfix = $redisKeyPostfix;
-        $this->enabled = $enabled;
+        $this->transfer = $transfer;
         $this->transferMode = $transferMode;
         $this->isRequired = $isRequired;
     }
 
 
-    public static function fromArray(string $key, array $in): self
+    public static function fromArray(array $in): self
     {
         return new self(
-            $key,
-            $in['enabled'],
+            $in['redisKeyPostfix'],
+            $in['transfer'],
             $in['transferMode'],
             $in['isRequired']
         );
     }
 
-    public function isEnabled(): bool
+    /**
+     * @return bool
+     */
+    public function shouldTransfer(): bool
     {
-        return $this->enabled;
+        return $this->transfer;
     }
 
     public function isRequired(): bool
@@ -59,5 +66,17 @@ class RedisKeyPostfixForEachRelease
         return $this->redisKeyPostfix;
     }
 
+    /**
+     * @return string
+     */
+    public function getTransferMode(): string
+    {
+        return $this->transferMode;
+    }
+
+    public function hasTransferModeHashIncremental(): bool
+    {
+        return $this->transferMode === self::TRANSFER_MODE_HASH_INCREMENTAL;
+    }
 
 }

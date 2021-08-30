@@ -4,6 +4,7 @@ namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
 use Flowpack\DecoupledContentStore\Exception;
 use Neos\Flow\Annotations as Flow;
+
 /**
  * @Flow\Proxy(false)
  */
@@ -32,12 +33,6 @@ final class ContentReleaseIdentifier implements \JsonSerializable
     {
         return new self("" . time());
     }
-
-    public function redisKey(string $postfix): string
-    {
-        return 'contentStore:' . $this->identifier . ':' . $postfix;
-    }
-
 
     public function jsonSerialize(): string
     {
