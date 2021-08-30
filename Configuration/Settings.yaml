@@ -64,7 +64,7 @@ Flowpack:
         isRequired: true
       enumerationDocumentNodes:
         redisKeyPostfix: 'enumeration:documentNodes'
-        transfer: true
+        transfer: false
         transferMode: 'dump'
         isRequired: true
       inProgressRenderings:
@@ -91,12 +91,12 @@ Flowpack:
         redisKeyPostfix: 'renderingErrors'
         transfer: false
         transferMode: 'dump'
-        isRequired: true
+        isRequired: false
       renderingJobQueue:
         redisKeyPostfix: 'renderingJobQueue'
         transfer: false
         transferMode: 'dump'
-        isRequired: true
+        isRequired: false
       renderedMetadata:
         redisKeyPostfix: 'renderedMetadata'
         transfer: true

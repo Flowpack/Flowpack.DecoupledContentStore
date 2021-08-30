@@ -51,18 +51,17 @@ class ContentReleaseSynchronizer
         foreach ($redisKeyPostfixesForEachRelease->getKeysToTransfer() as $redisKeyPostfix) {
             $redisKey = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix());
             $contentReleaseLogger->info($redisKey);
-            if ($redisKeyPostfix->isRequired()) {
-                if (!$sourceRedis->exists($redisKey)) {
-                    $contentReleaseLogger->error('Required key  ' . $redisKey . ' does not exist.');
-                    exit(1);
-                }
-
-                if ($redisKeyPostfix->hasTransferModeHashIncremental()) {
-                    $this->transferHashKeyIncrementally($sourceRedis, $targetRedis, $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
-                } else {
-                    $this->transferKey($sourceRedis, $targetRedis, $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
-                }
+            if ($redisKeyPostfix->isRequired() && !$sourceRedis->exists($redisKey)) {
+                $contentReleaseLogger->error('Required key  ' . $redisKey . ' does not exist.');
+                exit(1);
             }
+
+            if ($redisKeyPostfix->hasTransferModeHashIncremental()) {
+                $this->transferHashKeyIncrementally($sourceRedis, $targetRedis, $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
+            } else {
+                $this->transferKey($sourceRedis, $targetRedis, $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $redisKeyPostfix->getRedisKeyPostfix()), $contentReleaseLogger);
+            }
+
         }
     }
 
