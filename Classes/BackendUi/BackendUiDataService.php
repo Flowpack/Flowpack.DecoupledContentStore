@@ -82,6 +82,7 @@ class BackendUiDataService
                 $lastRendering->getTotalJobs() > 0 ? round($lastRendering->getRenderedJobs()
                     / $lastRendering->getTotalJobs() * 100) : 100,
                 $firstRendering->getRenderedJobs(),
+                $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier))
             );
         }
 

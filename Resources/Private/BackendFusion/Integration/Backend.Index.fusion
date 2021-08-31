@@ -1,11 +1,14 @@
-prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(Neos.Fusion:Component) {
+Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
 
-    // API, list of ContentReleaseOverviewRow objects
-    overviewData = null
+    // Context Variables:
+    // - overviewData: list of ContentReleaseOverviewRow objects
+    // - contentStore: contains string content store identifier
+    // - redisContentStores: contains array of all configured content store identifiers
 
     renderer = Neos.Fusion:Component {
+
         _renderedTableBody = Neos.Fusion:Loop {
-            items = ${props.overviewData}
+            items = ${overviewData}
             itemRenderer = Neos.Fusion:Component {
                 // item instanceof ContentReleaseOverviewRow
                 contentReleaseIdentifier = ${item.contentReleaseIdentifier.identifier}
@@ -18,12 +21,13 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                 renderer = afx`
                     <tr>
                         <td>
-                            <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: props.contentReleaseIdentifier}}>
+                            <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: props.contentReleaseIdentifier, contentStore: contentStore}}>
                                 {props.contentReleaseIdentifier}
                             </Neos.Fusion:Link.Action>
                             {" "}
                             <span class="neos-badge" title="status" data-neos-toggle="tooltip">{item.metadata.status.displayName}</span>
-                            <span @if.errors={item.ErrorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
+                            <span @if.isActive={item.active} class="neos-badge neos-badge-info">active</span>
+                            <span @if.errors={item.errorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                         </td>
                         <td>
                             {props.enumeratedDocumentNodesCount}
@@ -53,6 +57,7 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
                 />
             </form>
             <div class="neos-content neos-container-fluid">
+                <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
                 <legend>Content Store Releases</legend>
                 <div class="neos-row-fluid">
                     <table class="neos-table cs-releases-table">
@@ -78,18 +83,24 @@ prototype(Flowpack.DecoupledContentStore:Controller.Backend.Index) < prototype(N
             </div>
         `
     }
-    @process.debugDump = Neos.Fusion:DebugDump
 }
 
 prototype(Flowpack.DecoupledContentStore:ListFooter) < prototype(Neos.Fusion:Component) {
     _publishAllUri = Neos.Fusion:UriBuilder {
         action = 'publishAll'
     }
+
     renderer = afx`
         <div class="neos-footer">
-            <Neos.Fusion:Link.Action href.action="index" attributes.class="neos-button">
+            <Neos.Fusion:Link.Action href.action="index" class="neos-button">
                 <i class="fa fa-sync"></i> Reload
             </Neos.Fusion:Link.Action>
+            <span style="font-size:14px; display: inline-block; vertical-align: middle; padding-right: 14px; padding-left: 60px;">Active Content Store:</span>
+            <Neos.Fusion:Loop items={redisContentStores}>
+                <Neos.Fusion:Link.Action href.action="index" href.arguments={{contentStore: item}} class={AtomicFusion.classNames('neos-button', {'neos-button-primary': item == contentStore})}>
+                    {item}
+                </Neos.Fusion:Link.Action>
+            </Neos.Fusion:Loop>
 
             <button form="postHelper" formaction={props._publishAllUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
                 Publish All

@@ -1,9 +1,0 @@
-Flowpack.DecoupledContentStore.BackendController.index = Flowpack.DecoupledContentStore:Controller.Backend.Index {
-    overviewData = ${overviewData}
-}
-
-Flowpack.DecoupledContentStore.BackendController.details = Flowpack.DecoupledContentStore:Controller.Backend.Details {
-    detailsData = ${detailsData}
-    detailTaskName = ${detailTaskName}
-    jobLogs = ${jobLogs}
-}

@@ -100,7 +100,7 @@ class ContentReleaseCleaner
     }
 
 
-    private function removeRelease(ContentReleaseIdentifier $contentReleaseIdentifierToRemove, RedisInstanceIdentifier $redisIdentifier, ContentReleaseLogger $contentReleaseLogger)
+    public function removeRelease(ContentReleaseIdentifier $contentReleaseIdentifierToRemove, RedisInstanceIdentifier $redisIdentifier, ContentReleaseLogger $contentReleaseLogger)
     {
         $redis = $this->redisClientManager->getRedis($redisIdentifier);
 

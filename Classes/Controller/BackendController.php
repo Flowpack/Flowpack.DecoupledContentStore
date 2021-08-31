@@ -5,10 +5,18 @@ use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
+use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
+use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Flowpack\Prunner\PrunnerApiService;
 use Neos\Flow\Annotations as Flow;
 use Neos\Fusion\View\FusionView;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\Output;
 
 class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 {
@@ -33,15 +41,45 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 
     /**
      * @Flow\Inject
+     * @var RedisClientManager
+     */
+    protected $redisClientManager;
+
+    /**
+     * @Flow\Inject
+     * @var RedisContentReleaseService
+     */
+    protected $redisContentReleaseService;
+
+    /**
+     * @Flow\Inject
      * @var RedisReleaseSwitchService
      */
     protected $redisReleaseSwitchService;
+
+    /**
+     * @Flow\Inject
+     * @var RedisKeyService
+     */
+    protected $redisKeyService;
+
+    /**
+     * @Flow\Inject
+     * @var ContentReleaseCleaner
+     */
+    protected $contentReleaseCleaner;
 
     /**
      * @Flow\InjectConfiguration("redisContentStores")
      * @var array
      */
     protected $redisContentStores;
+
+    /**
+     * @Flow\InjectConfiguration("redisKeyPostfixesForEachRelease")
+     * @var array
+     */
+    protected $redisKeyPostfixesForEachReleaseConfiguration;
 
     protected $defaultViewObjectName = FusionView::class;
 
@@ -78,40 +116,41 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->redirect('index');
     }
 
-    /**
-     * @param integer $release
-     * @return string
-     */
-    public function removeAction($release)
+    public function removeAction(string $contentReleaseIdentifier, string $redisInstanceIdentifier)
     {
-        // TODO!!!
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatus(405);
+            $this->response->setStatusCode(405);
             return 'Method not allowed';
         }
 
-        $releaseIdentifier = $release;
+        $contentReleaseIdentifierToRemove = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisInstanceIdentifier = $redisInstanceIdentifier ? RedisInstanceIdentifier::fromString($redisInstanceIdentifier) : RedisInstanceIdentifier::primary();
 
-        $this->contentStore->removeRelease($releaseIdentifier, 'Manual removal in content store administration module');
+        $bufferedOutput = new BufferedOutput();
+        $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifierToRemove);
+
+        $this->contentReleaseCleaner->removeRelease($contentReleaseIdentifierToRemove, $redisInstanceIdentifier, $logger);
+
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
+        $redis->zRem('contentStore:registeredReleases', $contentReleaseIdentifier);
 
         $this->redirect('index');
     }
 
-    /**
-     * @param integer $release
-     * @return string
-     */
-    public function switchAction($release)
+    public function switchAction(string $contentReleaseIdentifier, string $redisInstanceIdentifier)
     {
-        // TODO!!!
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatus(405);
+            $this->response->setStatusCode(405);
             return 'Method not allowed';
         }
 
-        $releaseIdentifier = $release;
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisInstanceIdentifier = $redisInstanceIdentifier ? RedisInstanceIdentifier::fromString($redisInstanceIdentifier) : RedisInstanceIdentifier::primary();
 
-        $this->contentStore->switchCurrentRelease($releaseIdentifier, true);
+        $bufferedOutput = new BufferedOutput();
+        $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
+
+        $this->redisReleaseSwitchService->switchContentRelease($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
 
         $this->redirect('index');
     }

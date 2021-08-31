@@ -1,40 +1,37 @@
-prototype(Flowpack.DecoupledContentStore:Controller.Backend.Details) < prototype(Neos.Fusion:Component) {
+Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component {
 
-    // API, ContentReleaseDetails
-    detailsData = null
+    // Context Variables
+    // - detailsData: API, ContentReleaseDetails
+    // - detailTaskName: string, optional
+    // - jobLogs: JobLogs, optional
+    // - contentStore: string, currently active content store / redis instance
 
-    // string, optional
-    detailTaskName = null
+    renderer = afx`
+        <form id="postHelper" method="post">
+            <input
+                type="hidden"
+                name="__csrfToken"
+                value={Security.csrfToken()}
+            />
+        </form>
+        <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
+        <h1 class="text-3xl py-5">Content Release {detailsData.contentReleaseIdentifier.identifier}</h1>
+        <Flowpack.DecoupledContentStore:ContentReleaseSteps />
 
-    // JobLogs, optional
-    jobLogs = null
-
-
-    renderer = Neos.Fusion:Component {
-        @apply.parent = ${props}
-
-        renderer = afx`
-            <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
-            <h1 class="text-3xl py-5">Content Release {props.detailsData.contentReleaseIdentifier.identifier}</h1>
-            <Flowpack.DecoupledContentStore:ContentReleaseSteps {...props}/>
-
-            <h2 @if.isTrue={props.detailTaskName} class="text-3xl py-5">Log Output for {props.detailTaskName}</h2>
-            <pre>
-                {jobLogs.stderr}
-            </pre>
-            <pre>
-                {jobLogs.stdout}
-            </pre>
-        `
-    }
-    @process.debugDump = Neos.Fusion:DebugDump
+        <h2 @if.isTrue={detailTaskName} class="text-3xl py-5">Log Output for {detailTaskName}</h2>
+        <pre>
+            {jobLogs.stderr}
+        </pre>
+        <pre>
+            {jobLogs.stdout}
+        </pre>
+        <Flowpack.DecoupledContentStore:DetailsFooter />
+    `
 }
 
 
 prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.Fusion:Component) {
-    // API, ContentReleaseDetails
-    detailsData = null
-    _taskResults = ${this.detailsData.job.taskResults}
+    _taskResults = ${detailsData.job.taskResults}
 
     renderer = afx`
         <ol class="border border-gray-300 rounded-md divide-y divide-gray-300 md:flex md:divide-y-0 bg-gray-700">
@@ -174,11 +171,11 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox/>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Enumerated Pages">
-                    {props.detailsData.enumeratedDocumentNodesCount}
+                    {detailsData.enumeratedDocumentNodesCount}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
-                <Neos.Fusion:Loop items={props.detailsData.renderingStatistics}>
+                <Neos.Fusion:Loop items={detailsData.renderingStatistics}>
                     <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title={"Rendered Pages Iteration " + (iterator.index + 1)}>
                         {item.renderedJobs}
                         / {item.totalJobs}
@@ -188,7 +185,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Errors">
-                    {props.detailsData.renderingErrorCount}
+                    {detailsData.renderingErrorCount}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
@@ -198,7 +195,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Is currently live?">
-                    {props.detailsData.active}
+                    {detailsData.active}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
         </dl>
@@ -309,5 +306,38 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseStats.Stat) < prototype(N
         <dd class="mt-1 mb-2 text-3xl font-semibold text-gray-900">
             {props.content}
         </dd>
+    `
+}
+
+prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:Component) {
+    _switchUri = Neos.Fusion:UriBuilder {
+        action = 'switch'
+        arguments = Neos.Fusion:DataStructure {
+            contentReleaseIdentifier = ${detailsData.contentReleaseIdentifier.identifier}
+            redisInstanceIdentifier = ${contentStore}
+        }
+    }
+
+    _removeUri = Neos.Fusion:UriBuilder {
+        action = 'remove'
+        arguments = Neos.Fusion:DataStructure {
+            contentReleaseIdentifier = ${detailsData.contentReleaseIdentifier.identifier}
+            redisInstanceIdentifier = ${contentStore}
+        }
+    }
+
+    renderer = afx`
+        <div class="neos-footer">
+            <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: detailsData.contentReleaseIdentifier.identifier}} class="neos-button">
+                <i class="fa fa-sync"></i> Reload
+            </Neos.Fusion:Link.Action>
+
+            <button form="postHelper" formaction={props._removeUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
+                Remove release
+            </button>
+            <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
+                Switch to release
+            </button>
+        </div>
     `
 }

@@ -20,10 +20,11 @@ class ContentReleaseOverviewRow
     private int $errorCount;
     private float $progress;
     private int $renderedUrlCount;
+    private bool $isActive;
 
     public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata,
                                 int $enumeratedDocumentNodesCount, int $iterationsCount, int $errorCount,
-                                float $progress, int $renderedUrlCount)
+                                float $progress, int $renderedUrlCount, bool $isActive)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->metadata = $metadata;
@@ -32,6 +33,7 @@ class ContentReleaseOverviewRow
         $this->errorCount = $errorCount;
         $this->progress = $progress;
         $this->renderedUrlCount = $renderedUrlCount;
+        $this->isActive = $isActive;
     }
 
     /**
@@ -88,6 +90,14 @@ class ContentReleaseOverviewRow
     public function getRenderedUrlCount(): int
     {
         return $this->renderedUrlCount;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isActive(): bool
+    {
+        return $this->isActive;
     }
 
 }
