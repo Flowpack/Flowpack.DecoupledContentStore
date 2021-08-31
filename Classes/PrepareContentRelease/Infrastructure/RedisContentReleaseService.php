@@ -70,16 +70,17 @@ class RedisContentReleaseService
         return $result;
     }
 
-    public function fetchMetadataForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier): ContentReleaseMetadata
+    public function fetchMetadataForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ?RedisInstanceIdentifier $redisInstanceIdentifier = null): ContentReleaseMetadata
     {
-        $redis = $this->redisClientManager->getPrimaryRedis();
+        $redisInstanceIdentifier = $redisInstanceIdentifier ?: RedisInstanceIdentifier::primary();
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'));
         return ContentReleaseMetadata::fromJsonString($metadataEncoded);
     }
 
-    public function fetchMetadataForContentReleases(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
+    public function fetchMetadataForContentReleases(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
     {
-        $redis = $this->redisClientManager->getPrimaryRedis();
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         $result = []; // KEY == contentReleaseIdentifier. VALUE == enumerated count
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redisPipeline = $redis->pipeline();

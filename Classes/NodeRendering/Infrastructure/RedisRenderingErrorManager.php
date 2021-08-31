@@ -3,6 +3,7 @@
 namespace Flowpack\DecoupledContentStore\NodeRendering\Infrastructure;
 
 use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
@@ -33,9 +34,10 @@ class RedisRenderingErrorManager
         $this->redisClientManager->getPrimaryRedis()->sAdd($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingErrors'), $exception->getMessage() . ' - ' . json_encode($additionalData));
     }
 
-    public function getRenderingErrors(ContentReleaseIdentifier $contentReleaseIdentifier): array
+    public function getRenderingErrors(ContentReleaseIdentifier $contentReleaseIdentifier, ?RedisInstanceIdentifier $redisInstanceIdentifier = null): array
     {
-        return $this->redisClientManager->getPrimaryRedis()->sMembers($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingErrors'));
+        $redisInstanceIdentifier = $redisInstanceIdentifier ?: RedisInstanceIdentifier::primary();
+        return $this->redisClientManager->getRedis($redisInstanceIdentifier)->sMembers($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingErrors'));
     }
 
     public function flush(ContentReleaseIdentifier $contentReleaseIdentifier): void
@@ -43,11 +45,11 @@ class RedisRenderingErrorManager
         $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingErrors'));
     }
 
-    public function countMultipleErrors(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
+    public function countMultipleErrors(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
     {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == count of error entries
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
-            $redis = $this->redisClientManager->getPrimaryRedis();
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->scard($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'renderingErrors'));

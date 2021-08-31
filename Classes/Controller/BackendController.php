@@ -4,8 +4,9 @@ namespace Flowpack\DecoupledContentStore\Controller;
 use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\Prunner\PrunnerApiService;
-use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Neos\Fusion\View\FusionView;
 
@@ -30,19 +31,39 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
      */
     protected $backendUiDataService;
 
+    /**
+     * @Flow\Inject
+     * @var RedisReleaseSwitchService
+     */
+    protected $redisReleaseSwitchService;
+
+    /**
+     * @Flow\InjectConfiguration("redisContentStores")
+     * @var array
+     */
+    protected $redisContentStores;
+
     protected $defaultViewObjectName = FusionView::class;
 
-    public function indexAction()
+    public function indexAction(?string $contentStore = null)
     {
-        $this->view->assign('overviewData', $this->backendUiDataService->loadBackendOverviewData());
+        $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
+
+        $this->view->assign('contentStore', $contentStore->getIdentifier());
+        $this->view->assign('overviewData', $this->backendUiDataService->loadBackendOverviewData($contentStore));
+        $this->view->assign('redisContentStores', array_keys($this->redisContentStores));
     }
 
-    public function detailsAction(string $contentReleaseIdentifier, ?string $detailTaskName = '')
+    public function detailsAction(string $contentReleaseIdentifier, ?string $contentStore = null, ?string $detailTaskName = '')
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
 
-        $detailsData = $this->backendUiDataService->loadDetailsData($contentReleaseIdentifier);
+        $this->view->assign('contentStore', $contentStore->getIdentifier());
+
+        $detailsData = $this->backendUiDataService->loadDetailsData($contentReleaseIdentifier, $contentStore);
         $this->view->assign('detailsData', $detailsData);
+
         if ($detailTaskName !== '') {
             $this->view->assign('detailTaskName', $detailTaskName);
             $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs($detailsData->getJob()->getId(), $detailTaskName));

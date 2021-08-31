@@ -58,16 +58,15 @@ class BackendUiDataService
      */
     protected $redisReleaseSwitchService;
 
-    public function loadBackendOverviewData()
+    public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier)
     {
-        $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds(RedisInstanceIdentifier::primary());
-
-        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(...$contentReleaseIds);
-        $counts = $this->redisEnumerationRepository->countMultiple(...$contentReleaseIds);
-        $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics(...$contentReleaseIds);
-        $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors(...$contentReleaseIds);
-        $lastRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry(...$contentReleaseIds);
-        $firstRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getFirstRenderingStatisticsEntry(...$contentReleaseIds);
+        $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier);
+        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases($redisInstanceIdentifier, ...$contentReleaseIds);
+        $counts = $this->redisEnumerationRepository->countMultiple($redisInstanceIdentifier, ...$contentReleaseIds);
+        $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics($redisInstanceIdentifier, ...$contentReleaseIds);
+        $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors($redisInstanceIdentifier, ...$contentReleaseIds);
+        $lastRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry($redisInstanceIdentifier, ...$contentReleaseIds);
+        $firstRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getFirstRenderingStatisticsEntry($redisInstanceIdentifier, ...$contentReleaseIds);
 
         $result = [];
         foreach ($contentReleaseIds as $contentReleaseId) {
@@ -89,19 +88,18 @@ class BackendUiDataService
         return $result;
     }
 
-    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier): ContentReleaseDetails
+    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ContentReleaseDetails
     {
-        $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
+        $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier, $redisInstanceIdentifier);
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
 
         $renderingStatistics = array_map(function(string $item) {
             return RenderingStatistics::fromJsonString($item);
-        }, $this->redisRenderingStatisticsStore->getRenderingStatistics($contentReleaseIdentifier));
+        }, $this->redisRenderingStatisticsStore->getRenderingStatistics($contentReleaseIdentifier, $redisInstanceIdentifier));
 
-        $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
+        $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier, $redisInstanceIdentifier));
 
-        // TODO: distinct backend views for each redis instance
-        $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease(RedisInstanceIdentifier::primary());
+        $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier);
 
         return new ContentReleaseDetails(
             $contentReleaseIdentifier,

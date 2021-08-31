@@ -3,6 +3,7 @@
 namespace Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository;
 
 use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
@@ -61,11 +62,11 @@ class RedisEnumerationRepository
         return 0;
     }
 
-    public function countMultiple(ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
+    public function countMultiple(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
     {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == enumerated count
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
-            $redis = $this->redisClientManager->getPrimaryRedis();
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->lLen($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'));
