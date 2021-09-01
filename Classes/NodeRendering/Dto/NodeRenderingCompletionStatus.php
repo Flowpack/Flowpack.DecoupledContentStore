@@ -70,6 +70,19 @@ final class NodeRenderingCompletionStatus implements \JsonSerializable
         return $this->status === self::FAILED;
     }
 
+    public function isRunning(): bool
+    {
+        return $this->status === self::RUNNING;
+    }
+
+    /**
+     * @return string
+     */
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
     public function getDisplayName(): string
     {
         return $this->status;

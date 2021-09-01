@@ -33,8 +33,8 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                             {props.enumeratedDocumentNodesCount}
                         </td>
                         <td>
-                            <span @if.isRunning={item.metadata.status.displayName == "running"}>{item.progress}%</span>
-                            <span @if.isNotRunning={item.metadata.status.displayName != "running"}>
+                            <span @if.isRunning={item.metadata.status.running}>{item.progress}%</span>
+                            <span @if.isNotRunning={!item.metadata.status.running}>
                                 <span class="neos-badge neos-badge-success" title="rendered" data-neos-toggle="tooltip">{item.renderedUrlCount}</span>
                                 / <span class="neos-badge" title="total" data-neos-toggle="tooltip">{props.enumeratedDocumentNodesCount}</span>
                             </span>
