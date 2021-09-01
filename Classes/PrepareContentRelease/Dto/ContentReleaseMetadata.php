@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\PrepareContentRelease\Dto;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Neos\Flow\Annotations as Flow;
@@ -53,10 +54,10 @@ final class ContentReleaseMetadata implements \JsonSerializable
         return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled());
     }
 
-    public static function fromJsonString($metadataEncoded): self
+    public static function fromJsonString($metadataEncoded, ContentReleaseIdentifier $contentReleaseIdentifier): self
     {
         if (!is_string($metadataEncoded)) {
-            throw new \Exception('Metadata is no string...');
+            throw new \Exception('Metadata is no string for ' . $contentReleaseIdentifier->getIdentifier());
         }
         $tmp = json_decode($metadataEncoded, true);
         if (!is_array($tmp)) {

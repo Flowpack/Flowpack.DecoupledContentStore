@@ -89,7 +89,7 @@ class RedisContentReleaseService
         $redisInstanceIdentifier = $redisInstanceIdentifier ?: RedisInstanceIdentifier::primary();
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'));
-        return ContentReleaseMetadata::fromJsonString($metadataEncoded);
+        return ContentReleaseMetadata::fromJsonString($metadataEncoded, $contentReleaseIdentifier);
     }
 
     public function fetchMetadataForContentReleases(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
@@ -103,7 +103,7 @@ class RedisContentReleaseService
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
-                $result[$releaseIdentifier->jsonSerialize()] = ContentReleaseMetadata::fromJsonString($res[$i]);
+                $result[$releaseIdentifier->jsonSerialize()] = ContentReleaseMetadata::fromJsonString($res[$i], $releaseIdentifier);
             }
         }
         return ContentReleaseBatchResult::createFromArray($result);

@@ -117,5 +117,7 @@ class ContentReleaseCleaner
             $contentReleaseLogger->debug('  - Removing ' . $redisKey);
             $redis->del($redisKey);
         }
+
+        $redis->zRem('contentStore:registeredReleases', $contentReleaseIdentifierToRemove->getIdentifier());
     }
 }
