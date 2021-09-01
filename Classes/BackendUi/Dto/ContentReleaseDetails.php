@@ -21,11 +21,16 @@ class ContentReleaseDetails
     private bool $isActive;
 
     /**
+     * @var Job[]
+     */
+    private array $manualTransferJobs;
+
+    /**
      * @var RenderingStatistics[]
      */
     private array $renderingStatistics;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount, bool $isActive)
+    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount, bool $isActive, array $manualTransferJobIds)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;
@@ -33,6 +38,7 @@ class ContentReleaseDetails
         $this->renderingStatistics = $renderingStatistics;
         $this->renderingErrorCount = $renderingErrorCount;
         $this->isActive = $isActive;
+        $this->manualTransferJobs = $manualTransferJobIds;
     }
 
     /**
@@ -81,6 +87,14 @@ class ContentReleaseDetails
     public function isActive(): bool
     {
         return $this->isActive;
+    }
+
+    /**
+     * @return Job[]
+     */
+    public function getManualTransferJobs(): array
+    {
+        return $this->manualTransferJobs;
     }
 
 }

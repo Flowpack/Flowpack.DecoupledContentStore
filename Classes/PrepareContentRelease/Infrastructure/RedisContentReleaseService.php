@@ -31,6 +31,12 @@ class RedisContentReleaseService
      */
     protected $redisKeyService;
 
+    /**
+     * @Flow\Inject
+     * @var RedisContentReleaseService
+     */
+    protected $redisContentReleaseService;
+
     public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger)
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
@@ -49,9 +55,17 @@ class RedisContentReleaseService
         ]);
     }
 
-    public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata)
+    public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, RedisInstanceIdentifier $redisInstanceIdentifier)
     {
-        $this->redisClientManager->getPrimaryRedis()->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
+        $this->redisClientManager->getRedis($redisInstanceIdentifier)->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
+    }
+
+    public function registerManualTransferJob(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger)
+    {
+        $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
+        $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withAdditionalManualTranferJobId($prunnerJobId), RedisInstanceIdentifier::primary());
+
+        $contentReleaseLogger->info(sprintf('Register new pipeline for release %s', $contentReleaseIdentifier->getIdentifier()));
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
@@ -20,7 +21,6 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
 
 /**
@@ -122,7 +122,7 @@ class NodeRenderOrchestrator
 
         if ($this->redisEnumerationRepository->count($contentReleaseIdentifier) === 0) {
             $contentReleaseLogger->error('Content Enumeration is empty. This is dangerous; we never want this to go live. Exiting.');
-            $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()));
+            $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()), RedisInstanceIdentifier::primary());
             yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION);
             return;
         }
@@ -134,7 +134,7 @@ class NodeRenderOrchestrator
             $i++;
             if ($i > 10) {
                 $contentReleaseLogger->error('FAILED to build a complete content release after 10 rendering attempts. Exiting.');
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()));
+                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()), RedisInstanceIdentifier::primary());
                 yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RETRY_LIMIT_REACHED);
                 return;
             }
@@ -167,7 +167,7 @@ class NodeRenderOrchestrator
                 $contentReleaseLogger->info('Everything rendered completely. Finishing RenderOrchestrator');
 
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable()));
+                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable()), RedisInstanceIdentifier::primary());
 
                 // Exit successfully.
                 yield ExitEvent::createWithStatusCode(0);
@@ -216,7 +216,7 @@ class NodeRenderOrchestrator
             // We also do NOT start a new incremental release, as this would lead very likely to the same errors.
             $amountOfRenderingErrors = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
             if ($amountOfRenderingErrors > 0) {
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()));
+                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()), RedisInstanceIdentifier::primary());
                 $contentReleaseLogger->error('In this iteration, there happened ' . $amountOfRenderingErrors . ' rendering errors. EXITING now, as there is no chance of completing the content release successfully.');
                 yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RENDERING_ERRORS);
                 return;

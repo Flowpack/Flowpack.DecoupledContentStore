@@ -30,15 +30,21 @@ final class ContentReleaseMetadata implements \JsonSerializable
      */
     private $switchTime;
 
+    /**
+     * @var PrunnerJobId[]
+     */
+    private $manualTransferJobIds;
+
     private NodeRenderingCompletionStatus $status;
 
-    private function __construct(PrunnerJobId $prunnerJobId, ?\DateTimeInterface $startTime, ?\DateTimeInterface $endTime, ?\DateTimeInterface $switchTime, ?NodeRenderingCompletionStatus $status)
+    private function __construct(PrunnerJobId $prunnerJobId, ?\DateTimeInterface $startTime, ?\DateTimeInterface $endTime, ?\DateTimeInterface $switchTime, ?NodeRenderingCompletionStatus $status, ?array $manualTransferJobIds = [])
     {
         $this->prunnerJobId = $prunnerJobId;
         $this->startTime = $startTime;
         $this->endTime = $endTime;
         $this->switchTime = $switchTime;
         $this->status = $status ?: NodeRenderingCompletionStatus::scheduled();
+        $this->manualTransferJobIds = $manualTransferJobIds;
     }
 
 
@@ -56,12 +62,16 @@ final class ContentReleaseMetadata implements \JsonSerializable
         if (!is_array($tmp)) {
             throw new \Exception('ContentReleaseMetadata cannot be constructed from: ' . $metadataEncoded);
         }
+
         return new self(
             PrunnerJobId::fromString($tmp['prunnerJobId']),
             ($tmp['startTime'] !== null) ? \DateTimeImmutable::createFromFormat(\DateTime::RFC3339_EXTENDED, $tmp['startTime']) : null,
             ($tmp['endTime'] !== null) ? \DateTimeImmutable::createFromFormat(\DateTime::RFC3339_EXTENDED, $tmp['endTime']) : null,
             ($tmp['switchTime'] !== null) ? \DateTimeImmutable::createFromFormat(\DateTime::RFC3339_EXTENDED, $tmp['switchTime']) : null,
-            NodeRenderingCompletionStatus::fromString($tmp['status'])
+            NodeRenderingCompletionStatus::fromString($tmp['status']),
+            isset($tmp['manualTransferJobIds']) ? array_map(function (string $item) {
+                return PrunnerJobId::fromString($item);
+            }, json_decode($tmp['manualTransferJobIds'])) : []
         );
     }
 
@@ -73,7 +83,8 @@ final class ContentReleaseMetadata implements \JsonSerializable
             'startTime' => $this->startTime ? $this->startTime->format(\DateTime::RFC3339_EXTENDED) : null,
             'endTime' => $this->endTime ? $this->endTime->format(\DateTime::RFC3339_EXTENDED) : null,
             'switchTime' => $this->switchTime ? $this->switchTime->format(\DateTime::RFC3339_EXTENDED) : null,
-            'status' => $this->status
+            'status' => $this->status,
+            'manualTransferJobIds' => json_encode($this->manualTransferJobIds)
         ];
     }
 
@@ -90,6 +101,13 @@ final class ContentReleaseMetadata implements \JsonSerializable
     public function withStatus(NodeRenderingCompletionStatus $status): self
     {
         return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status);
+    }
+
+    public function withAdditionalManualTranferJobId(PrunnerJobId $prunnerJobId): self
+    {
+        $manualTransferIdArray = self::getmanualTransferJobIds();
+        $manualTransferIdArray[] = $prunnerJobId;
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray);
     }
 
     /**
@@ -130,6 +148,14 @@ final class ContentReleaseMetadata implements \JsonSerializable
     public function getStatus(): NodeRenderingCompletionStatus
     {
         return $this->status;
+    }
+
+    /**
+     * @return PrunnerJobId[]
+     */
+    public function getmanualTransferJobIds(): ?array
+    {
+        return $this->manualTransferJobIds;
     }
 
 }

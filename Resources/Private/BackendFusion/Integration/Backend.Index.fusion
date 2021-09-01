@@ -3,7 +3,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     // Context Variables:
     // - overviewData: list of ContentReleaseOverviewRow objects
     // - contentStore: contains string content store identifier
-    // - redisContentStores: contains array of all configured content store identifiers
+    // - redisContentStores: array of all configured content store identifiers
 
     renderer = Neos.Fusion:Component {
 

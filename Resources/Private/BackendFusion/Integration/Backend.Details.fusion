@@ -5,6 +5,8 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
     // - detailTaskName: string, optional
     // - jobLogs: JobLogs, optional
     // - contentStore: string, currently active content store / redis instance
+    // - redisContentStores: array of all configured content store identifiers
+    // - isPrimary: bool
 
     renderer = afx`
         <form id="postHelper" method="post">
@@ -15,8 +17,15 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
             />
         </form>
         <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
-        <h1 class="text-3xl py-5">Content Release {detailsData.contentReleaseIdentifier.identifier}</h1>
-        <Flowpack.DecoupledContentStore:ContentReleaseSteps />
+        <h1 class="text-3xl py-5" style="display: inline;">
+            Content Release {detailsData.contentReleaseIdentifier.identifier}
+        </h1>
+        {" "}
+        <span class="neos-badge" style="vertical-align: super;" title="content store" data-neos-toggle="tooltip">{contentStore}</span>
+        <Flowpack.DecoupledContentStore:ContentReleaseSteps _taskResults={detailsData.job.taskResults} />
+        <Neos.Fusion:Loop items={detailsData.manualTransferJobs}>
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps _taskResults={item.taskResults} isManualTransferPipeline={true} prunnerJobId={item.id.id} />
+        </Neos.Fusion:Loop>
 
         <h2 @if.isTrue={detailTaskName} class="text-3xl py-5">Log Output for {detailTaskName}</h2>
         <pre>
@@ -31,7 +40,9 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
 
 
 prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.Fusion:Component) {
-    _taskResults = ${detailsData.job.taskResults}
+    _taskResults = null
+    isManualTransferPipeline = false
+    prunnerJobId = ''
 
     renderer = afx`
         <ol class="border border-gray-300 rounded-md divide-y divide-gray-300 md:flex md:divide-y-0 bg-gray-700">
@@ -46,13 +57,17 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                             itemName="task">
                         <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                                 task={task}
-                                title={String.replace(task.name, 'prepare_', '')}/>
+                                title={String.replace(task.name, 'prepare_', '')}
+                                prunnerJobId={props.prunnerJobId}
+                        />
                     </Neos.Fusion:Loop>
                 </div>
                 <div class="pl-5 pr-10 py-2 flex justify-end">
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('prepare_finished')}
-                            title="all ok?"/>
+                            title="all ok?"
+                            prunnerJobId={props.prunnerJobId}
+                    />
                 </div>
             </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
 
@@ -67,13 +82,17 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                             itemName="task">
                         <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                                 task={task}
-                                title={String.replace(task.name, 'enumerate_', '')}/>
+                                title={String.replace(task.name, 'enumerate_', '')}
+                                prunnerJobId={props.prunnerJobId}
+                        />
                     </Neos.Fusion:Loop>
                 </div>
                 <div class="pl-5 pr-10 py-2 flex justify-end">
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('enumerate_finished')}
-                            title="all ok?"/>
+                            title="all ok?"
+                            prunnerJobId={props.prunnerJobId}
+                    />
                 </div>
             </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
 
@@ -88,16 +107,22 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                             itemName="task">
                         <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                                 task={task}
-                                title={String.replace(task.name, 'render_', '')}/>
+                                title={String.replace(task.name, 'render_', '')}
+                                prunnerJobId={props.prunnerJobId}
+                        />
                     </Neos.Fusion:Loop>
                 </div>
                 <div class="pl-5 pr-10 py-2 flex justify-end">
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('render_orchestrator')}
-                            title="orchestrator"/>
+                            title="orchestrator"
+                            prunnerJobId={props.prunnerJobId}
+                    />
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('render_finished')}
-                            title="all ok?"/>
+                            title="all ok?"
+                            prunnerJobId={props.prunnerJobId}
+                    />
                 </div>
             </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
 
@@ -112,13 +137,17 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                             itemName="task">
                         <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                                 task={task}
-                                title={String.replace(task.name, 'validate_', '')}/>
+                                title={String.replace(task.name, 'validate_', '')}
+                                prunnerJobId={props.prunnerJobId}
+                        />
                     </Neos.Fusion:Loop>
                 </div>
                 <div class="pl-5 pr-10 py-2 flex justify-end">
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('validate_finished')}
-                            title="all ok?"/>
+                            title="all ok?"
+                            prunnerJobId={props.prunnerJobId}
+                    />
                 </div>
             </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
 
@@ -133,13 +162,17 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                             itemName="task">
                         <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                                 task={task}
-                                title={String.replace(task.name, 'transfer_', '')}/>
+                                title={String.replace(task.name, 'transfer_', '')}
+                                prunnerJobId={props.prunnerJobId}
+                        />
                     </Neos.Fusion:Loop>
                 </div>
                 <div class="pl-5 pr-10 py-2 flex justify-end">
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('transfer_finished')}
-                            title="all ok?"/>
+                            title="all ok?"
+                            prunnerJobId={props.prunnerJobId}
+                    />
                 </div>
             </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
 
@@ -155,19 +188,23 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                             itemName="task">
                         <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                                 task={task}
-                                title={String.replace(task.name, 'switch_', '')}/>
+                                title={String.replace(task.name, 'switch_', '')}
+                                prunnerJobId={props.prunnerJobId}
+                        />
                     </Neos.Fusion:Loop>
                 </div>
                 <div class="pl-5 pr-10 py-2 flex justify-end">
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('switch_finished')}
-                            title="all ok?"/>
+                            title="all ok?"
+                            prunnerJobId={props.prunnerJobId}
+                    />
                 </div>
             </Flowpack.DecoupledContentStore:ContentReleaseSteps.Step>
         </ol>
 
 
-        <dl class="md:flex md:divide-y-0 divide-y">
+        <dl @if.isNotManualTransferPipeline={!props.isManualTransferPipeline} class="md:flex md:divide-y-0 divide-y">
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox/>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Enumerated Pages">
@@ -243,6 +280,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.Step) < prototype(N
 
 prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask) < prototype(Neos.Fusion:Component) {
     title = "Foo"
+    prunnerJobId = ''
 
     // TaskResult DTO object
     task = null
@@ -253,6 +291,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask) < prototy
     _href.@process.convertToUri = Neos.Fusion:UriBuilder {
         action = 'details'
         arguments.detailTaskName = ${value}
+        arguments.prunnerJobId = ${props.prunnerJobId}
         addQueryString = true
     }
 
@@ -326,6 +365,25 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
         }
     }
 
+    _renderedSwitchButtons = Neos.Fusion:Loop {
+        items = ${redisContentStores}
+        itemRenderer = Neos.Fusion:Component {
+            _switchUri = Neos.Fusion:UriBuilder {
+                action = 'switchContentReleaseOnOtherInstance'
+                arguments = Neos.Fusion:DataStructure {
+                    contentReleaseIdentifier = ${detailsData.contentReleaseIdentifier.identifier}
+                    targetRedisInstanceIdentifier = ${item}
+                }
+            }
+
+            renderer = afx`
+                <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right" @if.isNotPrimary={item != "primary"}>
+                    Transfer to {item}
+                </button>
+            `
+        }
+    }
+
     renderer = afx`
         <div class="neos-footer">
             <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: detailsData.contentReleaseIdentifier.identifier}} class="neos-button">
@@ -338,6 +396,9 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
             <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
                 Switch to release
             </button>
+
+            {isPrimary ? props._renderedSwitchButtons : ''}
+
         </div>
     `
 }

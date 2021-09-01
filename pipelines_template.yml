@@ -114,6 +114,11 @@ pipelines:
           - render_7
           - render_8
 
+      # IMPORTANT
+      # Steps 3 to 5 are used almost identically (only with variable redisInstanceIdentifier) below
+      # for the `manually_transfer_content_release` pipeline.
+      # If you change something you should change it in both places.
+
       ################################################################################
       # 3) VALIDATION
       ################################################################################
@@ -191,3 +196,60 @@ pipelines:
         depends_on:
           - switch_primary
 
+  # this subset of the pipeline above is running when a release is manually transfered and switched live
+  # from the primary content store to any other content store
+  # ARG: contentReleaseId, redisInstanceId
+  manually_transfer_content_release:
+
+      tasks:
+          ################################################################################
+          # 0) PREPARE
+          ################################################################################
+          prepare_finished:
+              script:
+                  - ./flow contentReleasePrepare:createContentRelease {{ .contentReleaseId }} {{ .__jobID }}
+
+          ################################################################################
+          # 3) VALIDATION
+          ################################################################################
+          validate_content:
+              script:
+                  - ./flow contentReleaseValidation:validate {{ .contentReleaseId }}
+              depends_on: [ render_finished ]
+
+          validate_finished:
+              script:
+                  - ./flow contentReleaseValidation:ensureNoValidationErrorsExist {{ .contentReleaseId }}
+              depends_on:
+                  - validate_content
+
+          ################################################################################
+          # 4) TRANSFER
+          ################################################################################
+          transfer_content:
+              script:
+              depends_on: [validate_finished]
+
+          transfer_resources:
+              script:
+
+          transfer_finished:
+              script:
+                  - ./flow contentReleaseTransfer:removeOldReleases {{ .redisInstanceId }} {{ .contentReleaseId }}
+              depends_on:
+                  - transfer_content
+                  - transfer_resources
+
+          ################################################################################
+          # 5) SWITCH
+          ################################################################################
+          switch_target:
+              script:
+                  - ./flow contentReleaseSwitch:switchActiveContentRelease {{ .redisInstanceId }} {{ .contentReleaseId }}
+              depends_on:
+                  - transfer_finished
+
+          switch_finished:
+              script: [""]
+              depends_on:
+                  - switch_target

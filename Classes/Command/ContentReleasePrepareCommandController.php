@@ -29,4 +29,13 @@ class ContentReleasePrepareCommandController extends CommandController
 
         $this->redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger);
     }
+
+    public function registerManualTransferJobCommand(string $contentReleaseIdentifier, string $prunnerJobId)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $prunnerJobId = PrunnerJobId::fromString($prunnerJobId);
+        $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
+
+        $this->redisContentReleaseService->registerManualTransferJob($contentReleaseIdentifier, $prunnerJobId, $logger);
+    }
 }

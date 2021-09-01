@@ -4,12 +4,12 @@ namespace Flowpack\DecoupledContentStore\NodeEnumeration;
 
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
-use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeConstraintFactory;
@@ -51,7 +51,7 @@ class NodeEnumerator
         // set content release status to running
         $currentMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($releaseIdentifier);
         $newMetadata = $currentMetadata->withStatus(NodeRenderingCompletionStatus::running());
-        $this->redisContentReleaseService->setContentReleaseMetadata($releaseIdentifier, $newMetadata);
+        $this->redisContentReleaseService->setContentReleaseMetadata($releaseIdentifier, $newMetadata, RedisInstanceIdentifier::primary());
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
         foreach (GeneratorUtility::createArrayBatch($this->enumerateAll($site, $contentReleaseLogger), 100) as $enumeration) {

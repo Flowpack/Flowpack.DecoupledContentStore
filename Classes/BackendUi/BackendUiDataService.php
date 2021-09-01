@@ -7,6 +7,7 @@ namespace Flowpack\DecoupledContentStore\BackendUi;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseDetails;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
@@ -94,6 +95,10 @@ class BackendUiDataService
         $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier, $redisInstanceIdentifier);
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
 
+        $manualTransferJobs = count($contentReleaseMetadata->getmanualTransferJobIds()) ? array_map(function (PrunnerJobId $item) {
+            return $this->prunnerApiService->loadJobDetail($item->toJobId());
+        }, $contentReleaseMetadata->getmanualTransferJobIds()) : [];
+
         $renderingStatistics = array_map(function(string $item) {
             return RenderingStatistics::fromJsonString($item);
         }, $this->redisRenderingStatisticsStore->getRenderingStatistics($contentReleaseIdentifier, $redisInstanceIdentifier));
@@ -108,7 +113,8 @@ class BackendUiDataService
             $this->redisEnumerationRepository->count($contentReleaseIdentifier),
             $renderingStatistics,
             $renderingErrorCount,
-            $contentReleaseIdentifier->equals($currentReleaseIdentifier)
+            $contentReleaseIdentifier->equals($currentReleaseIdentifier),
+            $manualTransferJobs
         );
     }
 }
