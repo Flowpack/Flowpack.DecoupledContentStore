@@ -9,6 +9,9 @@ Flowpack:
         database: 11
 
         # How many content releases to keep before cleaning them up.
+        #
+        # NOTE: the log-retention count is not configured here, but in prunner (see `pipelines.yml`, underneath
+        # pipelines.do_content_release.retention_count and pipelines.manually_transfer_content_release.retention_count).
         contentReleaseRetentionCount: 20
 
       # you can add additional, arbitrarily named, content stores here - they appear in the UI.

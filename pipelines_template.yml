@@ -17,8 +17,9 @@ pipelines:
     queue_limit: 1
     queue_strategy: replace
 
-    # we want to keep the last 10 releases. You can adjust this to a setting which makes sense
-    # for your project.
+    # we want to keep the last 10 release's logs. You can adjust this to a setting which makes sense
+    # for your project. NOTE: to configure the retention period for the releases *themselves*,
+    # see Settings.yaml, path "Flowpack.DecoupledContentStore.redisContentStores.*.contentReleaseRetentionCount".
     #
     # Alternatively, you can specify a timespan in hours using `retention_period_hours`:
     # retention_period_hours: 72
@@ -200,56 +201,66 @@ pipelines:
   # from the primary content store to any other content store
   # ARG: contentReleaseId, redisInstanceId
   manually_transfer_content_release:
+    # just to be safe, we want to run manual transfers one-by-one (without concurrency)
+    concurrency: 1
 
-      tasks:
-          ################################################################################
-          # 0) PREPARE
-          ################################################################################
-          prepare_finished:
-              script:
-                  - ./flow contentReleasePrepare:createContentRelease {{ .contentReleaseId }} {{ .__jobID }}
+    # we want to keep the last 10 manual transfer's logs. You can adjust this to a setting which makes sense
+    # for your project. NOTE: to configure the retention period for the releases *themselves*,
+    # see Settings.yaml, path "Flowpack.DecoupledContentStore.redisContentStores.*.contentReleaseRetentionCount".
+    #
+    # Alternatively, you can specify a timespan in hours using `retention_period_hours`:
+    # retention_period_hours: 72
+    retention_count: 10
 
-          ################################################################################
-          # 3) VALIDATION
-          ################################################################################
-          validate_content:
-              script:
-                  - ./flow contentReleaseValidation:validate {{ .contentReleaseId }}
-              depends_on: [ render_finished ]
+    tasks:
+      ################################################################################
+      # 0) PREPARE
+      ################################################################################
+      prepare_finished:
+        script:
+          - ./flow contentReleasePrepare:createContentRelease {{ .contentReleaseId }} {{ .__jobID }}
 
-          validate_finished:
-              script:
-                  - ./flow contentReleaseValidation:ensureNoValidationErrorsExist {{ .contentReleaseId }}
-              depends_on:
-                  - validate_content
+      ################################################################################
+      # 3) VALIDATION
+      ################################################################################
+      validate_content:
+        script:
+          - ./flow contentReleaseValidation:validate {{ .contentReleaseId }}
+        depends_on: [ render_finished ]
 
-          ################################################################################
-          # 4) TRANSFER
-          ################################################################################
-          transfer_content:
-              script:
-              depends_on: [validate_finished]
+      validate_finished:
+        script:
+          - ./flow contentReleaseValidation:ensureNoValidationErrorsExist {{ .contentReleaseId }}
+        depends_on:
+          - validate_content
 
-          transfer_resources:
-              script:
+      ################################################################################
+      # 4) TRANSFER
+      ################################################################################
+      transfer_content:
+        script: [""]
+        depends_on: [validate_finished]
 
-          transfer_finished:
-              script:
-                  - ./flow contentReleaseTransfer:removeOldReleases {{ .redisInstanceId }} {{ .contentReleaseId }}
-              depends_on:
-                  - transfer_content
-                  - transfer_resources
+      transfer_resources:
+        script: [""]
 
-          ################################################################################
-          # 5) SWITCH
-          ################################################################################
-          switch_target:
-              script:
-                  - ./flow contentReleaseSwitch:switchActiveContentRelease {{ .redisInstanceId }} {{ .contentReleaseId }}
-              depends_on:
-                  - transfer_finished
+      transfer_finished:
+        script:
+          - ./flow contentReleaseTransfer:removeOldReleases {{ .redisInstanceId }} {{ .contentReleaseId }}
+        depends_on:
+          - transfer_content
+          - transfer_resources
 
-          switch_finished:
-              script: [""]
-              depends_on:
-                  - switch_target
+      ################################################################################
+      # 5) SWITCH
+      ################################################################################
+      switch_target:
+        script:
+          - ./flow contentReleaseSwitch:switchActiveContentRelease {{ .redisInstanceId }} {{ .contentReleaseId }}
+        depends_on:
+          - transfer_finished
+
+      switch_finished:
+        script: [""]
+        depends_on:
+          - switch_target
