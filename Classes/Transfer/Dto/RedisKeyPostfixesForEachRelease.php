@@ -46,6 +46,18 @@ class RedisKeyPostfixesForEachRelease
     }
 
     /**
+     * @return iterable|RedisKeyPostfixForEachRelease[]
+     */
+    public function getRequiredKeys(): iterable
+    {
+        foreach ($this->redisKeyPostfixes as $redisKeyPostfix) {
+            if ($redisKeyPostfix->isRequired()) {
+                yield $redisKeyPostfix;
+            }
+        }
+    }
+
+    /**
      * @return RedisKeyPostfixForEachRelease[]
      */
     public function getRedisKeyPostfixes(): array

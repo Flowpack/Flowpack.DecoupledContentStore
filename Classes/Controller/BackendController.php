@@ -75,12 +75,6 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
      */
     protected $redisContentStores;
 
-    /**
-     * @Flow\InjectConfiguration("redisKeyPostfixesForEachRelease")
-     * @var array
-     */
-    protected $redisKeyPostfixesForEachReleaseConfiguration;
-
     protected $defaultViewObjectName = FusionView::class;
 
     public function indexAction(?string $contentStore = null)

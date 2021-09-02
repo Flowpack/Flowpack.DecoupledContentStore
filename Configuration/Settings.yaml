@@ -75,7 +75,7 @@ Flowpack:
         redisKeyPostfix: 'inProgressRenderings'
         transfer: false
         transferMode: 'dump'
-        isRequired: true
+        isRequired: false
       metainfo:
         redisKeyPostfix: 'meta:info'
         transfer: true

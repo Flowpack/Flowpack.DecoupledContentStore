@@ -110,6 +110,11 @@ class ContentReleaseCleaner
             return;
         }
 
+        if ($currentRelease->equals($contentReleaseIdentifierToRemove)) {
+            $contentReleaseLogger->error('Release to be removed is currently active, thus we do not remove it.');
+            return;
+        }
+
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
 
         foreach ($redisKeyPostfixesForEachRelease->getRedisKeyPostfixes() as $redisKeyPostfix) {
