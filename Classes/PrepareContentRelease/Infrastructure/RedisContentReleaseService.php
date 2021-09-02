@@ -63,7 +63,7 @@ class RedisContentReleaseService
     public function registerManualTransferJob(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger)
     {
         $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
-        $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withAdditionalManualTranferJobId($prunnerJobId), RedisInstanceIdentifier::primary());
+        $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withAdditionalManualTransferJobId($prunnerJobId), RedisInstanceIdentifier::primary());
 
         $contentReleaseLogger->info(sprintf('Register new pipeline for release %s', $contentReleaseIdentifier->getIdentifier()));
     }

@@ -104,9 +104,9 @@ final class ContentReleaseMetadata implements \JsonSerializable
         return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status);
     }
 
-    public function withAdditionalManualTranferJobId(PrunnerJobId $prunnerJobId): self
+    public function withAdditionalManualTransferJobId(PrunnerJobId $prunnerJobId): self
     {
-        $manualTransferIdArray = self::getmanualTransferJobIds();
+        $manualTransferIdArray = self::getManualTransferJobIds();
         $manualTransferIdArray[] = $prunnerJobId;
         return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray);
     }
@@ -154,7 +154,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
     /**
      * @return PrunnerJobId[]
      */
-    public function getmanualTransferJobIds(): ?array
+    public function getManualTransferJobIds(): ?array
     {
         return $this->manualTransferJobIds;
     }

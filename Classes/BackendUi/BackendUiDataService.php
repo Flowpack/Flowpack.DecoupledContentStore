@@ -95,9 +95,9 @@ class BackendUiDataService
         $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier, $redisInstanceIdentifier);
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
 
-        $manualTransferJobs = count($contentReleaseMetadata->getmanualTransferJobIds()) ? array_map(function (PrunnerJobId $item) {
+        $manualTransferJobs = count($contentReleaseMetadata->getManualTransferJobIds()) ? array_map(function (PrunnerJobId $item) {
             return $this->prunnerApiService->loadJobDetail($item->toJobId());
-        }, $contentReleaseMetadata->getmanualTransferJobIds()) : [];
+        }, $contentReleaseMetadata->getManualTransferJobIds()) : [];
 
         $renderingStatistics = array_map(function(string $item) {
             return RenderingStatistics::fromJsonString($item);
