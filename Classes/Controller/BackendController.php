@@ -133,9 +133,6 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 
         $this->contentReleaseCleaner->removeRelease($contentReleaseIdentifierToRemove, $redisInstanceIdentifier, $logger);
 
-        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
-        $redis->zRem('contentStore:registeredReleases', $contentReleaseIdentifier);
-
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
 
