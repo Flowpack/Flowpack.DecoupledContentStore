@@ -95,7 +95,7 @@ prototype(Flowpack.DecoupledContentStore:ListFooter) < prototype(Neos.Fusion:Com
             <Neos.Fusion:Link.Action href.action="index" class="neos-button">
                 <i class="fa fa-sync"></i> Reload
             </Neos.Fusion:Link.Action>
-            <span style="font-size:14px; display: inline-block; vertical-align: middle; padding-right: 14px; padding-left: 60px;">Active Content Store:</span>
+            <span class="align-middle inline-block text-sm pr-4 pl-16">Active Content Store:</span>
             <Neos.Fusion:Loop items={redisContentStores}>
                 <Neos.Fusion:Link.Action href.action="index" href.arguments={{contentStore: item}} class={AtomicFusion.classNames('neos-button', {'neos-button-primary': item == contentStore})}>
                     {item}

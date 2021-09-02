@@ -17,14 +17,23 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
             />
         </form>
         <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
-        <h1 class="text-3xl py-5" style="display: inline;">
+        <h1 class="text-3xl py-5 inline">
             Content Release {detailsData.contentReleaseIdentifier.identifier}
         </h1>
         {" "}
         <span class="neos-badge" style="vertical-align: super;" title="content store" data-neos-toggle="tooltip">{contentStore}</span>
-        <Flowpack.DecoupledContentStore:ContentReleaseSteps _taskResults={detailsData.job.taskResults} />
+        <Flowpack.DecoupledContentStore:ContentReleaseSteps
+            _taskResults={detailsData.job.taskResults}
+            prunnerStart={detailsData.job.created}
+        />
         <Neos.Fusion:Loop items={detailsData.manualTransferJobs}>
-            <Flowpack.DecoupledContentStore:ContentReleaseSteps _taskResults={item.taskResults} isManualTransferPipeline={true} prunnerJobId={item.id.id} />
+            <Flowpack.DecoupledContentStore:ContentReleaseSteps
+                _taskResults={item.taskResults}
+                isManualTransferPipeline={true}
+                prunnerJobId={item.id.id}
+                prunnerStart={item.created}
+                manualSwitchTarget={item.variables.redisInstanceId}
+            />
         </Neos.Fusion:Loop>
 
         <h2 @if.isTrue={detailTaskName} class="text-3xl py-5">Log Output for {detailTaskName}</h2>
@@ -43,8 +52,12 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
     _taskResults = null
     isManualTransferPipeline = false
     prunnerJobId = ''
+    prunnerStart = ''
+    prunnerStart.@process.date = ${value ? Date.format(value, 'd.m.Y H:i:s') : ''}
+    manualSwitchTarget = ''
 
     renderer = afx`
+        <span class="inline-block mt-4" @if.isManualTransferPipeline={props.isManualTransferPipeline}>Start: {props.prunnerStart}, Transfer to: {props.manualSwitchTarget}</span>
         <ol class="border border-gray-300 rounded-md divide-y divide-gray-300 md:flex md:divide-y-0 bg-gray-700">
             <!-- Prepare -->
             <Flowpack.DecoupledContentStore:ContentReleaseSteps.Step
@@ -205,7 +218,9 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
 
 
         <dl @if.isNotManualTransferPipeline={!props.isManualTransferPipeline} class="md:flex md:divide-y-0 divide-y">
-            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox/>
+            <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
+                <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title={"Start: " + props.prunnerStart} />
+            </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Enumerated Pages">
                     {detailsData.enumeratedDocumentNodesCount}
@@ -232,7 +247,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Is currently live?">
-                    {detailsData.active}
+                    {detailsData.active ? detailsData.active : "-"}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
         </dl>
