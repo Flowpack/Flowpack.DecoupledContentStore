@@ -9,6 +9,7 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
+use Flowpack\DecoupledContentStore\Core\RedisPruneService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
@@ -68,6 +69,12 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
      * @var ContentReleaseCleaner
      */
     protected $contentReleaseCleaner;
+
+    /**
+     * @Flow\Inject
+     * @var RedisPruneService
+     */
+    protected $redisPruneService;
 
     /**
      * @Flow\InjectConfiguration("redisContentStores")
@@ -154,5 +161,13 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
             ['contentReleaseId' => $contentReleaseIdentifier, 'redisInstanceId' => $targetRedisInstanceIdentifier]);
 
         $this->redirect('index', null, null, ['contentStore' => $targetRedisInstanceIdentifier]);
+    }
+
+    public function pruneContentStoreAction(string $redisInstanceIdentifier)
+    {
+        $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
+        $this->redisPruneService->pruneRedisInstance($redisInstanceIdentifier);
+
+        $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
 }

@@ -6,6 +6,12 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     // - redisContentStores: array of all configured content store identifiers
 
     renderer = Neos.Fusion:Component {
+        _pruneContentStoreUri = Neos.Fusion:UriBuilder {
+            action = 'pruneContentStore'
+            arguments = Neos.Fusion:DataStructure {
+                redisInstanceIdentifier = ${contentStore}
+            }
+        }
 
         _renderedTableBody = Neos.Fusion:Loop {
             items = ${overviewData}
@@ -77,6 +83,10 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                             {props._renderedTableBody}
                         </tbody>
                     </table>
+
+                    <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
+                        Prune content store
+                    </button>
 
                     <Flowpack.DecoupledContentStore:ListFooter />
                 </div>
