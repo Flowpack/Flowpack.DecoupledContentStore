@@ -21,10 +21,11 @@ class ContentReleaseOverviewRow
     private float $progress;
     private int $renderedUrlCount;
     private bool $isActive;
+    private float $releaseSize;
 
     public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata,
                                 int $enumeratedDocumentNodesCount, int $iterationsCount, int $errorCount,
-                                float $progress, int $renderedUrlCount, bool $isActive)
+                                float $progress, int $renderedUrlCount, bool $isActive, float $releaseSize)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->metadata = $metadata;
@@ -34,6 +35,7 @@ class ContentReleaseOverviewRow
         $this->progress = $progress;
         $this->renderedUrlCount = $renderedUrlCount;
         $this->isActive = $isActive;
+        $this->releaseSize = $releaseSize;
     }
 
     /**
@@ -98,6 +100,14 @@ class ContentReleaseOverviewRow
     public function isActive(): bool
     {
         return $this->isActive;
+    }
+
+    /**
+     * @return float
+     */
+    public function getReleaseSize(): float
+    {
+        return $this->releaseSize;
     }
 
 }

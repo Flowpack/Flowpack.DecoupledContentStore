@@ -4,6 +4,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     // - overviewData: list of ContentReleaseOverviewRow objects
     // - contentStore: contains string content store identifier
     // - redisContentStores: array of all configured content store identifiers
+    // - storeSize: string of content store size
 
     renderer = Neos.Fusion:Component {
         _pruneContentStoreUri = Neos.Fusion:UriBuilder {
@@ -49,7 +50,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         <td>{props.start}</td>
                         <td>{props.end}</td>
                         <td>{props.switch}</td>
-                        <td>TODO</td>
+                        <td>{item.releaseSize} MB</td>
                     </tr>
                 `
             }
@@ -84,6 +85,9 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         </tbody>
                     </table>
 
+                    <span>Store size: </span>
+                    <span class="neos-badge neos-badge-info">{storeSize}</span>
+                    <br />
                     <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
                         Prune content store
                     </button>

@@ -87,10 +87,12 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
     public function indexAction(?string $contentStore = null)
     {
         $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
+        $storeSize = $this->redisClientManager->getRedis($contentStore)->info('memory')['used_memory_human'];
 
         $this->view->assign('contentStore', $contentStore->getIdentifier());
         $this->view->assign('overviewData', $this->backendUiDataService->loadBackendOverviewData($contentStore));
         $this->view->assign('redisContentStores', array_keys($this->redisContentStores));
+        $this->view->assign('storeSize', $storeSize);
     }
 
     public function detailsAction(string $contentReleaseIdentifier, ?string $contentStore = null, ?string $detailTaskName = '', ?string $prunnerJobId = '')
