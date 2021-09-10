@@ -9,6 +9,7 @@ use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -59,6 +60,12 @@ class BackendUiDataService
      */
     protected $redisReleaseSwitchService;
 
+    /**
+     * @Flow\Inject
+     * @var RedisClientManager
+     */
+    protected $redisClientManager;
+
     public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier)
     {
         $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier);
@@ -83,11 +90,28 @@ class BackendUiDataService
                 $lastRendering->getTotalJobs() > 0 ? round($lastRendering->getRenderedJobs()
                     / $lastRendering->getTotalJobs() * 100) : 100,
                 $firstRendering->getRenderedJobs(),
-                $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier))
+                $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier)),
+                $this->calculateReleaseSize($redisInstanceIdentifier, $contentReleaseId)
             );
         }
 
         return $result;
+    }
+
+    private function calculateReleaseSize(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier $contentReleaseIdentifier)
+    {
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
+        $allKeys = $redis->keys('*');
+        $size = 0;
+
+        foreach ($allKeys as $key) {
+            if (str_contains($key, $contentReleaseIdentifier->getIdentifier())) {
+                $size += $redis->rawCommand('memory', 'usage', $key);
+            }
+        }
+
+        // bytes are returned, convert to megabytes
+        return round($size / 100000, 2);
     }
 
     public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ContentReleaseDetails
