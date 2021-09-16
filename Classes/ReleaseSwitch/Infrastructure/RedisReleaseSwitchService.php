@@ -54,12 +54,20 @@ class RedisReleaseSwitchService
         }
 
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
+        $hasError = false;
         foreach ($redisKeyPostfixesForEachRelease->getRequiredKeys() as $requiredPostfix) {
-            $key = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $requiredPostfix->getRedisKeyPostfix());
-            if (!$redis->exists($key)) {
-                $contentReleaseLogger->error('Required redis key ' . $key . ' does not exist for release thus we do not switch.');
-                return;
+            if ($requiredPostfix->shouldTransfer()) {
+                $key = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $requiredPostfix->getRedisKeyPostfix());
+                if (!$redis->exists($key)) {
+                    $contentReleaseLogger->error('Required redis key ' . $key . ' does not exist for release thus we do not switch.');
+                    $hasError = true;
+                }
             }
+        }
+        if ($hasError === true) {
+            $contentReleaseLogger->error('ABORTING directly before switch because final key validation failed.');
+            exit(1);
+            return;
         }
 
         $redis->set('contentStore:current', $contentReleaseIdentifier->getIdentifier());
