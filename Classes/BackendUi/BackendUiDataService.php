@@ -101,17 +101,15 @@ class BackendUiDataService
     private function calculateReleaseSize(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier $contentReleaseIdentifier)
     {
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
-        $allKeys = $redis->keys('*');
+        $allKeys = $redis->keys('contentStore:' . $contentReleaseIdentifier->getIdentifier() . ':*');
         $size = 0;
 
         foreach ($allKeys as $key) {
-            if (str_contains($key, $contentReleaseIdentifier->getIdentifier())) {
-                $size += $redis->rawCommand('memory', 'usage', $key);
-            }
+            $size += $redis->rawCommand('memory', 'usage', $key);
         }
 
         // bytes are returned, convert to megabytes
-        return round($size / 100000, 2);
+        return round($size / 1000000, 2);
     }
 
     public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ContentReleaseDetails
