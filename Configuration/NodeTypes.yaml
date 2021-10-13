@@ -1,0 +1,9 @@
+# Timable content is not supported OOTB
+
+'Neos.Neos:Document':
+  superTypes:
+    'Neos.Neos:Timable': false
+
+'Neos.Neos:Content':
+  superTypes:
+    'Neos.Neos:Timable': false
