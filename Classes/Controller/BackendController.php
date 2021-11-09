@@ -172,4 +172,12 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
+
+    public function cancelRunningReleaseAction(string $redisInstanceIdentifier)
+    {
+        $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
+        $this->contentReleaseManager->cancelAllRunningContentReleases();
+
+        $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
+    }
 }

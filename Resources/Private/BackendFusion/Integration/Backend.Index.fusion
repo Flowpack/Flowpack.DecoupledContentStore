@@ -13,6 +13,12 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                 redisInstanceIdentifier = ${contentStore}
             }
         }
+        _cancelRunningReleaseUri = Neos.Fusion:UriBuilder {
+            action = 'cancelRunningRelease'
+            arguments = Neos.Fusion:DataStructure {
+                redisInstanceIdentifier = ${contentStore}
+            }
+        }
 
         _renderedTableBody = Neos.Fusion:Loop {
             items = ${overviewData}
@@ -90,6 +96,11 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                     <br />
                     <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
                         Prune content store
+                    </button>
+                    <span> </span>
+                    <Neos.Fusion:Debug.Console value={"URI" + props._cancelRunningReleaseUri} />
+                    <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
+                        Cancel running release
                     </button>
 
                     <Flowpack.DecoupledContentStore:ListFooter />
