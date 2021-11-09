@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
-use EinsUndEins\Neos\ContentStore\Exception;
+use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
-use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
-use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
