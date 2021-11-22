@@ -98,7 +98,6 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         Prune content store
                     </button>
                     <span> </span>
-                    <Neos.Fusion:Debug.Console value={"URI" + props._cancelRunningReleaseUri} />
                     <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
                         Cancel running release
                     </button>
