@@ -393,7 +393,7 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
 
             renderer = afx`
                 <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right" @if.isNotPrimary={item != "primary"}>
-                    Transfer to {item}
+                    Transfer and switch on {item}
                 </button>
             `
         }
