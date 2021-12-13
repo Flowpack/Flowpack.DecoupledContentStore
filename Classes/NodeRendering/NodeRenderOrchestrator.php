@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
+use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
@@ -93,6 +94,12 @@ class NodeRenderOrchestrator
      */
     protected $redisContentReleaseService;
 
+    /**
+     * @Flow\Inject
+     * @var ConcurrentBuildLockService
+     */
+    protected $concurrentBuildLockService;
+
     private const EXIT_ERRORSTATUSCODE_RELEASE_ALREADY_COMPLETED = 1;
     private const EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION = 2;
     private const EXIT_ERRORSTATUSCODE_RETRY_LIMIT_REACHED = 3;
@@ -140,6 +147,7 @@ class NodeRenderOrchestrator
             }
 
             $contentReleaseLogger->info('Starting iteration ' . $i);
+            $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
 
             $this->redisRenderingStatisticsStore->addStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create(0, 0, []));
 
@@ -200,11 +208,12 @@ class NodeRenderOrchestrator
                     $jobsWorkedThroughOverLastTenSeconds = $previousRemainingJobs - $remainingJobsCount;
                     $renderingsPerSecondDataPoints[] = $jobsWorkedThroughOverLastTenSeconds / 10;
 
-
                     $contentReleaseLogger->debug('Waiting... ', [
                         'numberOfQueuedJobs' => $remainingJobsCount,
                         'numberOfRenderingsInProgress' => $this->redisRenderingQueue->numberOfRenderingsInProgress($contentReleaseIdentifier),
                     ]);
+
+                    $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
                 }
             }
 
