@@ -10,10 +10,12 @@ use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Http\BaseUriProvider;
 use Neos\Flow\Http\Helper\RequestInformationHelper;
 use Neos\Flow\Http\Helper\ResponseInformationHelper;
+use Neos\Flow\Http\ServerRequestAttributes;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Mvc\ActionResponse;
 use Neos\Flow\Mvc\Controller\Arguments;
 use Neos\Flow\Mvc\Controller\ControllerContext;
+use Neos\Flow\Mvc\Routing\Dto\RouteParameters;
 use Neos\Flow\Mvc\Routing\UriBuilder;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Utility\ObjectAccess;
@@ -123,7 +125,7 @@ class DocumentRenderer
         } catch (\Exception $exception) {
             throw new Exception\RenderingException('Error rendering document view', $node, $nodeUri, 1491378709, $exception);
         } finally {
-            $this->cacheUrlMappingAspect->afterDocumentRendering    ();
+            $this->cacheUrlMappingAspect->afterDocumentRendering();
         }
     }
 
@@ -185,6 +187,8 @@ class DocumentRenderer
         $_SERVER['FLOW_REWRITEURLS'] = '1';
 
         $httpRequest = new ServerRequest('GET', $uri);
+        $routingParameters = RouteParameters::createEmpty()->withParameter('requestUriHost', $httpRequest->getUri()->getHost());
+        $httpRequest = $httpRequest->withAttribute(ServerRequestAttributes::ROUTING_PARAMETERS, $routingParameters);
 
         $request = ActionRequest::fromHttpRequest($httpRequest);
         $request->setControllerObjectName('Neos\Neos\Controller\Frontend\NodeController');
