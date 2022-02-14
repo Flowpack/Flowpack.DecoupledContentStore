@@ -4,7 +4,7 @@
   "name": "flowpack/decoupledcontentstore",
   "require": {
     "php": "^7.1",
-    "neos/neos": "~7.1.0",
+    "neos/neos": "^7.0",
     "albertofem/rsync-lib": "~1.0"
   },
   "autoload": {
