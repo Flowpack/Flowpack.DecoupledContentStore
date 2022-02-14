@@ -5,7 +5,8 @@
   "require": {
     "php": "^7.1",
     "neos/neos": "^7.0",
-    "albertofem/rsync-lib": "~1.0"
+    "albertofem/rsync-lib": "~1.0",
+    "sandstorm/optimizedrediscachebackend": "^1.1.4"
   },
   "autoload": {
     "psr-4": {
