@@ -41,13 +41,21 @@ class ConcurrentBuildLockService
 
     public function assertNoOtherContentReleaseWasStarted(ContentReleaseIdentifier $contentReleaseIdentifier)
     {
-        $concurrentBuildLock = ContentReleaseIdentifier::fromString($this->redisClientManager->getPrimaryRedis()->get('contentStore:concurrentBuildLock'));
+        $concurrentBuildLockString = $this->redisClientManager->getPrimaryRedis()->get('contentStore:concurrentBuildLock');
+
+        if (empty($concurrentBuildLockString)) {
+            echo '!!!!! Hard-aborting the current job ' . $contentReleaseIdentifier->getIdentifier() . ' because the concurrentBuildLock does not exist.' . "\n\n";
+            echo "This should never happen for correctly configured jobs (that run after prepare_finished).\n\n";
+            exit(1);
+        }
+        
+        $concurrentBuildLock = ContentReleaseIdentifier::fromString($concurrentBuildLockString);
 
         if (!$contentReleaseIdentifier->equals($concurrentBuildLock)) {
             // the concurrent build lock is different (i.e. newer) than our currently-running content release.
             // Thus, we abort the in-progress content release as quickly as we can - by DYING.
 
-            echo '!!!!! Hard-aborting the current job ' . $concurrentBuildLock->getIdentifier() . ' because the concurrentBuildLock contains ' . $concurrentBuildLock->getIdentifier() . "\n\n";
+            echo '!!!!! Hard-aborting the current job ' . $contentReleaseIdentifier->getIdentifier() . ' because the concurrentBuildLock contains ' . $concurrentBuildLock->getIdentifier() . "\n\n";
             echo "This is no error during deployment, but should never happen outside a deployment.\n\n It can only happen if two prunner instances run concurrently.\n\n";
             exit(1);
         }
