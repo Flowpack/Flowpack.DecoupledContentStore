@@ -33,6 +33,7 @@ pipelines:
       prepare_finished:
         script:
           - ./flow contentReleasePrepare:createContentRelease {{ .contentReleaseId }} {{ .__jobID }}
+          - ./flow contentReleasePrepare:ensureAllOtherInProgressContentReleasesWillBeTerminated {{ .contentReleaseId }}
 
       ################################################################################
       # 1) ENUMERATION

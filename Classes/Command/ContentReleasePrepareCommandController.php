@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
+use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\Flow\Annotations as Flow;
@@ -21,6 +22,12 @@ class ContentReleasePrepareCommandController extends CommandController
      */
     protected $redisContentReleaseService;
 
+    /**
+     * @Flow\Inject
+     * @var ConcurrentBuildLockService
+     */
+    protected $concurrentBuildLock;
+
     public function createContentReleaseCommand(string $contentReleaseIdentifier, string $prunnerJobId)
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
@@ -28,6 +35,13 @@ class ContentReleasePrepareCommandController extends CommandController
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
         $this->redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger);
+    }
+
+    public function ensureAllOtherInProgressContentReleasesWillBeTerminatedCommand(string $contentReleaseIdentifier)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+
+        $this->concurrentBuildLock->ensureAllOtherInProgressContentReleasesWillBeTerminated($contentReleaseIdentifier);
     }
 
     public function registerManualTransferJobCommand(string $contentReleaseIdentifier, string $prunnerJobId)

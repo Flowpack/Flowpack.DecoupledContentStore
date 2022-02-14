@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
+use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\DocumentRenderedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
@@ -112,6 +113,12 @@ class NodeRenderer
      */
     protected $persistenceManager;
 
+    /**
+     * @Flow\Inject
+     * @var ConcurrentBuildLockService
+     */
+    protected $concurrentBuildLockService;
+
 
     public function render(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger, RendererIdentifier $rendererIdentifier)
     {
@@ -133,6 +140,7 @@ class NodeRenderer
                 // determining what needs to be done. We just need to wait a bit and retry.
                 $contentReleaseLogger->debug('Rendering queue currently empty; we wait a bit see if there is work for us.');
                 sleep(2);
+                $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
                 continue;
             }
 
@@ -149,6 +157,11 @@ class NodeRenderer
             yield DocumentRenderedEvent::create();
 
             $i++;
+
+            if ($i % 5 === 0) {
+                $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
+            }
+
             if ($i % 20 === 0) {
                 $contentReleaseLogger->info('Restarting after 20 renders.');
                 yield ExitEvent::createWithStatusCode(193);
