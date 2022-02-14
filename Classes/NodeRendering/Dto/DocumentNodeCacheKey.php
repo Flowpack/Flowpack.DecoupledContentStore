@@ -57,8 +57,8 @@ final class DocumentNodeCacheKey
         return preg_replace('/[^a-zA-Z0-9-]/', '_', sprintf('doc--%s-%s-%s', $this->nodeIdentifier, json_encode($this->dimensions), json_encode($this->arguments)));
     }
 
-    public function fullyQualifiedRedisKeyName(): string
+    public function fullyQualifiedRedisKeyName(string $identifierPrefix): string
     {
-        return 'Neos_Fusion_Content:entry:' . $this->redisKeyName();
+        return $identifierPrefix . 'Neos_Fusion_Content:entry:' . $this->redisKeyName();
     }
 }
