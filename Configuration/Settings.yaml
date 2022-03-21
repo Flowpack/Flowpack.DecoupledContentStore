@@ -64,6 +64,11 @@ Flowpack:
       # each content release starts with a fixed prefix "contentRelease:[releaseId]:", and afterwards
       # follows a part which needs to be registered here. This is needed for synchronization between different
       # content stores and cleanup of old releases.
+      # the transfer setting can either be a boolean value for all redis content stores or an object that specifies
+      # *per content store*, if the key should be transferred or not. example for the latter:
+      #        transfer:
+      #          target_live: false
+      #          '*': true
       data:
         redisKeyPostfix: 'data'
         transfer: true
