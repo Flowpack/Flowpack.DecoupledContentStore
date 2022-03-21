@@ -56,7 +56,7 @@ class RedisReleaseSwitchService
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
         $hasError = false;
         foreach ($redisKeyPostfixesForEachRelease->getRequiredKeys() as $requiredPostfix) {
-            if ($requiredPostfix->shouldTransfer()) {
+            if ($requiredPostfix->shouldTransfer($redisInstanceIdentifier)) {
                 $key = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, $requiredPostfix->getRedisKeyPostfix());
                 if (!$redis->exists($key)) {
                     $contentReleaseLogger->error('Required redis key ' . $key . ' does not exist for release thus we do not switch.');
