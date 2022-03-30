@@ -19,6 +19,12 @@ class IncrementalContentReleaseHandler
      */
     protected $contentReleaseManager;
 
+    /**
+     * @Flow\InjectConfiguration(path="autoPublish.onNodePublish")
+     * @var string|null
+     */
+    protected $onNodePublish;
+
     protected $nodePublishedInThisRequest = false;
 
     public function nodePublished()
@@ -29,7 +35,14 @@ class IncrementalContentReleaseHandler
     public function startContentReleaseIfNodesWerePublishedBefore()
     {
         if ($this->nodePublishedInThisRequest === true) {
-            $this->contentReleaseManager->startIncrementalContentRelease();
+            switch ($this->onNodePublish) {
+                case "incremental":
+                    $this->contentReleaseManager->startIncrementalContentRelease();
+                    return;
+                case "full":
+                    $this->contentReleaseManager->startFullContentRelease();
+                    return;
+            }
         }
     }
 }

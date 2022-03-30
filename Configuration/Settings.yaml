@@ -41,8 +41,6 @@ Flowpack:
       # Add full HTTP message to the output of the content store
       addHttpMessage: false
 
-
-
     extensions:
       # Extend Node Rendering by generating additional data for each rendering, interleaved with the content cache.
       #
@@ -120,8 +118,6 @@ Flowpack:
         transferMode: 'dump'
         isRequired: true
 
-
-
     resourceSync:
       targets: {  }
       #
@@ -132,7 +128,14 @@ Flowpack:
       #    port: ''
       #    user: ''
       #    directory: '../nginx/frontend/resources/'
+
+    autoPublish:
+      # Enable automatic publishing when nodes were published (via web).
+      # Allowed values: "incremental", "full", null.
+      onNodePublish: incremental
+
 Neos:
+
   Neos:
     fusion:
       autoInclude:
