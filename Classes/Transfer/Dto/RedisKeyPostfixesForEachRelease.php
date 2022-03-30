@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer\Dto;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+
 class RedisKeyPostfixesForEachRelease
 {
 
@@ -36,10 +38,10 @@ class RedisKeyPostfixesForEachRelease
     /**
      * @return iterable|RedisKeyPostfixForEachRelease[]
      */
-    public function getKeysToTransfer(): iterable
+    public function getKeysToTransfer(RedisInstanceIdentifier $redisInstanceIdentifier): iterable
     {
         foreach ($this->redisKeyPostfixes as $redisKeyPostfix) {
-            if ($redisKeyPostfix->shouldTransfer()) {
+            if ($redisKeyPostfix->shouldTransfer($redisInstanceIdentifier)) {
                 yield $redisKeyPostfix;
             }
         }

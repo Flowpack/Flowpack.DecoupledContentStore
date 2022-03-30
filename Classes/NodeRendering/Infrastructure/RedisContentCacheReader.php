@@ -5,6 +5,7 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\Infrastructure;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheValues;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
+use Neos\Cache\Backend\AbstractBackend;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
@@ -29,12 +30,22 @@ class RedisContentCacheReader
      */
     protected $contentCache;
 
+    /**
+     * @Flow\InjectConfiguration(path="cache.applicationIdentifier", package="Neos.Flow")
+     * @var string
+     */
+    protected $applicationIdentifier;
+
     public function tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey $documentNodeCacheKey): RenderedDocumentFromContentCache
     {
         $maxNestLevel = ContentCache::MAXIMUM_NESTING_LEVEL;
         $contentCacheStartToken = ContentCache::CACHE_SEGMENT_START_TOKEN;
         $contentCacheEndToken = ContentCache::CACHE_SEGMENT_END_TOKEN;
         $contentCacheMarker = ContentCache::CACHE_SEGMENT_MARKER;
+        /**
+         * @see AbstractBackend::setCache()
+         */
+        $identifierPrefix = md5($this->applicationIdentifier) . ':';
 
         $redis = null;
         $backend = $this->contentCache->getBackend();
@@ -45,7 +56,7 @@ class RedisContentCacheReader
         } else {
             throw new \RuntimeException('TODO: Cache backend must be OptimizedRedisCacheBackend.');
         }
-        $serializedCacheValues = $redis->get($documentNodeCacheKey->fullyQualifiedRedisKeyName());
+        $serializedCacheValues = $redis->get($documentNodeCacheKey->fullyQualifiedRedisKeyName($identifierPrefix));
         if ($serializedCacheValues === false) {
             return RenderedDocumentFromContentCache::createIncomplete('No Redis Key "' . $documentNodeCacheKey->redisKeyName() . '" found.');
         }
@@ -53,7 +64,8 @@ class RedisContentCacheReader
 
         $script = "
             local rootIdentifier = ARGV[1]
-        
+            local identifierPrefix = ARGV[2]
+
             local function readContentCacheRecursively(identifier, depth)
                 depth = depth or 1
 
@@ -62,45 +74,45 @@ class RedisContentCacheReader
                     return '', 'Maximum Nesting Level Reached'
                 end
 
-                local content = redis.call('GET', 'Neos_Fusion_Content:entry:' .. identifier)
+                local content = redis.call('GET', identifierPrefix .. 'Neos_Fusion_Content:entry:' .. identifier)
                 if not content then
-                    return '', 'Neos_Fusion_Content:entry:' .. identifier .. ' not found'
+                    return '', identifierPrefix .. 'Neos_Fusion_Content:entry:' .. identifier .. ' not found'
                 end
 
-                local error = nil 
+                local error = nil
                 content = string.gsub(content, '${contentCacheStartToken}${contentCacheMarker}([a-z0-9]+)${contentCacheEndToken}${contentCacheMarker}', function(id)
                         local str
                         local errMsg
                         str, errMsg = readContentCacheRecursively(id, depth + 1)
-                        
+
                         if errMsg then
                             error = errMsg
                         end
-                        
+
                         return str
                     end
                 )
-                
+
                 if error then
                     return nil, error
                 else
                     return content, nil
                 end
             end
-            
+
             local content, error = readContentCacheRecursively(rootIdentifier)
             if not error then
                 error = ''
             end
-            
+
             if not content then
                 content = ''
             end
-            
+
             return {content, error}
         ";
         // starting with Lua 7, eval_ro can be used.
-        $res = $redis->eval($script, [$documentNodeCacheValues->getRootIdentifier()], 0);
+        $res = $redis->eval($script, [$documentNodeCacheValues->getRootIdentifier(), $identifierPrefix], 0);
         $error = $redis->getLastError();
         if ($error !== null) {
             throw new \RuntimeException('Redis Error: ' . $error);

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer\Dto;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Exception\InvalidTransferConfigException;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -15,24 +17,31 @@ final class RedisKeyPostfixForEachRelease
     private const TRANSFER_MODE_DUMP = 'dump';
 
     protected string $redisKeyPostfix;
-    protected bool $transfer;
+    protected array $transfer;
     protected string $transferMode;
     protected bool $isRequired;
 
     /**
      * @param string $redisKeyPostfix
-     * @param bool $transfer
+     * @param bool|array $transfer
      * @param string $transferMode
      * @param bool $isRequired
      */
-    private function __construct(string $redisKeyPostfix, bool $transfer, string $transferMode, bool $isRequired)
+    private function __construct(string $redisKeyPostfix, $transfer, string $transferMode, bool $isRequired)
     {
         if (!in_array($transferMode, [self::TRANSFER_MODE_HASH_INCREMENTAL, self::TRANSFER_MODE_DUMP])) {
             throw new \RuntimeException('TransferMode ' . $transferMode . ' not supported.');
         }
 
+        if (is_bool($transfer)) {
+            $this->transfer = [
+                '*' => $transfer
+            ];
+        } else {
+            $this->transfer = $transfer;
+        }
+
         $this->redisKeyPostfix = $redisKeyPostfix;
-        $this->transfer = $transfer;
         $this->transferMode = $transferMode;
         $this->isRequired = $isRequired;
     }
@@ -51,9 +60,15 @@ final class RedisKeyPostfixForEachRelease
     /**
      * @return bool
      */
-    public function shouldTransfer(): bool
+    public function shouldTransfer(RedisInstanceIdentifier $redisInstanceIdentifier): bool
     {
-        return $this->transfer;
+        if (array_key_exists($redisInstanceIdentifier->getIdentifier(), $this->transfer)) {
+            return $this->transfer[$redisInstanceIdentifier->getIdentifier()];
+        }
+        if (array_key_exists('*', $this->transfer)) {
+            return $this->transfer['*'];
+        }
+        throw new InvalidTransferConfigException('No valid transfer mode is configured.');
     }
 
     public function isRequired(): bool

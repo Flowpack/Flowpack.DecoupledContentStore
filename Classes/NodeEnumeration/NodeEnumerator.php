@@ -3,6 +3,7 @@
 namespace Flowpack\DecoupledContentStore\NodeEnumeration;
 
 
+use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -38,6 +39,12 @@ class NodeEnumerator
     protected $redisContentReleaseService;
 
     /**
+     * @Flow\Inject
+     * @var ConcurrentBuildLockService
+     */
+    protected $concurrentBuildLockService;
+
+    /**
      * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
      * @var string
      */
@@ -55,6 +62,7 @@ class NodeEnumerator
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
         foreach (GeneratorUtility::createArrayBatch($this->enumerateAll($site, $contentReleaseLogger), 100) as $enumeration) {
+            $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.
             // TODO: EXTENSION POINT HERE, TO ADD ADDITIONAL ENUMERATIONS (.metadata.json f.e.)
             // TODO: not yet fully sure how to handle Enumeration

@@ -2,8 +2,7 @@
 
 This is the 2nd generation of a Two-Stack CMS package for Neos.
 
-**This Package is currently work-in-progress and heavily developed right now. It is
-not yet ready for general usage, but will be soon.**
+**This Package is used in production in a bigger instance.**
 
 The Content Store package is one part of a [Two-Stack CMS](https://martinfowler.com/articles/two-stack-cms/)
 solution with Neos. A Two-Stack architecture separates editing and publishing

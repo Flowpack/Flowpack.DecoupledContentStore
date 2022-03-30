@@ -105,7 +105,9 @@ class BackendUiDataService
         $size = 0;
 
         foreach ($allKeys as $key) {
-            $size += $redis->rawCommand('memory', 'usage', $key);
+            // We need to set the `samples` option to 0 here, as the default value is 5 and specifies the number of
+            // sampled nested values. With 0 all nested values are sampled.
+            $size += $redis->rawCommand('memory', 'usage', $key, 'samples', '0');
         }
 
         // bytes are returned, convert to megabytes
