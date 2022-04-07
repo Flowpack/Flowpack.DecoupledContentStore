@@ -103,7 +103,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         Cancel running release
                     </button>
 
-                    <div class="neos-footer">
+                    <div class="neos-footer h-full">
                         <Flowpack.DecoupledContentStore:ListFooter />
                     </div>
                 </div>

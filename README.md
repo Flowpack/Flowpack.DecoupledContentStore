@@ -363,7 +363,7 @@ and what data to delete if a release is removed.
   - Adding a flash message
     ```
     // ActionController
-    $this->addFlashMessage('warning', Error\Message::SEVERITY_WARNING);
+    $this->addFlashMessage('sth important you have to say');
     ```
 
 ## Development

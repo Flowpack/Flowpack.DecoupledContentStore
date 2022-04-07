@@ -1,5 +1,6 @@
 
 module.exports = {
+  important: true,
   purge: {
       enabled: !Boolean(process.env.DEV),
       content: [
