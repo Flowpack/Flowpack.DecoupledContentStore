@@ -4,7 +4,7 @@ prototype(Flowpack.DecoupledContentStore:FlashMessages) < prototype(Neos.Fusion:
     renderer = afx`
         <ul id="neos-notifications-inline" @if.hasFlashMessages={props.flashMessages}>
             <Neos.Fusion:Loop items={props.flashMessages}>
-                <li data-type="item.severity">
+                <li data-type={String.toLowerCase(item.severity)}>
                     {item.message}
                 </li>
             </Neos.Fusion:Loop>
