@@ -393,14 +393,14 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
 
             renderer = afx`
                 <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right" @if.isNotPrimary={item != "primary"}>
-                    Transfer to {item}
+                    Transfer and switch on {item}
                 </button>
             `
         }
     }
 
     renderer = afx`
-        <div class="neos-footer">
+        <div class="neos-footer !h-full">
             <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: detailsData.contentReleaseIdentifier.identifier}} class="neos-button">
                 <i class="fa fa-sync"></i> Reload
             </Neos.Fusion:Link.Action>

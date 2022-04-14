@@ -338,6 +338,34 @@ Flowpack:
 This is needed so that the system knows which keys should be synchronized between the different content stores,
 and what data to delete if a release is removed.
 
+### Extending the backend module
+
+- You need a Views.yaml in your package, looking like this:
+```
+-
+  requestFilter: 'isPackage("Flowpack.DecoupledContentStore")'
+  viewObjectName: 'Neos\Fusion\View\FusionView'
+  options:
+    fusionPathPatterns:
+      - 'resource://Flowpack.DecoupledContentStore/Private/BackendFusion'
+      - 'resource://Vendor.Site/Private/DecoupledContentStoreFusion'
+```
+- Ensure that your package depends on `flowpack/decoupledcontentstore` in composer.json (so that your Views.yaml "wins" because the DecoupledContentStore-Package comes with its own Views.yaml)
+- Add a Root.fusion in `Vendor.Site/Resources/Private/DecoupledContentStoreFusion` which can contain your modifications
+- We currently support the following adjustments:
+  - Adding a button to the footer
+    ```
+    prototype(Flowpack.DecoupledContentStore:ListFooter) {
+        test = '<span class="align-middle inline-block text-sm pr-4 pl-16">TEST</span>'
+        test.@position = 'before reload'
+    }
+    ```
+  - Adding a flash message
+    ```
+    // ActionController
+    $this->addFlashMessage('sth important you have to say');
+    ```
+
 ## Development
 
 - You need [pnpm](https://github.com/pnpm/pnpm) as package panager installed: `curl -f https://get.pnpm.io/v6.js | node - add --global pnpm`

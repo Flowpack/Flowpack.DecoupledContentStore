@@ -159,8 +159,11 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 
     public function switchContentReleaseOnOtherInstanceAction(string $targetRedisInstanceIdentifier, string $contentReleaseIdentifier)
     {
+        $redis = $this->redisClientManager->getPrimaryRedis();
+        $currentContentReleaseId = $redis->get('contentStore:current');
+
         $this->prunnerApiService->schedulePipeline(PipelineName::create('manually_transfer_content_release'),
-            ['contentReleaseId' => $contentReleaseIdentifier, 'redisInstanceId' => $targetRedisInstanceIdentifier]);
+            ['contentReleaseId' => $contentReleaseIdentifier, 'currentContentReleaseId' => $currentContentReleaseId ?: ContentReleaseManager::NO_PREVIOUS_RELEASE, 'redisInstanceId' => $targetRedisInstanceIdentifier]);
 
         $this->redirect('index', null, null, ['contentStore' => $targetRedisInstanceIdentifier]);
     }
