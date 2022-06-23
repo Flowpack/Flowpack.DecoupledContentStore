@@ -8,6 +8,8 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
+use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
@@ -42,6 +44,11 @@ class ContentReleaseCleaner
      */
     protected $redisReleaseSwitchService;
 
+    /**
+     * @Flow\Inject
+     * @var RedisRenderingErrorManager
+     */
+    protected $redisRenderingErrorManager;
 
     /**
      * @Flow\Inject
@@ -74,7 +81,10 @@ class ContentReleaseCleaner
             } elseif ($id->equals($contentReleaseIdentifierOfUpcomingRelease)) {
                 $contentReleaseLogger->info('- ' . $id->getIdentifier() . ' (UPCOMING)');
             } else {
-                $i++;
+                // on primary: only add to counter if status of release is "success" and release has no errors
+                if (!$redisInstanceIdentifier->isPrimary() || ($this->redisContentReleaseService->fetchMetadataForContentRelease($id)->getStatus()->getStatus() === NodeRenderingCompletionStatus::success()->getStatus() && count($this->redisRenderingErrorManager->getRenderingErrors($id)) === 0)) {
+                    $i++;
+                }
 
                 // we always want to keep $currentRelease and $contentReleaseIdentifierOfUpcomingRelease; thus
                 // we need to remove 2 from $contentReleasesToKeep
