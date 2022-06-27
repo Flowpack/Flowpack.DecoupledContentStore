@@ -48,8 +48,11 @@ class ContentReleaseManager
 
     public function startFullContentRelease()
     {
+        $redis = $this->redisClientManager->getPrimaryRedis();
+        $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
+
         $this->contentCache->flush();
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => self::NO_PREVIOUS_RELEASE]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE]);
     }
 
     public function cancelAllRunningContentReleases()
