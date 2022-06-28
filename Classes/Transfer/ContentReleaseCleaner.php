@@ -73,7 +73,7 @@ class ContentReleaseCleaner
             throw new \RuntimeException('contentReleaseRetentionCount must be at least 2, found: ' . $contentReleasesToKeep);
         }
 
-        $i = 0;
+        $healthyReleaseCounter = 0;
         $releasesToRemove = [];
         foreach ($contentReleaseIds as $id) {
             if ($id->equals($currentRelease)) {
@@ -81,21 +81,30 @@ class ContentReleaseCleaner
             } elseif ($id->equals($contentReleaseIdentifierOfUpcomingRelease)) {
                 $contentReleaseLogger->info('- ' . $id->getIdentifier() . ' (UPCOMING)');
             } else {
-                // on primary: only add to counter if status of release is "success" and release has no errors
-                if (!$redisInstanceIdentifier->isPrimary() || ($this->redisContentReleaseService->fetchMetadataForContentRelease($id)->getStatus()->getStatus() === NodeRenderingCompletionStatus::success()->getStatus() && count($this->redisRenderingErrorManager->getRenderingErrors($id)) === 0)) {
-                    $i++;
+                if (!$redisInstanceIdentifier->isPrimary()) {
+                    // We are on a PRODUCTION content store (in case of a replicated setup) - there are no errors transferred there
+                    // by design and we want to NEVER run into a memory problem (that's why the cleanup should always run).
+                    $healthyReleaseCounter++;
+                } else {
+                    // We are on the primary content store (the one which the pipeline uses as scratch space).
+                    // In case of errors, we want to keep more "good" content releases ("success" state and no errors), so that we can
+                    // more easily switch back to an older release.
+                    // -> We accept potential Redis out of memory errors in this case.
+                    if (($this->redisContentReleaseService->fetchMetadataForContentRelease($id)->getStatus()->getStatus() === NodeRenderingCompletionStatus::success()->getStatus() && count($this->redisRenderingErrorManager->getRenderingErrors($id)) === 0)) {
+                        $healthyReleaseCounter++;
+                    }
                 }
 
                 // we always want to keep $currentRelease and $contentReleaseIdentifierOfUpcomingRelease; thus
                 // we need to remove 2 from $contentReleasesToKeep
-               $shouldRemoveRelease = ($i > $contentReleasesToKeep - 2);
+                $shouldRemoveRelease = ($healthyReleaseCounter > $contentReleasesToKeep - 2);
 
-               if ($shouldRemoveRelease) {
-                   $releasesToRemove[] = $id;
-                   $contentReleaseLogger->info('- ' . $id->getIdentifier() . ' <-- to remove');
-               } else {
-                   $contentReleaseLogger->info('- ' . $id->getIdentifier());
-               }
+                if ($shouldRemoveRelease) {
+                    $releasesToRemove[] = $id;
+                    $contentReleaseLogger->info('- ' . $id->getIdentifier() . ' <-- to remove');
+                } else {
+                    $contentReleaseLogger->info('- ' . $id->getIdentifier());
+                }
             }
         }
 
