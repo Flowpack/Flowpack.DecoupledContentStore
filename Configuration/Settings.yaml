@@ -120,6 +120,8 @@ Flowpack:
         transferMode: 'dump'
         isRequired: true
 
+    # can be used on the consuming site to ensure non-breaking deployments for changes in the config
+    configEpoch: v1
 
 
     resourceSync:

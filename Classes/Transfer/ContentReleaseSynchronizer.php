@@ -29,6 +29,12 @@ class ContentReleaseSynchronizer
     protected $redisKeyPostfixesForEachReleaseConfiguration;
 
     /**
+     * @Flow\InjectConfiguration("configEpoch")
+     * @var string
+     */
+    protected $configEpochSetting;
+
+    /**
      * @Flow\Inject
      * @var RedisKeyService
      */
@@ -64,6 +70,7 @@ class ContentReleaseSynchronizer
         }
 
         $targetRedis->zAdd('contentStore:registeredReleases', 0, $contentReleaseIdentifier->getIdentifier());
+        $targetRedis->set('contentStore:configEpoch', $this->configEpochSetting);
     }
 
     /**
