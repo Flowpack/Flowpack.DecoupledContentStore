@@ -30,9 +30,9 @@ class ContentReleaseSynchronizer
 
     /**
      * @Flow\InjectConfiguration("configEpoch")
-     * @var string
+     * @var array
      */
-    protected $configEpochSetting;
+    protected $configEpochSettings;
 
     /**
      * @Flow\Inject
@@ -70,7 +70,7 @@ class ContentReleaseSynchronizer
         }
 
         $targetRedis->zAdd('contentStore:registeredReleases', 0, $contentReleaseIdentifier->getIdentifier());
-        $targetRedis->set('contentStore:configEpoch', $this->configEpochSetting);
+        $targetRedis->set('contentStore:configEpoch', $this->configEpochSettings['current']);
     }
 
     /**

@@ -121,7 +121,9 @@ Flowpack:
         isRequired: true
 
     # can be used on the consuming site to ensure non-breaking deployments for changes in the config
-    configEpoch: v1
+    configEpoch:
+      current: v1
+      previous: ~
 
 
     resourceSync:
