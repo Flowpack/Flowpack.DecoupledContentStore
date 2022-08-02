@@ -365,6 +365,39 @@ and what data to delete if a release is removed.
     // ActionController
     $this->addFlashMessage('sth important you have to say');
     ```
+  
+### Using different sets of config
+
+In some cases it might be necessary to make fundamental adjustments to some configuration properties that would be
+really hard to handle (safely, non-breaking) on the consuming site of the content store. Therefore we added the config
+property `configEpoch` that can contain a current and previous config version. The `current` value (that should be used
+on the consuming site) gets published to the content store.
+
+We decided to save the configEpoch on content store level instead of content release level for simplicity reasons on the
+consuming site. If you need to switch back to an older release that was rendered with the previous config epoch version
+and would not match the currently published one, you may manually toggle between current and previous config epoch.
+There is a button for this in the backend module for each target content store. Obviously this button should be used
+with extra care as the config epoch needs to fit the current release at all times.
+
+Example:
+
+- We need to make a bigger change to the contentDimensions config, let's say we need to add uriPrefixes that weren't
+  there before. We adjust the config accordingly and in the same deployment we configure the config epoch as follows:
+
+    ```yml
+    Flowpack:
+      DecoupledContentStore:
+        configEpoch:
+          current: v2
+          previous: v1
+    ```
+
+- Now on the consuming site we can take action to handle both the old and new config and decide based on the value in
+  redis which case is executed.
+
+    ```php
+    'contentStoreUrl' => 'https://www.vendor.de/' . ($configEpoch === 'v2' ? 'de-de/' : '')
+    ```
 
 ## Development
 
