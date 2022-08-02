@@ -82,17 +82,31 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
      */
     protected $redisContentStores;
 
+    /**
+     * @Flow\InjectConfiguration("configEpoch")
+     * @var array
+     */
+    protected $configEpochSettings;
+
     protected $defaultViewObjectName = FusionView::class;
 
     public function indexAction(?string $contentStore = null)
     {
         $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
-        $storeSize = $this->redisClientManager->getRedis($contentStore)->info('memory')['used_memory_human'];
+        $redis = $this->redisClientManager->getRedis($contentStore);
+        $storeSize = $redis->info('memory')['used_memory_human'];
+        $currentConfigEpoch = $this->configEpochSettings['current'] ?? null;
+        $previousConfigEpoch = $this->configEpochSettings['previous'] ?? null;
+        $configEpochRedis = $redis->get('contentStore:configEpoch');
+        $showToggleConfigEpochButton = $previousConfigEpoch !== null && !$contentStore->isPrimary();
 
         $this->view->assign('contentStore', $contentStore->getIdentifier());
         $this->view->assign('overviewData', $this->backendUiDataService->loadBackendOverviewData($contentStore));
         $this->view->assign('redisContentStores', array_keys($this->redisContentStores));
         $this->view->assign('storeSize', $storeSize);
+        $this->view->assign('toggleFromConfigEpoch', $configEpochRedis);
+        $this->view->assign('toggleToConfigEpoch', $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch);
+        $this->view->assign('showToggleConfigEpochButton', $showToggleConfigEpochButton);
     }
 
     public function detailsAction(string $contentReleaseIdentifier, ?string $contentStore = null, ?string $detailTaskName = '', ?string $prunnerJobId = '')
@@ -180,6 +194,14 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
     {
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
         $this->contentReleaseManager->cancelAllRunningContentReleases();
+
+        $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
+    }
+
+    public function toggleConfigEpochAction(string $redisInstanceIdentifier)
+    {
+        $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
+        $this->contentReleaseManager->toggleConfigEpoch($redisInstanceIdentifier);
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }

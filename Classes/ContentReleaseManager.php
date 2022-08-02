@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
@@ -33,6 +34,12 @@ class ContentReleaseManager
      */
     protected $redisClientManager;
 
+    /**
+     * @Flow\InjectConfiguration("configEpoch")
+     * @var array
+     */
+    protected $configEpochSettings;
+
     const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
     const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
 
@@ -61,6 +68,20 @@ class ContentReleaseManager
         $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
         foreach ($runningJobs as $job) {
             $this->prunnerApiService->cancelJob($job);
+        }
+    }
+
+    public function toggleConfigEpoch(RedisInstanceIdentifier $redisInstanceIdentifier)
+    {
+        $currentConfigEpochConfig = $this->configEpochSettings['current'] ?? null;
+        $previousConfigEpochConfig = $this->configEpochSettings['previous'] ?? null;
+        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
+        $configEpochRedis = $redis->get('contentStore:configEpoch');
+
+        if ($configEpochRedis === $currentConfigEpochConfig) {
+            $redis->set('contentStore:configEpoch', $previousConfigEpochConfig);
+        } else {
+            $redis->set('contentStore:configEpoch', $currentConfigEpochConfig);
         }
     }
 }
