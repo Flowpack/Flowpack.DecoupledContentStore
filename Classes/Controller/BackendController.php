@@ -98,7 +98,7 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $currentConfigEpoch = $this->configEpochSettings['current'] ?? null;
         $previousConfigEpoch = $this->configEpochSettings['previous'] ?? null;
         $configEpochRedis = $redis->get('contentStore:configEpoch');
-        $showToggleConfigEpochButton = $previousConfigEpoch !== null && !$contentStore->isPrimary();
+        $showToggleConfigEpochButton = $previousConfigEpoch !== null;
 
         $this->view->assign('contentStore', $contentStore->getIdentifier());
         $this->view->assign('overviewData', $this->backendUiDataService->loadBackendOverviewData($contentStore));
