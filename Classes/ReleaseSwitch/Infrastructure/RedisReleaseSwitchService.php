@@ -41,6 +41,12 @@ class RedisReleaseSwitchService
      */
     protected $redisKeyPostfixesForEachReleaseConfiguration;
 
+    /**
+     * @Flow\InjectConfiguration("configEpoch")
+     * @var array
+     */
+    protected $configEpochSettings;
+
     public function switchContentRelease(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger)
     {
         $redis = $this->redisClient->getRedis($redisInstanceIdentifier);
@@ -71,6 +77,7 @@ class RedisReleaseSwitchService
         }
 
         $redis->set('contentStore:current', $contentReleaseIdentifier->getIdentifier());
+        $redis->set('contentStore:configEpoch', $this->configEpochSettings['current']);
         $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withSwitchTime(new \DateTimeImmutable()), $redisInstanceIdentifier);
 
