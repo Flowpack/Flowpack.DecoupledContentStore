@@ -12,7 +12,7 @@ use Neos\Flow\Annotations as Flow;
 class RedisPruneService
 {
     // go through all keys in the selected content store
-    // check wether they are reserved keys or currently active or contain one of the currently registered releases ids
+    // check whether they are reserved keys or currently active or contain one of the currently registered releases ids
     // if not: delete
     const PRUNE_LUA_SCRIPT = '
         local contentStoreCurrent = redis.call("GET", "contentStore:current")
@@ -32,6 +32,7 @@ class RedisPruneService
         for index,contentStoreKey in ipairs(contentStoreAllKeys) do
             if contentStoreKey ~= "contentStore:current"
             and contentStoreKey ~= "contentStore:registeredReleases"
+            and contentStoreKey ~= "contentStore:configEpoch"
             and string.sub(contentStoreKey, 1, string.len(currentContentStoreStart)) ~= currentContentStoreStart
             and not table_contains_value(contentStoreRegisteredReleases, contentStoreKey) then
                 redis.call("DEL", contentStoreKey)
