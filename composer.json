@@ -3,11 +3,9 @@
   "type": "neos-package",
   "name": "flowpack/decoupledcontentstore",
   "require": {
-    "php": "^7.1 || ^8.0",
-    "neos/neos": "^7.0",
-    "albertofem/rsync-lib": "~1.0",
-    "sandstorm/optimizedrediscachebackend": "^1.1.4",
-    "flowpack/prunner": "^0.2"
+    "php": "^8.0",
+    "neos/neos": "^8.0",
+    "albertofem/rsync-lib": "~1.0"
   },
   "autoload": {
     "psr-4": {
