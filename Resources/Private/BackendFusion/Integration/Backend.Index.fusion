@@ -5,8 +5,8 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     // - contentStore: contains string content store identifier
     // - redisContentStores: array of all configured content store identifiers
     // - storeSize: string of content store size
-    // - toggleFromConfigEpoch: string, e.g. "v2"
-    // - toggleToConfigEpoch: string, e.g. "v1"
+    // - toggleFromConfigEpoch: string, e.g. "2"
+    // - toggleToConfigEpoch: string, e.g. "1"
     // - showToggleConfigEpochButton: boolean
 
     renderer = Neos.Fusion:Component {

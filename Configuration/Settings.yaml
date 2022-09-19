@@ -122,7 +122,7 @@ Flowpack:
 
     # can be used on the consuming site to ensure non-breaking deployments for changes in the config
     configEpoch:
-      current: v1
+      current: '1'
       previous: ~
 
 
