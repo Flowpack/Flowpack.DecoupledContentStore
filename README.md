@@ -388,15 +388,16 @@ Example:
     Flowpack:
       DecoupledContentStore:
         configEpoch:
-          current: v2
-          previous: v1
+          current: '2'
+          previous: '1'
     ```
 
 - Now on the consuming site we can take action to handle both the old and new config and decide based on the value in
   redis which case is executed.
 
     ```php
-    'contentStoreUrl' => 'https://www.vendor.de/' . ($configEpoch === 'v2' ? 'de-de/' : '')
+    $configEpoch = (int) $redisClient->get('contentStore:configEpoch');
+    $contentStoreUrl = 'https://www.vendor.de/' . ($configEpoch > 1 ? 'de-de/' : '');
     ```
 
 ## Development
