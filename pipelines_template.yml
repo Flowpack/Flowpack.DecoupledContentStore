@@ -9,7 +9,7 @@
 # The contents of this file is read by [prunner](https://github.com/Flowpack/prunner).
 #
 pipelines:
-  # ARG: contentReleaseId, currentContentReleaseId
+  # ARG: contentReleaseId, currentContentReleaseId, validate
   # the currentContentReleaseId is not used in any pipeline step here in the template, but is a common need in other
   # use cases in extensions, e.g. calculating the differences between current and new release
   do_content_release:
@@ -128,7 +128,8 @@ pipelines:
       ################################################################################
       validate_content:
         script:
-          - ./flow contentReleaseValidation:validate {{ .contentReleaseId }}
+          - |
+            {{ if .validate }} ./flow contentReleaseValidation:validate {{ .contentReleaseId }} {{ end }}
         depends_on: [ render_finished ]
 
       # Extension Point: If you want to validate additional things

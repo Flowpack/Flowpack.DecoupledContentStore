@@ -10,12 +10,17 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     // - showToggleConfigEpochButton: boolean
 
     renderer = Neos.Fusion:Component {
+        _publishAllWithoutValidationUri = Neos.Fusion:UriBuilder {
+            action = 'publishAllWithoutValidation'
+        }
+
         _pruneContentStoreUri = Neos.Fusion:UriBuilder {
             action = 'pruneContentStore'
             arguments = Neos.Fusion:DataStructure {
                 redisInstanceIdentifier = ${contentStore}
             }
         }
+
         _cancelRunningReleaseUri = Neos.Fusion:UriBuilder {
             action = 'cancelRunningRelease'
             arguments = Neos.Fusion:DataStructure {
@@ -105,6 +110,10 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                     <span>Store size: </span>
                     <span class="neos-badge neos-badge-info">{storeSize}</span>
                     <br />
+                    <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
+                        Publish all without validation
+                    </button>
+                    <span> </span>
                     <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning" style="margin-top: 300px;">
                         Prune content store
                     </button>

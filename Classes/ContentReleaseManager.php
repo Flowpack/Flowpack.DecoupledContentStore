@@ -50,16 +50,17 @@ class ContentReleaseManager
 
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE, 'validate' => true]);
     }
 
-    public function startFullContentRelease()
+    // the validate parameter can be used to intentionally skip the validation step for this release
+    public function startFullContentRelease(bool $validate = true)
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
         $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
 
         $this->contentCache->flush();
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE, 'validate' => $validate]);
     }
 
     public function cancelAllRunningContentReleases()

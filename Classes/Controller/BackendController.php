@@ -135,6 +135,13 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->redirect('index');
     }
 
+    public function publishAllWithoutValidationAction()
+    {
+        $this->contentReleaseManager->cancelAllRunningContentReleases();
+        $this->contentReleaseManager->startFullContentRelease(false);
+        $this->redirect('index');
+    }
+
     public function removeAction(string $contentReleaseIdentifier, string $redisInstanceIdentifier)
     {
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
