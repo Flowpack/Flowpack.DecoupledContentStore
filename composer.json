@@ -5,7 +5,8 @@
   "require": {
     "php": "^8.0",
     "neos/neos": "^8.0",
-    "albertofem/rsync-lib": "~1.0"
+    "albertofem/rsync-lib": "~1.0",
+    "flowpack/prunner": "*"
   },
   "autoload": {
     "psr-4": {
