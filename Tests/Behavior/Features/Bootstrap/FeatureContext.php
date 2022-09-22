@@ -3,6 +3,7 @@
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
+use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
@@ -40,7 +41,6 @@ use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Neos\Utility\Arrays;
 use Neos\Utility\ObjectAccess;
 use PHPUnit\Framework\Assert;
-use Psr\Log\Test\TestLogger;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Yaml\Yaml;
 
@@ -153,6 +153,8 @@ class FeatureContext implements Context
         $prunnerJobId = PrunnerJobId::fromString("...");
         $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
         $redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger);
+        $concurrentBuildLockService = $this->getObjectManager()->get(ConcurrentBuildLockService::class);
+        $concurrentBuildLockService->ensureAllOtherInProgressContentReleasesWillBeTerminated($contentReleaseIdentifier);
         echo $bufferedOutput->fetch();
     }
 
@@ -406,13 +408,8 @@ EOF;
     {
         $contentCacheFlusher = $this->getObjectManager()->get(ContentCacheFlusher::class);
 
-        $testLogger = new TestLogger();
-        ObjectAccess::setProperty($contentCacheFlusher, 'systemLogger', $testLogger, true);
         $contentCacheFlusher->shutdownObject();
         ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', [], true);
-        foreach ($testLogger->records as $record) {
-            echo $record['message'] . "\n";
-        }
     }
 
     /**

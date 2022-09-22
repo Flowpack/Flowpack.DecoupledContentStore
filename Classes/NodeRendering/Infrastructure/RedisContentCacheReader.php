@@ -10,7 +10,7 @@ use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Neos\Fusion\Core\Cache\ContentCache;
-use Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend;
+use Neos\Cache\Backend\RedisBackend;
 
 /**
  * @Flow\Scope("singleton")
@@ -49,8 +49,8 @@ class RedisContentCacheReader
 
         $redis = null;
         $backend = $this->contentCache->getBackend();
-        if ($backend instanceof OptimizedRedisCacheBackend) {
-            $reflProp = new \ReflectionProperty(OptimizedRedisCacheBackend::class, 'redis');
+        if ($backend instanceof RedisBackend) {
+            $reflProp = new \ReflectionProperty(RedisBackend::class, 'redis');
             $reflProp->setAccessible(true);
             $redis = $reflProp->getValue($backend);
         } else {
