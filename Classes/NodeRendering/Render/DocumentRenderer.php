@@ -1,5 +1,7 @@
 <?php
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
+
 use Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect;
 use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -154,7 +156,7 @@ class DocumentRenderer
         return new ControllerContext(
             $request,
             new ActionResponse(),
-            new Arguments(array()),
+            new Arguments([]),
             $uriBuilder
         );
     }
@@ -227,7 +229,7 @@ class DocumentRenderer
                 );
             }
 
-            $contentReleaseLogger->debug('Rendering document for URI ' . $uri, ['baseUri' => $baseUri]);
+            $contentReleaseLogger->info('Rendering document for URI ' . $uri, ['baseUri' => $baseUri]);
 
             $controllerContext = $this->buildControllerContextAndSetBaseUri($uri, $node, $requestArguments);
             /** @var ActionRequest $request */

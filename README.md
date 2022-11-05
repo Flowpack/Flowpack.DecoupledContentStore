@@ -338,6 +338,64 @@ Flowpack:
 This is needed so that the system knows which keys should be synchronized between the different content stores,
 and what data to delete if a release is removed.
 
+### Rendering additional nodes with arguments (e.g. pagination or filters)
+
+If you render a paginated list or have filters (with a predictable list of values) that can be
+added to a document via arguments, you can implement a slot for the `nodeEnumerated` signal to enumerate additional
+nodes with arguments.
+
+> **Note:** Request arguments must be mapped to URIs via custom routes, since we do not support HTTP query parameters for rendered documents.
+
+#### Example
+
+Add a slot for the `nodeEnumerated` signal via `Package.php`:
+
+```php
+<?php
+class Package extends BasePackage
+{
+    public function boot(Bootstrap $bootstrap)
+    {
+        $dispatcher = $bootstrap->getSignalSlotDispatcher();
+
+        $dispatcher->connect(NodeEnumerator::class, 'nodeEnumerated', MyNodeListsEnumerator::class, 'enumerateNodeLists');
+    }
+}
+```
+
+Implement the slot and enumerate additional nodes depending on the node type:
+
+```php
+<?php
+class NodeListsEnumerator
+{
+    public function enumerateNodeLists(EnumeratedNode $enumeratedNode, ContentReleaseIdentifier $releaseIdentifier, ContentReleaseLogger $logger)
+    {
+        $nodeTypeName = $enumeratedNode->getNodeTypeName();
+        $nodeType = $this->nodeTypeManager->getNodeType($nodeTypeName);
+        if ($nodeType->isOfType('Vendor.Site:Document.Blog.Folder')) {
+            // Get the node and count the number of pages to render
+            // $pageCount = ...
+
+            $pageCount = ceil($postCount / (float)$this->perPage);
+            if ($pageCount <= 1) {
+                return;
+            }
+
+            // Start after the first page, because the first page will be the document without arguments
+            for ($page = 2; $page <= $pageCount; $page++) {
+                $enumeratedNodes[] = EnumeratedNode::fromNode($documentNode, ['page' => $page]);
+            }
+
+            $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeratedNodes);
+        }
+    }
+}
+```
+
+The actual logic will depend on your use of the node. Having the actual filtering logic implemented in PHP is
+beneficial, because it allows you to use it in the rendering process as well as in the additional enumeration.
+
 ### Extending the backend module
 
 - You need a Views.yaml in your package, looking like this:

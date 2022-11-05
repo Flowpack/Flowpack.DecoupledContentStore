@@ -34,17 +34,24 @@ final class EnumeratedNode implements \JsonSerializable
      */
     protected $arguments;
 
-    private function __construct(string $contextPath, string $nodeIdentifier, array $arguments)
+    /**
+     * The node type name
+     *
+     * @var string
+     */
+    protected $nodeTypeName;
+
+    private function __construct(string $contextPath, string $nodeIdentifier, string $nodeTypeName, array $arguments)
     {
         $this->contextPath = $contextPath;
         $this->nodeIdentifier = $nodeIdentifier;
+        $this->nodeTypeName = $nodeTypeName;
         $this->arguments = $arguments;
     }
 
-
-    static public function fromNode(NodeInterface $node): self
+    static public function fromNode(NodeInterface $node, array $arguments = []): self
     {
-        return new self($node->getContextPath(), $node->getIdentifier(), []);
+        return new self($node->getContextPath(), $node->getIdentifier(), $node->getNodeType()->getName(), $arguments);
     }
 
     static public function fromJsonString(string $enumeratedNodeString): self
@@ -53,7 +60,7 @@ final class EnumeratedNode implements \JsonSerializable
         if (!is_array($tmp)) {
             throw new \Exception('EnumeratedNode cannot be constructed from: ' . $enumeratedNodeString);
         }
-        return new self($tmp['contextPath'], $tmp['nodeIdentifier'], $tmp['arguments']);
+        return new self($tmp['contextPath'], $tmp['nodeIdentifier'], $tmp['nodeTypeName'] ?? '', $tmp['arguments']);
     }
 
     public function jsonSerialize()
@@ -61,6 +68,7 @@ final class EnumeratedNode implements \JsonSerializable
         return [
             'contextPath' => $this->contextPath,
             'nodeIdentifier' => $this->nodeIdentifier,
+            'nodeTypeName' => $this->nodeTypeName,
             'arguments' => $this->arguments
         ];
     }
@@ -80,12 +88,14 @@ final class EnumeratedNode implements \JsonSerializable
         return $nodePathAndContext['dimensions'];
     }
 
-    /**
-     * @return string
-     */
     public function getNodeIdentifier(): string
     {
         return $this->nodeIdentifier;
+    }
+
+    public function getNodeTypeName(): string
+    {
+        return $this->nodeTypeName;
     }
 
     public function getArguments(): array
@@ -95,6 +105,6 @@ final class EnumeratedNode implements \JsonSerializable
 
     public function debugString(): string
     {
-        return sprintf('Node %s (%s)', $this->nodeIdentifier, $this->contextPath);
+        return sprintf('%s %s %s(%s)', $this->nodeTypeName, $this->nodeIdentifier, $this->arguments ? http_build_query($this->arguments) . ' ' : '', $this->contextPath);
     }
 }
