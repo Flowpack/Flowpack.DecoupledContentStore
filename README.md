@@ -47,7 +47,7 @@ as the basis for orchestrating and executing a content release.
 ## Requirements
 
 - Redis
-- Sandstorm.OptimizedCacheBackend recommended
+- Sandstorm.OptimizedCacheBackend is required when this package is used with Neos 7.3 (Neos 8 already has an optimized Redis backend)
 - Prunner
 
 Start up prunner via the following command:
