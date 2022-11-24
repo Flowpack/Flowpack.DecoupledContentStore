@@ -7,6 +7,7 @@ namespace Flowpack\DecoupledContentStore;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
@@ -78,6 +79,18 @@ class ContentReleaseManager
         $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
         foreach ($runningJobs as $job) {
             $this->prunnerApiService->cancelJob($job);
+        }
+    }
+
+    public function cancelRunningContentReleases(JobId $jobId): void
+    {
+        $result = $this->prunnerApiService->loadPipelinesAndJobs();
+        $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
+        foreach ($runningJobs as $job) {
+            if ($job->getId() !== $jobId) {
+                $this->prunnerApiService->cancelJob($job);
+                break;
+            }
         }
     }
 
