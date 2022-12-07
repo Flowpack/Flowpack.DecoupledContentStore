@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure;
 
@@ -7,11 +8,11 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 
 /**
  * @Flow\Scope("singleton")
@@ -37,10 +38,10 @@ class RedisContentReleaseService
      */
     protected $redisContentReleaseService;
 
-    public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger)
+    public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger, string $workspaceName = 'live'): void
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable());
+        $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable(), $workspaceName);
         $redis->multi();
         try {
             $redis->zAdd('contentStore:registeredReleases', 0, $contentReleaseIdentifier->getIdentifier());
@@ -55,12 +56,12 @@ class RedisContentReleaseService
         ]);
     }
 
-    public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, RedisInstanceIdentifier $redisInstanceIdentifier)
+    public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, RedisInstanceIdentifier $redisInstanceIdentifier): void
     {
         $this->redisClientManager->getRedis($redisInstanceIdentifier)->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
     }
 
-    public function registerManualTransferJob(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger)
+    public function registerManualTransferJob(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger): void
     {
         $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withAdditionalManualTransferJobId($prunnerJobId), RedisInstanceIdentifier::primary());

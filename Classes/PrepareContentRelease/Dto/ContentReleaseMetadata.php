@@ -6,6 +6,7 @@ namespace Flowpack\DecoupledContentStore\PrepareContentRelease\Dto;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
+use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -38,7 +39,17 @@ final class ContentReleaseMetadata implements \JsonSerializable
 
     private NodeRenderingCompletionStatus $status;
 
-    private function __construct(PrunnerJobId $prunnerJobId, ?\DateTimeInterface $startTime, ?\DateTimeInterface $endTime, ?\DateTimeInterface $switchTime, ?NodeRenderingCompletionStatus $status, ?array $manualTransferJobIds = [])
+    private ?string $workspaceName;
+
+    private function __construct(
+        PrunnerJobId $prunnerJobId,
+        ?\DateTimeInterface $startTime,
+        ?\DateTimeInterface $endTime,
+        ?\DateTimeInterface $switchTime,
+        ?NodeRenderingCompletionStatus $status,
+        ?array $manualTransferJobIds = [],
+        string $workspaceName = 'live'
+    )
     {
         $this->prunnerJobId = $prunnerJobId;
         $this->startTime = $startTime;
@@ -46,12 +57,13 @@ final class ContentReleaseMetadata implements \JsonSerializable
         $this->switchTime = $switchTime;
         $this->status = $status ?: NodeRenderingCompletionStatus::scheduled();
         $this->manualTransferJobIds = $manualTransferJobIds;
+        $this->workspaceName = $workspaceName;
     }
 
 
-    public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime): self
+    public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime, string $workspace = 'live'): self
     {
-        return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled());
+        return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled(), [], $workspace);
     }
 
     public static function fromJsonString($metadataEncoded, ContentReleaseIdentifier $contentReleaseIdentifier): self
@@ -72,12 +84,13 @@ final class ContentReleaseMetadata implements \JsonSerializable
             NodeRenderingCompletionStatus::fromString($tmp['status']),
             isset($tmp['manualTransferJobIds']) ? array_map(function (string $item) {
                 return PrunnerJobId::fromString($item);
-            }, json_decode($tmp['manualTransferJobIds'])) : []
+            }, json_decode($tmp['manualTransferJobIds'])) : [],
+            $tmp['workspace'] ?? 'live'
         );
     }
 
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'prunnerJobId' => $this->prunnerJobId->getIdentifier(),
@@ -85,7 +98,8 @@ final class ContentReleaseMetadata implements \JsonSerializable
             'endTime' => $this->endTime ? $this->endTime->format(\DateTime::RFC3339_EXTENDED) : null,
             'switchTime' => $this->switchTime ? $this->switchTime->format(\DateTime::RFC3339_EXTENDED) : null,
             'status' => $this->status,
-            'manualTransferJobIds' => json_encode($this->manualTransferJobIds)
+            'manualTransferJobIds' => json_encode($this->manualTransferJobIds),
+            'workspaceName' => $this->workspaceName
         ];
     }
 
@@ -111,41 +125,26 @@ final class ContentReleaseMetadata implements \JsonSerializable
         return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray);
     }
 
-    /**
-     * @return PrunnerJobId
-     */
     public function getPrunnerJobId(): PrunnerJobId
     {
         return $this->prunnerJobId;
     }
 
-    /**
-     * @return \DateTimeInterface|null
-     */
     public function getStartTime(): ?\DateTimeInterface
     {
         return $this->startTime;
     }
 
-    /**
-     * @return \DateTimeInterface|null
-     */
     public function getEndTime(): ?\DateTimeInterface
     {
         return $this->endTime;
     }
 
-    /**
-     * @return \DateTimeInterface|null
-     */
     public function getSwitchTime(): ?\DateTimeInterface
     {
         return $this->switchTime;
     }
 
-    /**
-     * @return NodeRenderingCompletionStatus
-     */
     public function getStatus(): NodeRenderingCompletionStatus
     {
         return $this->status;
@@ -157,6 +156,11 @@ final class ContentReleaseMetadata implements \JsonSerializable
     public function getManualTransferJobIds(): ?array
     {
         return $this->manualTransferJobIds;
+    }
+
+    public function getWorkspaceName(): ?string
+    {
+        return $this->workspaceName;
     }
 
 }

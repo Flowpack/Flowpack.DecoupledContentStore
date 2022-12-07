@@ -7,6 +7,7 @@ namespace Flowpack\DecoupledContentStore;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Neos\ContentRepository\Domain\Model\Workspace;
 use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
@@ -60,7 +61,7 @@ class ContentReleaseManager
     }
 
     // the validate parameter can be used to intentionally skip the validation step for this release
-    public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null): ContentReleaseIdentifier
+    public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null): ContentReleaseIdentifier
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
         if ($currentContentReleaseId) {
@@ -69,7 +70,12 @@ class ContentReleaseManager
 
         $contentReleaseId = ContentReleaseIdentifier::create();
         $this->contentCache->flush();
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => $contentReleaseId, 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE, 'validate' => $validate]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), [
+            'contentReleaseId' => $contentReleaseId,
+            'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
+            'validate' => $validate,
+            'workspaceName' => $workspace ? $workspace->getName() : 'live'
+        ]);
         return $contentReleaseId;
     }
 
