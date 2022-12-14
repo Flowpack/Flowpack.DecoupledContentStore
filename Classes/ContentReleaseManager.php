@@ -46,7 +46,7 @@ class ContentReleaseManager
     const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
     const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
 
-    public function startIncrementalContentRelease(string $currentContentReleaseId = null): ContentReleaseIdentifier
+    public function startIncrementalContentRelease(string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
         if ($currentContentReleaseId) {
@@ -56,12 +56,17 @@ class ContentReleaseManager
         $contentReleaseId = ContentReleaseIdentifier::create();
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => $contentReleaseId, 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE, 'validate' => true]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge([
+            'contentReleaseId' => $contentReleaseId,
+            'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
+            'validate' => true,
+            'workspaceName' => $workspace ? $workspace->getName() : 'live',
+        ], $additionalVariables));
         return $contentReleaseId;
     }
 
     // the validate parameter can be used to intentionally skip the validation step for this release
-    public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null): ContentReleaseIdentifier
+    public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
         if ($currentContentReleaseId) {
@@ -70,12 +75,12 @@ class ContentReleaseManager
 
         $contentReleaseId = ContentReleaseIdentifier::create();
         $this->contentCache->flush();
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), [
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge([
             'contentReleaseId' => $contentReleaseId,
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => $validate,
-            'workspaceName' => $workspace ? $workspace->getName() : 'live'
-        ]);
+            'workspaceName' => $workspace ? $workspace->getName() : 'live',
+        ], $additionalVariables));
         return $contentReleaseId;
     }
 
