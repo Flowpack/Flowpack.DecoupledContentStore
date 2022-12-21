@@ -107,24 +107,25 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         </tbody>
                     </table>
 
-                    <span>Store size: </span>
-                    <span class="neos-badge neos-badge-info">{storeSize}</span>
-                    <br />
-                    <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
-                        Publish all without validation
-                    </button>
-                    <span> </span>
-                    <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning" style="margin-top: 300px;">
-                        Prune content store
-                    </button>
-                    <span> </span>
-                    <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-warning" style="margin-top: 300px;">
-                        Cancel running release
-                    </button>
-                    <span> </span>
-                    <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpoch} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
-                        {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
-                    </button>
+                    <div>
+                        <span>Store size: </span>
+                        <span class="neos-badge neos-badge-info">{storeSize}</span>
+                    </div>
+
+                    <div style="margin-top: 5rem; display: flex; gap: 1rem;">
+                      <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger">
+                          Publish all without validation
+                      </button>
+                      <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning">
+                          Prune content store
+                      </button>
+                      <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-warning">
+                          Cancel running release
+                      </button>
+                      <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpoch} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
+                          {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
+                      </button>
+                    </div>
 
                     <div class="neos-footer !h-full">
                         <Flowpack.DecoupledContentStore:ListFooter />
