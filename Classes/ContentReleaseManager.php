@@ -56,12 +56,12 @@ class ContentReleaseManager
         $contentReleaseId = ContentReleaseIdentifier::create();
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge([
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => true,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
-        ], $additionalVariables));
+        ]));
         return $contentReleaseId;
     }
 
@@ -75,12 +75,12 @@ class ContentReleaseManager
 
         $contentReleaseId = ContentReleaseIdentifier::create();
         $this->contentCache->flush();
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge([
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => $validate,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
-        ], $additionalVariables));
+        ]));
         return $contentReleaseId;
     }
 
