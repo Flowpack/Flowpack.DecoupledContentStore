@@ -84,7 +84,7 @@ class ContentReleaseManager
         return $contentReleaseId;
     }
 
-    public function cancelAllRunningContentReleases()
+    public function cancelAllRunningContentReleases(): void
     {
         $result = $this->prunnerApiService->loadPipelinesAndJobs();
         $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
@@ -93,19 +93,22 @@ class ContentReleaseManager
         }
     }
 
-    public function cancelRunningContentReleases(JobId $jobId): void
+    /**
+     * Cancel a single running content release ignoring all others
+     */
+    public function cancelRunningContentRelease(JobId $jobId): void
     {
         $result = $this->prunnerApiService->loadPipelinesAndJobs();
         $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
         foreach ($runningJobs as $job) {
-            if ($job->getId() !== $jobId) {
+            if ($job->getId() === $jobId) {
                 $this->prunnerApiService->cancelJob($job);
                 break;
             }
         }
     }
 
-    public function toggleConfigEpoch(RedisInstanceIdentifier $redisInstanceIdentifier)
+    public function toggleConfigEpoch(RedisInstanceIdentifier $redisInstanceIdentifier): void
     {
         $currentConfigEpochConfig = $this->configEpochSettings['current'] ?? null;
         $previousConfigEpochConfig = $this->configEpochSettings['previous'] ?? null;
