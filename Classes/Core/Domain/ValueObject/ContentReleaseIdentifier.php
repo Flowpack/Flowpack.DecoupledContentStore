@@ -11,10 +11,7 @@ use Neos\Flow\Annotations as Flow;
 final class ContentReleaseIdentifier implements \JsonSerializable
 {
 
-    /**
-     * @var string
-     */
-    private $identifier;
+    private string $identifier;
 
     private function __construct(string $identifier)
     {
@@ -39,9 +36,6 @@ final class ContentReleaseIdentifier implements \JsonSerializable
         return $this->identifier;
     }
 
-    /**
-     * @return string
-     */
     public function getIdentifier(): string
     {
         return $this->identifier;
@@ -50,5 +44,10 @@ final class ContentReleaseIdentifier implements \JsonSerializable
     public function equals(?ContentReleaseIdentifier $other): bool
     {
         return $other !== null && $this->identifier === $other->identifier;
+    }
+
+    public function __toString(): string
+    {
+        return $this->identifier;
     }
 }

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Neos\ContentRepository\Domain\Model\Workspace;
+use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
@@ -43,27 +46,45 @@ class ContentReleaseManager
     const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
     const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
 
-    public function startIncrementalContentRelease()
+    public function startIncrementalContentRelease(string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
+        if ($currentContentReleaseId) {
+            $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
+        }
 
+        $contentReleaseId = ContentReleaseIdentifier::create();
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE, 'validate' => true]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
+            'contentReleaseId' => $contentReleaseId,
+            'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
+            'validate' => true,
+            'workspaceName' => $workspace ? $workspace->getName() : 'live',
+        ]));
+        return $contentReleaseId;
     }
 
     // the validate parameter can be used to intentionally skip the validation step for this release
-    public function startFullContentRelease(bool $validate = true)
+    public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
+        if ($currentContentReleaseId) {
+            $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
+        }
 
+        $contentReleaseId = ContentReleaseIdentifier::create();
         $this->contentCache->flush();
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), ['contentReleaseId' => (string)time(), 'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE, 'validate' => $validate]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
+            'contentReleaseId' => $contentReleaseId,
+            'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
+            'validate' => $validate,
+            'workspaceName' => $workspace ? $workspace->getName() : 'live',
+        ]));
+        return $contentReleaseId;
     }
 
-    public function cancelAllRunningContentReleases()
+    public function cancelAllRunningContentReleases(): void
     {
         $result = $this->prunnerApiService->loadPipelinesAndJobs();
         $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
@@ -72,7 +93,22 @@ class ContentReleaseManager
         }
     }
 
-    public function toggleConfigEpoch(RedisInstanceIdentifier $redisInstanceIdentifier)
+    /**
+     * Cancel a single running content release ignoring all others
+     */
+    public function cancelRunningContentRelease(JobId $jobId): void
+    {
+        $result = $this->prunnerApiService->loadPipelinesAndJobs();
+        $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
+        foreach ($runningJobs as $job) {
+            if ($job->getId() === $jobId) {
+                $this->prunnerApiService->cancelJob($job);
+                break;
+            }
+        }
+    }
+
+    public function toggleConfigEpoch(RedisInstanceIdentifier $redisInstanceIdentifier): void
     {
         $currentConfigEpochConfig = $this->configEpochSettings['current'] ?? null;
         $previousConfigEpochConfig = $this->configEpochSettings['previous'] ?? null;

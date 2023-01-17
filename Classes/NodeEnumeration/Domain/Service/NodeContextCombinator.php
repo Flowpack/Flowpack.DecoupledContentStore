@@ -1,46 +1,50 @@
 <?php
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service;
 
-
+use Flowpack\DecoupledContentStore\Exception\NodeNotFoundException;
+use Neos\ContentRepository\Domain\Model\Workspace;
+use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Model\Site;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\Neos\Domain\Repository\SiteRepository;
+use Neos\Neos\Domain\Service\ContentDimensionPresetSourceInterface;
 
 class NodeContextCombinator
 {
 
     /**
      * @Flow\Inject
-     * @var \Neos\Neos\Domain\Service\ContentDimensionPresetSourceInterface
+     * @var ContentDimensionPresetSourceInterface
      */
     protected $dimensionPresetSource;
 
     /**
      * @Flow\Inject
-     * @var \Neos\Neos\Domain\Repository\SiteRepository
+     * @var SiteRepository
      */
     protected $siteRepository;
 
     /**
      * @Flow\Inject
-     * @var \Neos\ContentRepository\Domain\Service\ContextFactoryInterface
+     * @var ContextFactoryInterface
      */
     protected $contextFactory;
 
     /**
      * Iterate over the node with the given identifier and site in contexts for all available presets (if it exists as a variant)
      *
-     * @param string $nodeIdentifier
-     * @param Site $site
-     * @return \Generator
-     * @throws Exception\NodeNotFoundException
+     * @return \Generator<NodeInterface>
+     * @throws NodeNotFoundException
      */
-    public function nodeInContexts($nodeIdentifier, Site $site)
+    public function nodeInContexts(string $nodeIdentifier, Site $site, string $workspaceName = 'live'): \Generator
     {
         $nodeFound = false;
 
         /** @var NodeInterface $siteNode */
-        foreach ($this->siteNodeInContexts($site) as $siteNode) {
+        foreach ($this->siteNodeInContexts($site, $workspaceName) as $siteNode) {
             $node = $siteNode->getContext()->getNodeByIdentifier($nodeIdentifier);
 
             if ($node instanceof NodeInterface) {
@@ -50,7 +54,7 @@ class NodeContextCombinator
         }
 
         if (!$nodeFound) {
-            throw new Exception\NodeNotFoundException('Could not find node by identifier ' . $nodeIdentifier . ' in any context',
+            throw new NodeNotFoundException('Could not find node by identifier ' . $nodeIdentifier . ' in any context',
                 1467285561);
         }
     }
@@ -58,9 +62,9 @@ class NodeContextCombinator
     /**
      * Iterate over all sites
      *
-     * @return Site[]
+     * @return \Generator<Site>
      */
-    public function sites()
+    public function sites(): \Generator
     {
         $sites = $this->siteRepository->findAll();
 
@@ -72,16 +76,15 @@ class NodeContextCombinator
     /**
      * Iterate over the site node in all available presets (if it exists)
      *
-     * @param Site $site
-     * @return NodeInterface[]
+     * @return \Generator<NodeInterface>
      */
-    public function siteNodeInContexts(Site $site)
+    public function siteNodeInContexts(Site $site, string $workspaceName = 'live'): \Generator
     {
         $presets = $this->dimensionPresetSource->getAllPresets();
         if ($presets === []) {
             $contentContext = $this->contextFactory->create(array(
                     'currentSite' => $site,
-                    'workspaceName' => 'live',
+                    'workspaceName' => $workspaceName,
                     'dimensions' => [],
                     'targetDimensions' => []
                 ));
@@ -96,7 +99,7 @@ class NodeContextCombinator
 
                     $contentContext = $this->contextFactory->create(array(
                         'currentSite' => $site,
-                        'workspaceName' => 'live',
+                        'workspaceName' => $workspaceName,
                         'dimensions' => $dimensions,
                         'targetDimensions' => []
                     ));
@@ -114,15 +117,14 @@ class NodeContextCombinator
     /**
      * Iterate over the given node and all document child nodes recursively
      *
-     * @param NodeInterface $node
-     * @return NodeInterface[]
+     * @return \Generator<NodeInterface>
      */
-    public function recurseDocumentChildNodes(NodeInterface $node)
+    public function recurseDocumentChildNodes(NodeInterface $node): \Generator
     {
         yield $node;
 
-        foreach ($node->getChildNodes('Neos.Neos:Document') as $node) {
-            yield from $this->recurseDocumentChildNodes($node);
+        foreach ($node->getChildNodes('Neos.Neos:Document') as $childNode) {
+            yield from $this->recurseDocumentChildNodes($childNode);
         }
     }
 
