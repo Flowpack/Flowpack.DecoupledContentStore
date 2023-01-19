@@ -1,4 +1,4 @@
 (() => {
   // Resources/Private/Js/index.js
-  console.log("HI");
+  console.log("Initialized DecoupledContentStore");
 })();

@@ -77,60 +77,62 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
             }
         }
         renderer = afx`
-            <Flowpack.DecoupledContentStore:FlashMessages id="neos-notifications-inline" class="flashmessages" />
-            <form id="postHelper" method="post">
-                <input
-                        type="hidden"
-                        name="__csrfToken"
-                        value={Security.csrfToken()}
-                />
-            </form>
-            <div class="neos-content neos-container-fluid">
-                <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
-                <legend>Content Store Releases</legend>
-                <div class="neos-row-fluid">
-                    <table class="neos-table cs-releases-table">
-                        <thead>
-                        <tr>
-                            <th style="width: 240px">Identifier</th>
-                            <th style="width: 200px">Page Count</th>
-                            <th style="width: 200px">Render Progress</th>
-                            <th style="width: 200px">Iterations</th>
-                            <th>Start</th>
-                            <th>Stop</th>
-                            <th>Switch</th>
-                            <th>Release Size</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                            {props._renderedTableBody}
-                        </tbody>
-                    </table>
+            <div id="app">
+                <Flowpack.DecoupledContentStore:FlashMessages id="neos-notifications-inline" class="flashmessages" />
+                <form id="postHelper" method="post">
+                    <input
+                            type="hidden"
+                            name="__csrfToken"
+                            value={Security.csrfToken()}
+                    />
+                </form>
+                <div class="neos-content neos-container-fluid">
+                    <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
+                    <legend>Content Store Releases</legend>
+                    <div class="neos-row-fluid">
+                        <table class="neos-table cs-releases-table">
+                            <thead>
+                            <tr>
+                                <th style="width: 240px">Identifier</th>
+                                <th style="width: 200px">Page Count</th>
+                                <th style="width: 200px">Render Progress</th>
+                                <th style="width: 200px">Iterations</th>
+                                <th>Start</th>
+                                <th>Stop</th>
+                                <th>Switch</th>
+                                <th>Release Size</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                {props._renderedTableBody}
+                            </tbody>
+                        </table>
 
-                    <div>
-                        <span>Store size: </span>
-                        <span class="neos-badge neos-badge-info">{storeSize}</span>
-                    </div>
+                        <div>
+                            <span>Store size: </span>
+                            <span class="neos-badge neos-badge-info">{storeSize}</span>
+                        </div>
 
-                    <div style="margin-top: 5rem; display: flex; gap: 1rem;">
-                      <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger">
-                          Publish all without validation
-                      </button>
-                      <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning">
-                          Prune content store
-                      </button>
-                      <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-warning">
-                          Cancel running release
-                      </button>
-                      <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpoch} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
-                          {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
-                      </button>
-                    </div>
-
-                    <div class="neos-footer !h-full">
-                        <Flowpack.DecoupledContentStore:ListFooter />
+                        <div style="margin-top: 5rem; display: flex; gap: 1rem;">
+                          <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger">
+                              Publish all without validation
+                          </button>
+                          <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning">
+                              Prune content store
+                          </button>
+                          <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-warning">
+                              Cancel running release
+                          </button>
+                          <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpoch} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
+                              {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
+                          </button>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="neos-footer">
+              <Flowpack.DecoupledContentStore:ListFooter />
             </div>
         `
     }
@@ -143,7 +145,7 @@ prototype(Flowpack.DecoupledContentStore:ListFooter) < prototype(Neos.Fusion:Joi
         </Neos.Fusion:Link.Action>
     `
     switchContentStore = afx`
-        <span class="align-middle inline-block text-sm pr-4 pl-16">
+        <span class="switchContentStore">
             Active Content Store: &nbsp;
             <Neos.Fusion:Loop items={redisContentStores}>
                 <Neos.Fusion:Link.Action

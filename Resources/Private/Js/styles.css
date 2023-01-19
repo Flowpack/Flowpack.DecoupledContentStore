@@ -1,0 +1,25 @@
+#app *,
+#app ::before,
+#app ::after {
+  box-sizing: border-box; /* 1 */
+  border-width: 0; /* 2 */
+  border-style: solid; /* 2 */
+  border-color: theme('borderColor.DEFAULT', currentColor); /* 2 */
+}
+
+#app ::before,
+#app ::after {
+  --tw-content: '';
+}
+
+@tailwind components;
+@tailwind utilities;
+
+.switchContentStore {
+  vertical-align: middle;
+  display: inline-flex;
+  font-size: 0.9rem;
+  gap: 0.5rem;
+  margin-left: 1rem;
+  align-items: center;
+}
