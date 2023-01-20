@@ -60,10 +60,9 @@ final class ContentReleaseMetadata implements \JsonSerializable
         $this->workspaceName = $workspaceName;
     }
 
-
-    public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime, string $workspace = 'live'): self
+    public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime, string $workspaceName = 'live'): self
     {
-        return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled(), [], $workspace);
+        return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled(), [], $workspaceName);
     }
 
     public static function fromJsonString($metadataEncoded, ContentReleaseIdentifier $contentReleaseIdentifier): self
@@ -85,7 +84,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             isset($tmp['manualTransferJobIds']) ? array_map(function (string $item) {
                 return PrunnerJobId::fromString($item);
             }, json_decode($tmp['manualTransferJobIds'])) : [],
-            $tmp['workspace'] ?? 'live'
+            $tmp['workspaceName'] ?? 'live'
         );
     }
 
@@ -105,24 +104,24 @@ final class ContentReleaseMetadata implements \JsonSerializable
 
     public function withEndTime(\DateTimeInterface $endTime): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $endTime, $this->switchTime, $this->status, $this->manualTransferJobIds);
+        return new self($this->prunnerJobId, $this->startTime, $endTime, $this->switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName);
     }
 
     public function withSwitchTime(\DateTimeInterface $switchTime): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $switchTime, $this->status, $this->manualTransferJobIds);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName);
     }
 
     public function withStatus(NodeRenderingCompletionStatus $status): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status, $this->manualTransferJobIds);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status, $this->manualTransferJobIds, $this->workspaceName);
     }
 
     public function withAdditionalManualTransferJobId(PrunnerJobId $prunnerJobId): self
     {
-        $manualTransferIdArray = self::getManualTransferJobIds();
+        $manualTransferIdArray = $this->getManualTransferJobIds();
         $manualTransferIdArray[] = $prunnerJobId;
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray, $this->workspaceName);
     }
 
     public function getPrunnerJobId(): PrunnerJobId
