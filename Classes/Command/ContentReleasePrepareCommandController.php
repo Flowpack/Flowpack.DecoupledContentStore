@@ -10,6 +10,7 @@ use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Neos\Flow\Cli\CommandController;
+use Neos\Fusion\Core\Cache\ContentCache;
 
 /**
  * Commands for the PREPARE stage in the pipeline. Not meant to be called manually.
@@ -27,6 +28,12 @@ class ContentReleasePrepareCommandController extends CommandController
      * @var ConcurrentBuildLockService
      */
     protected $concurrentBuildLock;
+
+    /**
+     * @Flow\Inject
+     * @var ContentCache
+     */
+    protected $contentCache;
 
     public function createContentReleaseCommand(string $contentReleaseIdentifier, string $prunnerJobId, string $workspaceName = 'live'): void
     {
@@ -51,5 +58,16 @@ class ContentReleasePrepareCommandController extends CommandController
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
         $this->redisContentReleaseService->registerManualTransferJob($contentReleaseIdentifier, $prunnerJobId, $logger);
+    }
+
+    public function flushContentCacheIfRequiredCommand(string $contentReleaseIdentifier, bool $flushContentCache = false): void
+    {
+        $logger = ContentReleaseLogger::fromConsoleOutput($this->output, ContentReleaseIdentifier::fromString($contentReleaseIdentifier));
+        if (!$flushContentCache) {
+            $logger->info('Not flushing content cache');
+            return;
+        }
+        $logger->info('Flushing content cache');
+        $this->contentCache->flush();
     }
 }

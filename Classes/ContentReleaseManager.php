@@ -12,18 +12,12 @@ use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
-use Neos\Fusion\Core\Cache\ContentCache;
 
 /**
  * @Flow\Scope("singleton")
  */
 class ContentReleaseManager
 {
-    /**
-     * @Flow\Inject
-     * @var ContentCache
-     */
-    protected $contentCache;
 
     /**
      * @Flow\Inject
@@ -61,6 +55,7 @@ class ContentReleaseManager
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => true,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
+            'flushContentCache' => false,
         ]));
         return $contentReleaseId;
     }
@@ -74,12 +69,12 @@ class ContentReleaseManager
         }
 
         $contentReleaseId = ContentReleaseIdentifier::create();
-        $this->contentCache->flush();
         $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => $validate,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
+            'flushContentCache' => true,
         ]));
         return $contentReleaseId;
     }
