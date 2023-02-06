@@ -49,22 +49,22 @@ class ContentReleaseLogger
 
     public function debug($message, array $additionalPayload = [])
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->output->writeln($this->logPrefix . 'DEBUG ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
     }
 
     public function info($message, array $additionalPayload = [])
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->output->writeln($this->logPrefix . 'INFO ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
     }
 
     public function warn($message, array $additionalPayload = [])
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->output->writeln($this->logPrefix . 'WARN ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
     }
 
     public function error($message, array $additionalPayload = [])
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->output->writeln($this->logPrefix . 'ERROR ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
     }
 
     public function logException(\Exception $exception, string $message, array $additionalPayload)
