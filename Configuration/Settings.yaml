@@ -41,6 +41,9 @@ Flowpack:
       # Add full HTTP message to the output of the content store
       addHttpMessage: false
 
+      # Recurse to child nodes of hidden nodes
+      recurseHiddenContent: false
+
 
 
     extensions:

@@ -34,6 +34,12 @@ class NodeContextCombinator
     protected $contextFactory;
 
     /**
+     * @Flow\InjectConfiguration(path="nodeRendering.recurseHiddenContent", package="Flowpack.DecoupledContentStore")
+     * @var ContextFactoryInterface
+     */
+    protected $recurseHiddenContent;
+
+    /**
      * Iterate over the node with the given identifier and site in contexts for all available presets (if it exists as a variant)
      *
      * @return \Generator<NodeInterface>
@@ -86,7 +92,8 @@ class NodeContextCombinator
                     'currentSite' => $site,
                     'workspaceName' => $workspaceName,
                     'dimensions' => [],
-                    'targetDimensions' => []
+                    'targetDimensions' => [],
+                    'invisibleContentShown' => $this->recurseHiddenContent,
                 ));
 
             $siteNode = $contentContext->getNode('/sites/' . $site->getNodeName());
@@ -101,7 +108,8 @@ class NodeContextCombinator
                         'currentSite' => $site,
                         'workspaceName' => $workspaceName,
                         'dimensions' => $dimensions,
-                        'targetDimensions' => []
+                        'targetDimensions' => [],
+                        'invisibleContentShown' => $this->recurseHiddenContent,
                     ));
 
                     $siteNode = $contentContext->getNode('/sites/' . $site->getNodeName());

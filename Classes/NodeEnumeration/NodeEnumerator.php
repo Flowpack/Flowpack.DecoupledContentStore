@@ -93,8 +93,11 @@ class NodeEnumerator
                 foreach ($combinator->recurseDocumentChildNodes($siteNode) as $documentNode) {
                     $contextPath = $documentNode->getContextPath();
 
-                    if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->getNodeType()->getName()))) {
-
+                    if ($documentNode->isHidden()) {
+                        $contentReleaseLogger->debug('Skipping node from publishing, because it is hidden', [
+                            'node' => $contextPath,
+                        ]);
+                    } else if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->getNodeType()->getName()))) {
                         $contentReleaseLogger->debug('Registering node for publishing', [
                             'node' => $contextPath
                         ]);
