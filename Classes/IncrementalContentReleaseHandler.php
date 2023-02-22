@@ -4,9 +4,6 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore;
 
 use Neos\Flow\Annotations as Flow;
-use Flowpack\Prunner\PrunnerApiService;
-use Flowpack\Prunner\ValueObject\PipelineName;
-use Neos\Fusion\Core\Cache\ContentCache;
 
 /**
  * @Flow\Scope("singleton")
@@ -19,6 +16,11 @@ class IncrementalContentReleaseHandler
      */
     protected $contentReleaseManager;
 
+    /**
+     * @Flow\InjectConfiguration("startIncrementalReleaseOnWorkspacePublish")
+     */
+    protected $startIncrementalReleaseOnWorkspacePublish;
+
     protected $nodePublishedInThisRequest = false;
 
     public function nodePublished()
@@ -28,7 +30,7 @@ class IncrementalContentReleaseHandler
 
     public function startContentReleaseIfNodesWerePublishedBefore()
     {
-        if ($this->nodePublishedInThisRequest === true) {
+        if ($this->startIncrementalReleaseOnWorkspacePublish === true && $this->nodePublishedInThisRequest === true) {
             $this->contentReleaseManager->startIncrementalContentRelease();
         }
     }

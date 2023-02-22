@@ -1,5 +1,10 @@
 Flowpack:
   DecoupledContentStore:
+
+    # auto-start an incremental release whenever a workspace publish happens
+    # if you want to disable auto-start of incremental releases, set this to false
+    startIncrementalReleaseOnWorkspacePublish: true
+
     redisContentStores:
       # the "Primary" content store is the one Neos writes to during building the content release.
       primary:

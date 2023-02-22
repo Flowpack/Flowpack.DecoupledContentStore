@@ -239,6 +239,20 @@ As a big improvement for stability (compared to v1), the rendering pipeline does
 it is a full or an incremental render. To trigger a full render, the content cache is flushed before
 the rendering is started.
 
+### auto-starting of Incremental Releases on workspace changes
+
+By default, the Package is configured to automatically start an incremental release whenever any workspace is published.
+This behavior can be disabled via Flow configuration in your Settings.yaml
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    # if you want to disable auto-start of incremental releases, set this to false
+    # (default value: true)
+    startIncrementalReleaseOnWorkspacePublish: false
+    # ...
+```
+
 ### What happens if edits happen during a rendering?
 
 If a change by an editor happens during a rendering, the content cache is flushed (by tag) as a result of
