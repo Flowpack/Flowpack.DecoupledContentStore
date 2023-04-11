@@ -84,12 +84,6 @@ class NodeRenderer
 
     /**
      * @Flow\Inject
-     * @var ContextFactoryInterface
-     */
-    protected $contextFactory;
-
-    /**
-     * @Flow\Inject
      * @var ContentReleaseManager
      */
     protected $contentReleaseManager;
@@ -187,7 +181,7 @@ class NodeRenderer
         try {
             $node = $this->fetchRenderableNode($enumeratedNode);
 
-            if (!$node instanceof NodeInterface) {
+            if (!$node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
                 // This could happen because a deleted node was queued after publishing
                 $nodeWasFound = false;
             } else {
@@ -195,7 +189,7 @@ class NodeRenderer
 
                 $contentReleaseLogger->debug('Rendering document node variant', [
                     'node' => $node->getContextPath(),
-                    'nodeIdentifier' => $node->getIdentifier(),
+                    'nodeIdentifier' => $node->nodeAggregateId,
                     'arguments' => $enumeratedNode->getArguments()
                 ]);
 
@@ -240,14 +234,14 @@ class NodeRenderer
 
     /**
      * @param EnumeratedNode $enumeratedNode
-     * @return NodeInterface|null
+     * @return \Neos\ContentRepository\Core\Projection\ContentGraph\Node|null
      * @throws \Exception
      */
-    protected function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?NodeInterface
+    protected function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?\Neos\ContentRepository\Core\Projection\ContentGraph\Node
     {
         $site = $this->siteRepository->findOneByNodeName($enumeratedNode->getSiteNodeNameFromContextPath());
 
-        $context = $this->contextFactory->create([
+        $context = new \Neos\Rector\ContentRepository90\Legacy\LegacyContextStub([
             'workspaceName' => 'live',
             'currentSite' => $site,
             'currentDomain' => $site->getFirstActiveDomain(),

@@ -109,12 +109,12 @@ class DocumentRenderer
     /**
      * Render a specific node variant
      *
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param array $arguments Request arguments when rendering the node
      * @return string the rendered document (not needed inside this package, but might be useful for others who want to trigger the rendering)
      * @throws Exception\RenderingException
      */
-    public function renderDocumentNodeVariant(NodeInterface $node, array $arguments, ContentReleaseLogger $contentReleaseLogger): string
+    public function renderDocumentNodeVariant(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments, ContentReleaseLogger $contentReleaseLogger): string
     {
         $this->cacheUrlMappingAspect->beforeDocumentRendering($contentReleaseLogger);
         $nodeUri = $this->buildNodeUri($node, $arguments);
@@ -131,11 +131,11 @@ class DocumentRenderer
 
     /**
      * @param string $uri
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param array $arguments
      * @return ControllerContext
      */
-    protected function buildControllerContextAndSetBaseUri(string $uri, NodeInterface $node, array $arguments = [])
+    protected function buildControllerContextAndSetBaseUri(string $uri, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments = [])
     {
         $request = $this->getRequest($uri, $node);
         if (isset($arguments['@format'])) {
@@ -179,10 +179,10 @@ class DocumentRenderer
 
     /**
      * @param string $uri
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @return ActionRequest
      */
-    protected function getRequest($uri, NodeInterface $node)
+    protected function getRequest($uri, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node)
     {
         $_SERVER['FLOW_REWRITEURLS'] = '1';
 
@@ -205,18 +205,18 @@ class DocumentRenderer
      * This will set up a simulated request for rendering the view. If the output contains a "next link"
      * it will render
      *
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param string $uri The URI for the node
      * @param array $requestArguments Plain request arguments (e.g. node by context path), could come from routing match results
      * @return string the rendered output
      * @throws Exception\InvalidSiteConfigurationException
      */
-    protected function renderDocumentView(NodeInterface $node, $uri, array $requestArguments, ContentReleaseLogger $contentReleaseLogger): string
+    protected function renderDocumentView(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, $uri, array $requestArguments, ContentReleaseLogger $contentReleaseLogger): string
     {
         $this->isRendering = true;
 
         try {
-            /** @var ContentContext $contentContext */
+            /** @var \Neos\Rector\ContentRepository90\Legacy\LegacyContextStub $contentContext */
             $contentContext = $node->getContext();
             $site = $contentContext->getCurrentSite();
             $domain = $site->getFirstActiveDomain();
@@ -282,11 +282,11 @@ class DocumentRenderer
 
 
     /**
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param array $arguments
      * @return string The resolved URI for the given node
      */
-    protected function buildNodeUri(NodeInterface $node, array $arguments)
+    protected function buildNodeUri(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments)
     {
         /** @var Site $currentSite */
         $currentSite = $node->getContext()->getCurrentSite();

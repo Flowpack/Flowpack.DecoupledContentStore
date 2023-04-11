@@ -44,13 +44,13 @@ class NodeRenderingExtensionManager
     /**
      * Execute Document Metadata Generators to modify $cacheValues
      *
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param array $arguments
      * @param ControllerContext $controllerContext
      * @param DocumentNodeCacheValues $cacheValues
      * @return DocumentNodeCacheValues
      */
-    public function runDocumentMetadataGenerators(NodeInterface $node, array $arguments, ControllerContext $controllerContext, DocumentNodeCacheValues $cacheValues): DocumentNodeCacheValues
+    public function runDocumentMetadataGenerators(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments, ControllerContext $controllerContext, DocumentNodeCacheValues $cacheValues): DocumentNodeCacheValues
     {
         if (!isset($this->documentMetadataGenerators)) {
             $this->documentMetadataGenerators = self::instantiateExtensions($this->configuredDocumentMetadataGenerators, DocumentMetadataGeneratorInterface::class);

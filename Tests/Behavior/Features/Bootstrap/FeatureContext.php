@@ -28,7 +28,6 @@ use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisCon
 use Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures\StubPrunnerApiService;
 use Neos\Behat\Tests\Behat\FlowContextTrait;
 use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
-use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
@@ -91,7 +90,7 @@ class FeatureContext implements Context
      */
     public function resetNodeTypeManagerFully()
     {
-        $nodeTypeManager = $this->getObjectManager()->get(NodeTypeManager::class);
+        $nodeTypeManager = $this->getObjectManager()->get(\Neos\ContentRepository\Core\NodeType\NodeTypeManager::class);
         // This is a WORKAROUND, and should be done in NodeTypeManager::overrideNodeTypes().
         ObjectAccess::setProperty($nodeTypeManager, 'cachedSubNodeTypes', [], true);
     }
@@ -348,7 +347,7 @@ EOF;
             $this->nodeTypesConfiguration = Yaml::parse(self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw());
             $configuration = $this->nodeTypesConfiguration;
         }
-        $this->getObjectManager()->get(NodeTypeManager::class)->overrideNodeTypes($configuration);
+        $this->getObjectManager()->get(\Neos\ContentRepository\Core\NodeType\NodeTypeManager::class)->overrideNodeTypes($configuration);
     }
 
 

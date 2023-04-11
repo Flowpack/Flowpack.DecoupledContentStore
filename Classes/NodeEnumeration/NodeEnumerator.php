@@ -13,6 +13,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCom
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
+use Neos\ContentRepository\Core\Projection\ContentGraph\NodeTypeConstraints;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeConstraintFactory;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeName;
 use Neos\Flow\Annotations as Flow;
@@ -20,12 +21,6 @@ use Neos\Neos\Domain\Model\Site;
 
 class NodeEnumerator
 {
-    /**
-     * @Flow\Inject
-     * @var NodeTypeConstraintFactory
-     */
-    protected $nodeTypeConstraintFactory;
-
     /**
      * @Flow\Inject
      * @var RedisEnumerationRepository
@@ -76,7 +71,7 @@ class NodeEnumerator
     {
         $combinator = new NodeContextCombinator();
 
-        $nodeTypeWhitelist = $this->nodeTypeConstraintFactory->parseFilterString($this->nodeTypeWhitelist);
+        $nodeTypeWhitelist = NodeTypeConstraints::fromFilterString($this->nodeTypeWhitelist);
 
         $queueSite = function (Site $site) use ($combinator, &$documentNodeVariantsToRender, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
@@ -93,7 +88,7 @@ class NodeEnumerator
                 foreach ($combinator->recurseDocumentChildNodes($siteNode) as $documentNode) {
                     $contextPath = $documentNode->getContextPath();
 
-                    if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->getNodeType()->getName()))) {
+                    if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->nodeType->getName()))) {
 
                         $contentReleaseLogger->debug('Registering node for publishing', [
                             'node' => $contextPath

@@ -15,7 +15,7 @@ class PublishingAwareNodeWrappingHandler extends \Neos\Neos\Fusion\ExceptionHand
     /**
      * {@inheritdoc}
      */
-    protected function handle($fusionPath, \Exception $exception, $referenceCode)
+    protected function handle($fusionPath, \Exception $exception, $referenceCode): string
     {
         if ($this->documentRenderer->isRendering()) {
             throw $exception;

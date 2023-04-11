@@ -42,9 +42,9 @@ final class EnumeratedNode implements \JsonSerializable
     }
 
 
-    static public function fromNode(NodeInterface $node): self
+    static public function fromNode(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): self
     {
-        return new self($node->getContextPath(), $node->getIdentifier(), []);
+        return new self($node->getContextPath(), $node->nodeAggregateId, []);
     }
 
     static public function fromJsonString(string $enumeratedNodeString): self

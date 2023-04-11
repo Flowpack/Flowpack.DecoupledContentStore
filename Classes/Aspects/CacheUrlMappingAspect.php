@@ -74,6 +74,8 @@ class CacheUrlMappingAspect
      * @var ContentReleaseLogger
      */
     protected $contentReleaseLogger;
+    #[\Neos\Flow\Annotations\Inject]
+    protected \Neos\ContentRepositoryRegistry\ContentRepositoryRegistry $contentRepositoryRegistry;
 
     /**
      * @Flow\Before("method(Neos\Fusion\Core\Cache\RuntimeContentCache->postProcess())")
@@ -96,13 +98,14 @@ class CacheUrlMappingAspect
         if (!$this->isActive) {
             return;
         }
-        if (!isset($this->currentEvaluateContext['cacheIdentifierValues']['node']) || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof NodeInterface) {
+        if (!isset($this->currentEvaluateContext['cacheIdentifierValues']['node']) || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
             return;
         }
 
-        /** @var NodeInterface $node */
+        /** @var \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node */
         $node = $this->currentEvaluateContext['cacheIdentifierValues']['node'];
-        if (!$node->getContext()->getWorkspace()->isPublicWorkspace()) {
+        $contentRepository = $this->contentRepositoryRegistry->get($node->subgraphIdentity->contentRepositoryId);
+        if (!$contentRepository->getWorkspaceFinder()->findOneByCurrentContentStreamId($node->subgraphIdentity->contentStreamId)->isPublicWorkspace()) {
             return;
         }
 
@@ -166,9 +169,9 @@ class CacheUrlMappingAspect
     }
 
     /**
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      */
-    protected function getCurrentArguments(NodeInterface $node): array
+    protected function getCurrentArguments(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): array
     {
         /** @var \Neos\Flow\Mvc\ActionRequest $actionRequest */
         $actionRequest = $this->controllerContext->getRequest();

@@ -7,7 +7,7 @@ class RenderingException extends \Flowpack\DecoupledContentStore\Exception
 {
 
     /**
-     * @var NodeInterface
+     * @var \Neos\ContentRepository\Core\Projection\ContentGraph\Node
      */
     protected $node;
 
@@ -19,12 +19,12 @@ class RenderingException extends \Flowpack\DecoupledContentStore\Exception
 
     /**
      * @param string $message
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param string $nodeUri
      * @param int $code
      * @param \Exception $previous
      */
-    public function __construct($message, NodeInterface $node, $nodeUri, $code = 0, \Exception $previous = null)
+    public function __construct($message, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, $nodeUri, $code = 0, \Exception $previous = null)
     {
         $this->node = $node;
         $this->nodeUri = $nodeUri;

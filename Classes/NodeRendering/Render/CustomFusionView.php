@@ -2,6 +2,7 @@
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
 use Neos\Fusion\Core\Cache\RuntimeContentCache;
 use Neos\Fusion\Core\Runtime;
@@ -117,26 +118,26 @@ class CustomFusionView extends FusionView
     }
 
     /**
-     * @param TraversableNodeInterface $currentSiteNode
+     * @param Node $currentSiteNode
      * @return \Neos\Fusion\Core\Runtime
      */
-    protected function getFusionRuntime(TraversableNodeInterface $currentSiteNode)
+    protected function getFusionRuntime(Node $currentSiteNode)
     {
         // $this->fusionRuntime is RESET during a call to self::assign()
         // so this means for every rendered document, we enter this block again
         if ($this->fusionRuntime === null) {
-            $currentSiteNodeContextPath = $currentSiteNode->getContextPath();
+            $currentSiteNodeContextPath = $currentSiteNode->nodeAggregateId;
 
-            if (!isset($this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath])) {
+            if (!isset($this->fusionRuntimePerSiteNode[(string)$currentSiteNodeContextPath])) {
                 // OPTIMIZATION 1: we only want to parse the fusion code ONCE and then reuse it again and again.
                 // This is done by reusing FusionRuntime again and again.
                 $fusionObjectTree = $this->fusionService->getMergedFusionObjectTree($currentSiteNode);
 
                 // ... but we need to watch out, as the FusionRuntime also gets $this->controllerContext passed in,
                 // !!*WHICH CHANGES FOR EVERY DOCUMENT*!!
-                $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath] = new Runtime($fusionObjectTree, $this->controllerContext);
+                $this->fusionRuntimePerSiteNode[(string)$currentSiteNodeContextPath] = new Runtime($fusionObjectTree, $this->controllerContext);
             }
-            $this->fusionRuntime = $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath];
+            $this->fusionRuntime = $this->fusionRuntimePerSiteNode[(string)$currentSiteNodeContextPath];
 
             // Luckily for us, the ControllerContext is only stored at $fusionRuntime->controllerContext;
             // so we can simply set it for reflection.

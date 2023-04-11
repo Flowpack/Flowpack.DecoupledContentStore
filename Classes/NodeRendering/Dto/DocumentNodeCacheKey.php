@@ -42,9 +42,9 @@ final class DocumentNodeCacheKey
     }
 
 
-    public static function fromNodeAndArguments(NodeInterface $node, array $arguments): self
+    public static function fromNodeAndArguments(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments): self
     {
-        return new self($node->getIdentifier(), $node->getContext()->getDimensions(), $arguments);
+        return new self($node->nodeAggregateId, $node->getContext()->getDimensions(), $arguments);
     }
 
     public static function fromEnumeratedNode(EnumeratedNode $enumeratedNode)
