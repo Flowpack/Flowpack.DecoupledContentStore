@@ -26,11 +26,16 @@ final class DocumentNodeCacheKey
     protected $dimensions;
 
     /**
+     * @var string
+     */
+    protected $workspaceName;
+
+    /**
      * @var array
      */
     protected $arguments;
 
-    private function __construct(string $nodeIdentifier, array $dimensions, array $arguments)
+    private function __construct(string $nodeIdentifier, array $dimensions, string $workspaceName, array $arguments)
     {
         // we need to make this deterministic
         ksort($arguments);
@@ -38,22 +43,24 @@ final class DocumentNodeCacheKey
 
         $this->nodeIdentifier = $nodeIdentifier;
         $this->dimensions = $dimensions;
+        $this->workspaceName = $workspaceName;
         $this->arguments = $arguments;
     }
 
 
     public static function fromNodeAndArguments(NodeInterface $node, array $arguments): self
     {
-        return new self($node->getIdentifier(), $node->getContext()->getDimensions(), $arguments);
+        return new self($node->getIdentifier(), $node->getContext()->getDimensions(), $node->getWorkspace()->getName(), $arguments);
     }
 
     public static function fromEnumeratedNode(EnumeratedNode $enumeratedNode)
     {
-        return new self($enumeratedNode->getNodeIdentifier(), $enumeratedNode->getDimensionsFromContextPath(), $enumeratedNode->getArguments());
+        return new self($enumeratedNode->getNodeIdentifier(), $enumeratedNode->getDimensionsFromContextPath(), $enumeratedNode->getWorkspaceNameFromContextPath(), $enumeratedNode->getArguments());
     }
 
     public function redisKeyName(): string
     {
+        // TODO: Add workspace name to cache entry to allow parallel releases, but `CacheUrlMappingAspect` has to provide node in correct workspace during rendering
         return preg_replace('/[^a-zA-Z0-9-]/', '_', sprintf('doc--%s-%s-%s', $this->nodeIdentifier, json_encode($this->dimensions), json_encode($this->arguments)));
     }
 

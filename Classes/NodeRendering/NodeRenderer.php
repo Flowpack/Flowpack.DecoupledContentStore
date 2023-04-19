@@ -203,7 +203,9 @@ class NodeRenderer
                 $contentReleaseLogger->debug('Rendering document node variant', [
                     'node' => $node->getContextPath(),
                     'nodeIdentifier' => $node->getIdentifier(),
-                    'arguments' => $enumeratedNode->getArguments()
+                    'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
+                    'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
+                    'arguments' => $enumeratedNode->getArguments(),
                 ]);
 
                 $this->documentRenderer->renderDocumentNodeVariant($node, $enumeratedNode->getArguments(), $contentReleaseLogger);
