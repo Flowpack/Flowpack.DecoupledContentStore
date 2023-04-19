@@ -255,7 +255,7 @@ class NodeRenderer
         $site = $this->siteRepository->findOneByNodeName($enumeratedNode->getSiteNodeNameFromContextPath());
 
         $context = $this->contextFactory->create([
-            'workspaceName' => 'live',
+            'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
             'currentSite' => $site,
             'currentDomain' => $site->getFirstActiveDomain(),
             'dimensions' => $enumeratedNode->getDimensionsFromContextPath()

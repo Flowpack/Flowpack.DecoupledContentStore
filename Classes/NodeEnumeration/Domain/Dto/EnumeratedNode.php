@@ -80,6 +80,12 @@ final class EnumeratedNode implements \JsonSerializable
         return $nodePathAndContext['dimensions'];
     }
 
+    public function getWorkspaceNameFromContextPath(): string
+    {
+        $nodePathAndContext = NodePaths::explodeContextPath($this->contextPath);
+        return $nodePathAndContext['workspaceName'];
+    }
+
     /**
      * @return string
      */
