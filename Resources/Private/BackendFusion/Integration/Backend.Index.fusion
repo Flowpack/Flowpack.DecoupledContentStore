@@ -57,6 +57,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                             <span @if.isActive={item.active} class="neos-badge neos-badge-info">active</span>
                             <span @if.errors={item.errorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                         </td>
+                        <td>{item.metadata.accountId}</td>
                         <td>
                             {props.enumeratedDocumentNodesCount}
                         </td>
@@ -93,6 +94,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         <thead>
                         <tr>
                             <th style="width: 240px">Identifier</th>
+                            <th>Author</th>
                             <th style="width: 200px">Page Count</th>
                             <th style="width: 200px">Render Progress</th>
                             <th style="width: 200px">Iterations</th>
