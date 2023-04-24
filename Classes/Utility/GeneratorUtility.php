@@ -5,6 +5,12 @@ namespace Flowpack\DecoupledContentStore\Utility;
 class GeneratorUtility
 {
 
+    /**
+     * @template T
+     * @param iterable<T> $iterable
+     * @param int $chunkSize
+     * @return iterable<array<T>>
+     */
     static public function createArrayBatch(iterable $iterable, int $chunkSize): iterable
     {
         $accumulator = [];
