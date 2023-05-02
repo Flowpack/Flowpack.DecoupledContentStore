@@ -3,6 +3,7 @@
 namespace Flowpack\DecoupledContentStore\Core\Domain\Dto;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -20,7 +21,6 @@ final class ContentReleaseBatchResult
         $this->results = $results;
     }
 
-
     public static function createFromArray(array $in): self
     {
         return new self($in);
@@ -28,7 +28,7 @@ final class ContentReleaseBatchResult
 
     public function getResultForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier)
     {
-        return $this->results[$contentReleaseIdentifier->jsonSerialize()];
+        return $this->results[(string)$contentReleaseIdentifier] ?? null;
     }
 
 }

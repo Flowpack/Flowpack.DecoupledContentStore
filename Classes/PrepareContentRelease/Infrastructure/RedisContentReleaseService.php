@@ -104,7 +104,7 @@ class RedisContentReleaseService
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
-                $result[$releaseIdentifier->jsonSerialize()] = ContentReleaseMetadata::fromJsonString($res[$i], $releaseIdentifier);
+                $result[(string)$releaseIdentifier] = $res[$i] ? ContentReleaseMetadata::fromJsonString($res[$i], $releaseIdentifier) : null;
             }
         }
         return ContentReleaseBatchResult::createFromArray($result);
