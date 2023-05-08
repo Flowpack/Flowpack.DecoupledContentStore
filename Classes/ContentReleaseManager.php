@@ -12,6 +12,7 @@ use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
+use Neos\Flow\Security\Context;
 use Neos\Fusion\Core\Cache\ContentCache;
 
 /**
@@ -43,6 +44,12 @@ class ContentReleaseManager
      */
     protected $configEpochSettings;
 
+    /**
+     * @FLow\Inject
+     * @var Context
+     */
+    protected $securityContext;
+
     const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
     const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
 
@@ -61,6 +68,7 @@ class ContentReleaseManager
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => true,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
+            'accountId' => $this->securityContext->getAccount()->getAccountIdentifier(),
         ]));
         return $contentReleaseId;
     }
@@ -80,6 +88,7 @@ class ContentReleaseManager
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => $validate,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
+            'accountId' => $this->securityContext->getAccount()->getAccountIdentifier(),
         ]));
         return $contentReleaseId;
     }

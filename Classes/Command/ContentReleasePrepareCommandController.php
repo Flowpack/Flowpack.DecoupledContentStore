@@ -28,13 +28,12 @@ class ContentReleasePrepareCommandController extends CommandController
      */
     protected $concurrentBuildLock;
 
-    public function createContentReleaseCommand(string $contentReleaseIdentifier, string $prunnerJobId, string $workspaceName = 'live'): void
+    public function createContentReleaseCommand(string $contentReleaseIdentifier, string $prunnerJobId, string $workspaceName = 'live', string $accountId = 'cli'): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $prunnerJobId = PrunnerJobId::fromString($prunnerJobId);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
-
-        $this->redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger, $workspaceName);
+        $this->redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger, $workspaceName, $accountId);
     }
 
     public function ensureAllOtherInProgressContentReleasesWillBeTerminatedCommand(string $contentReleaseIdentifier): void

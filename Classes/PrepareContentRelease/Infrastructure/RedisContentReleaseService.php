@@ -38,10 +38,10 @@ class RedisContentReleaseService
      */
     protected $redisContentReleaseService;
 
-    public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger, string $workspaceName = 'live'): void
+    public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger, string $workspaceName = 'live', string $accountId = 'cli'): void
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable(), $workspaceName);
+        $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable(), $workspaceName, $accountId);
         $redis->multi();
         try {
             $redis->zAdd('contentStore:registeredReleases', 0, $contentReleaseIdentifier->getIdentifier());
