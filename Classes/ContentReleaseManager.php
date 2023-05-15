@@ -68,7 +68,9 @@ class ContentReleaseManager
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => true,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
-            'accountId' => $this->securityContext->getAccount()->getAccountIdentifier(),
+            'accountId' => $this->securityContext->isInitialized()
+                ? $this->securityContext->getAccount()->getAccountIdentifier() :
+                null,
         ]));
         return $contentReleaseId;
     }
@@ -88,7 +90,9 @@ class ContentReleaseManager
             'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
             'validate' => $validate,
             'workspaceName' => $workspace ? $workspace->getName() : 'live',
-            'accountId' => $this->securityContext->getAccount()->getAccountIdentifier(),
+            'accountId' => $this->securityContext->isInitialized()
+                ? $this->securityContext->getAccount()->getAccountIdentifier() :
+                null,
         ]));
         return $contentReleaseId;
     }
