@@ -122,6 +122,8 @@ class NodeRenderOrchestrator
             return;
         }
 
+        $startTime = time();
+
         // Ensure we start with an empty queue here, in case this command is called multiple times.
         $this->redisRenderingQueue->flush($contentReleaseIdentifier);
         $this->redisRenderingErrorManager->flush($contentReleaseIdentifier);
@@ -172,7 +174,7 @@ class NodeRenderOrchestrator
 
             if (count($nodesScheduledForRendering) === 0) {
                 // we have NO nodes scheduled for rendering anymore, so that means we FINISHED successfully.
-                $contentReleaseLogger->info('Everything rendered completely. Finishing RenderOrchestrator');
+                $contentReleaseLogger->info(sprintf('Everything rendered completely in %d seconds. Finishing RenderOrchestrator',  time() - $startTime));
 
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
                 $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable()), RedisInstanceIdentifier::primary());
