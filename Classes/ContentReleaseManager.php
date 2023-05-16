@@ -56,22 +56,29 @@ class ContentReleaseManager
     public function startIncrementalContentRelease(string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        if ($currentContentReleaseId) {
-            $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
-        }
 
         $contentReleaseId = ContentReleaseIdentifier::create();
+
+        $currentContentReleaseIdOrFallback = $currentContentReleaseId
+            ?? $redis->get(self::REDIS_CURRENT_RELEASE_KEY)
+            ?: self::NO_PREVIOUS_RELEASE;
+
+        $workspaceName = $workspace !== null ? $workspace->getName() : 'live';
+
+        $accountId = $this->securityContext->isInitialized()
+            ? $this->securityContext->getAccount()->getAccountIdentifier()
+            : null;
+
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
         $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
-            'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
+            'currentContentReleaseId' => $currentContentReleaseIdOrFallback,
             'validate' => true,
-            'workspaceName' => $workspace ? $workspace->getName() : 'live',
-            'accountId' => $this->securityContext->isInitialized()
-                ? $this->securityContext->getAccount()->getAccountIdentifier() :
-                null,
+            'workspaceName' => $workspaceName,
+            'accountId' => $accountId,
         ]));
+
         return $contentReleaseId;
     }
 
@@ -79,21 +86,28 @@ class ContentReleaseManager
     public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        if ($currentContentReleaseId) {
-            $currentContentReleaseId = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
-        }
 
         $contentReleaseId = ContentReleaseIdentifier::create();
+
+        $currentContentReleaseIdOrFallback = $currentContentReleaseId
+            ?? $redis->get(self::REDIS_CURRENT_RELEASE_KEY)
+            ?: self::NO_PREVIOUS_RELEASE;
+
+        $workspaceName = $workspace !== null ? $workspace->getName() : 'live';
+
+        $accountId = $this->securityContext->isInitialized()
+            ? $this->securityContext->getAccount()->getAccountIdentifier()
+            : null;
+
         $this->contentCache->flush();
         $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
-            'currentContentReleaseId' => $currentContentReleaseId ?: self::NO_PREVIOUS_RELEASE,
+            'currentContentReleaseId' => $currentContentReleaseIdOrFallback,
             'validate' => $validate,
-            'workspaceName' => $workspace ? $workspace->getName() : 'live',
-            'accountId' => $this->securityContext->isInitialized()
-                ? $this->securityContext->getAccount()->getAccountIdentifier() :
-                null,
+            'workspaceName' => $workspaceName,
+            'accountId' => $accountId,
         ]));
+
         return $contentReleaseId;
     }
 
