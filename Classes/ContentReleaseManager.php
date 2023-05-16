@@ -55,28 +55,16 @@ class ContentReleaseManager
 
     public function startIncrementalContentRelease(string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
-        $redis = $this->redisClientManager->getPrimaryRedis();
-
         $contentReleaseId = ContentReleaseIdentifier::create();
-
-        $currentContentReleaseIdOrFallback = $currentContentReleaseId
-            ?? $redis->get(self::REDIS_CURRENT_RELEASE_KEY)
-            ?: self::NO_PREVIOUS_RELEASE;
-
-        $workspaceName = $workspace !== null ? $workspace->getName() : 'live';
-
-        $accountId = $this->securityContext->isInitialized()
-            ? $this->securityContext->getAccount()->getAccountIdentifier()
-            : null;
 
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
         $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
-            'currentContentReleaseId' => $currentContentReleaseIdOrFallback,
+            'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
             'validate' => true,
-            'workspaceName' => $workspaceName,
-            'accountId' => $accountId,
+            'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+            'accountId' => $this->getAccountId(),
         ]));
 
         return $contentReleaseId;
@@ -85,27 +73,16 @@ class ContentReleaseManager
     // the validate parameter can be used to intentionally skip the validation step for this release
     public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
-        $redis = $this->redisClientManager->getPrimaryRedis();
-
         $contentReleaseId = ContentReleaseIdentifier::create();
 
-        $currentContentReleaseIdOrFallback = $currentContentReleaseId
-            ?? $redis->get(self::REDIS_CURRENT_RELEASE_KEY)
-            ?: self::NO_PREVIOUS_RELEASE;
-
-        $workspaceName = $workspace !== null ? $workspace->getName() : 'live';
-
-        $accountId = $this->securityContext->isInitialized()
-            ? $this->securityContext->getAccount()->getAccountIdentifier()
-            : null;
-
         $this->contentCache->flush();
+
         $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
-            'currentContentReleaseId' => $currentContentReleaseIdOrFallback,
+            'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
             'validate' => $validate,
-            'workspaceName' => $workspaceName,
-            'accountId' => $accountId,
+            'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+            'accountId' => $this->getAccountId(),
         ]));
 
         return $contentReleaseId;
@@ -147,5 +124,30 @@ class ContentReleaseManager
         } else {
             $redis->set('contentStore:configEpoch', $currentConfigEpochConfig);
         }
+    }
+
+    private function resolveCurrentContentReleaseId(?string $currentContentReleaseId): string
+    {
+        if ($currentContentReleaseId !== null) {
+            return $currentContentReleaseId;
+        }
+
+        $redis = $this->redisClientManager->getPrimaryRedis();
+        $currentContentReleaseIdFromRedis = $redis->get(self::REDIS_CURRENT_RELEASE_KEY);
+
+        if ($currentContentReleaseIdFromRedis !== false) {
+            return $currentContentReleaseIdFromRedis;
+        }
+
+        return self::NO_PREVIOUS_RELEASE;
+    }
+
+    private function getAccountId(): ?string
+    {
+        if ($this->securityContext->isInitialized()) {
+            return $this->securityContext->getAccount()->getAccountIdentifier();
+        }
+
+        return null;
     }
 }
