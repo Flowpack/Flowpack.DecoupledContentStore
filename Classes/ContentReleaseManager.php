@@ -144,7 +144,7 @@ class ContentReleaseManager
 
     private function getAccountId(): ?string
     {
-        if ($this->securityContext->isInitialized()) {
+        if ($this->securityContext->isInitialized() && !is_null($this->securityContext->getAccount())) {
             return $this->securityContext->getAccount()->getAccountIdentifier();
         }
 
