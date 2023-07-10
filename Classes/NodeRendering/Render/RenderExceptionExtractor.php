@@ -47,7 +47,7 @@ class RenderExceptionExtractor
             preg_match(self::HTML_MESSAGE_HANDLER_PATTERN, $content, $matches) ||
             preg_match(self::XML_COMMENT_HANDLER_PATTERN, $content, $matches)
         ) {
-            return new ExtractedExceptionDto($matches['message'], $matches['stackTrace'], $matches['referenceCode']);
+            return new ExtractedExceptionDto($matches['message'], $matches['stackTrace'], $matches['referenceCode'] ?? '');
         }
         return null;
     }
