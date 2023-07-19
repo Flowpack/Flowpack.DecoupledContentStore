@@ -41,6 +41,14 @@ class RedisContentReleaseService
     public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger, string $workspaceName = 'live'): void
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
+
+        // Check there is no existing release with the same identifier
+        $existingRelease = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'));
+        if ($existingRelease) {
+            $contentReleaseLogger->error(sprintf('Content Release "%s" already exists', $contentReleaseIdentifier->getIdentifier()));
+            throw new \RuntimeException(sprintf('Content Release "%s" already exists, cannot create a release with the same identifier', $contentReleaseIdentifier->getIdentifier()), 1689750292);
+        }
+
         $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable(), $workspaceName);
         $redis->multi();
         try {
