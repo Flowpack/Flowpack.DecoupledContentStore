@@ -38,6 +38,11 @@ class CacheUrlMappingAspect
     protected $isActive = false;
 
     /**
+     * @var null | int
+     */
+    protected $renderTimestamp = null;
+
+    /**
      * @var array
      */
     protected $currentEvaluateContext;
@@ -143,7 +148,8 @@ class CacheUrlMappingAspect
         $arguments = $this->getCurrentArguments($node);
         // TODO: To make parallel rendering possible, we need to make sure that the cache key also includes the currently rendered workspace, as the node might originate from a base workspace (usually live). See `DocumentNodeCacheKey`.
         $rootKey = DocumentNodeCacheKey::fromNodeAndArguments($node, $arguments);
-        $rootCacheValues = DocumentNodeCacheValues::create($rootIdentifier, $url);
+        $rootCacheValues = DocumentNodeCacheValues::create($rootIdentifier, $url)
+            ->withMetadata('renderTime', (int)(microtime(true) * 1000) - $this->renderTimestamp);
         // allow other document metadata generators here
         $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators($node, $arguments, $this->controllerContext, $rootCacheValues);
         $this->contentCacheFrontend->set($rootKey->redisKeyName(), json_encode($rootCacheValues), $rootTags);
@@ -200,6 +206,7 @@ class CacheUrlMappingAspect
     {
         $this->isActive = true;
         $this->contentReleaseLogger = $contentReleaseLogger;
+        $this->renderTimestamp = (int)(microtime(true) * 1000);
     }
 
     public function afterDocumentRendering(): void
