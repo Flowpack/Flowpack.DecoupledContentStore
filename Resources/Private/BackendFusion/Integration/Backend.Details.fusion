@@ -11,39 +11,44 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
     renderer = afx`
         <div id="app">
             <form id="postHelper" method="post">
-                <input
-                    type="hidden"
-                    name="__csrfToken"
-                    value={Security.csrfToken()}
-                />
+              <input
+                type="hidden"
+                name="__csrfToken"
+                value={Security.csrfToken()}
+              />
             </form>
             <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
             <h1 class="text-3xl py-5 inline">
-                Content Release {detailsData.contentReleaseIdentifier.identifier}
+              Content Release {contentReleaseIdentifier.identifier}
             </h1>
-            {" "}
-            <span class="neos-badge" style="vertical-align: super;" title="content store" data-neos-toggle="tooltip">{contentStore}</span>
-            <Flowpack.DecoupledContentStore:ContentReleaseSteps
-                _taskResults={detailsData.job.taskResults}
-                prunnerStart={detailsData.job.created}
-            />
-            <Neos.Fusion:Loop items={detailsData.manualTransferJobs}>
-                <Flowpack.DecoupledContentStore:ContentReleaseSteps
-                    _taskResults={item.taskResults}
-                    isManualTransferPipeline={true}
-                    prunnerJobId={item.id.id}
-                    prunnerStart={item.created}
-                    manualSwitchTarget={item.variables.redisInstanceId}
-                />
-            </Neos.Fusion:Loop>
+            <Neos.Fusion:Fragment @if.hasData={detailsData}>
+              {" "}
+              <span class="neos-badge" style="vertical-align: super;" title="content store" data-neos-toggle="tooltip">{contentStore}</span>
+              <Flowpack.DecoupledContentStore:ContentReleaseSteps
+                  _taskResults={detailsData.job.taskResults}
+                  prunnerStart={detailsData.job.created}
+              />
+              <Neos.Fusion:Loop items={detailsData.manualTransferJobs}>
+                  <Flowpack.DecoupledContentStore:ContentReleaseSteps
+                      _taskResults={item.taskResults}
+                      isManualTransferPipeline={true}
+                      prunnerJobId={item.id.id}
+                      prunnerStart={item.created}
+                      manualSwitchTarget={item.variables.redisInstanceId}
+                  />
+              </Neos.Fusion:Loop>
 
-            <h2 @if.isTrue={detailTaskName} class="text-3xl py-5">Log Output for {detailTaskName}</h2>
-            <pre>
-                {jobLogs.stderr}
-            </pre>
-            <pre>
-                {jobLogs.stdout}
-            </pre>
+              <h2 @if.isTrue={detailTaskName} class="text-3xl py-5">Log Output for {detailTaskName}</h2>
+              <pre>
+                  {jobLogs.stderr}
+              </pre>
+              <pre>
+                  {jobLogs.stdout}
+              </pre>
+            </Neos.Fusion:Fragment>
+            <p @if.notData={!detailsData}>
+              No data exists for this release in Redis.
+            </p>
         </div>
         <Flowpack.DecoupledContentStore:DetailsFooter />
     `
@@ -403,6 +408,10 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
 
     renderer = afx`
         <div class="neos-footer">
+            <Neos.Fusion:Link.Action href.action="index" class="neos-button">
+              Back
+            </Neos.Fusion:Link.Action>
+
             <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: detailsData.contentReleaseIdentifier.identifier}} class="neos-button">
                 <i class="fa fa-sync"></i> Reload
             </Neos.Fusion:Link.Action>

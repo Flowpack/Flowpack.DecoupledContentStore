@@ -32,12 +32,6 @@ class RedisContentReleaseService
      */
     protected $redisKeyService;
 
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
     public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger, string $workspaceName = 'live'): void
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
@@ -71,8 +65,8 @@ class RedisContentReleaseService
 
     public function registerManualTransferJob(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger): void
     {
-        $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
-        $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withAdditionalManualTransferJobId($prunnerJobId), RedisInstanceIdentifier::primary());
+        $releaseMetadata = $this->fetchMetadataForContentRelease($contentReleaseIdentifier);
+        $this->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withAdditionalManualTransferJobId($prunnerJobId), RedisInstanceIdentifier::primary());
 
         $contentReleaseLogger->info(sprintf('Register new pipeline for release %s', $contentReleaseIdentifier->getIdentifier()));
     }
@@ -93,11 +87,14 @@ class RedisContentReleaseService
         return $result;
     }
 
-    public function fetchMetadataForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ?RedisInstanceIdentifier $redisInstanceIdentifier = null): ContentReleaseMetadata
+    public function fetchMetadataForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ?RedisInstanceIdentifier $redisInstanceIdentifier = null): ?ContentReleaseMetadata
     {
         $redisInstanceIdentifier = $redisInstanceIdentifier ?: RedisInstanceIdentifier::primary();
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'));
+        if (!$metadataEncoded) {
+            return null;
+        }
         return ContentReleaseMetadata::fromJsonString($metadataEncoded, $contentReleaseIdentifier);
     }
 

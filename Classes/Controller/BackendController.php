@@ -114,6 +114,7 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
 
+        $this->view->assign('contentReleaseIdentifier', $contentReleaseIdentifier);
         $this->view->assign('contentStore', $contentStore->getIdentifier());
 
         $detailsData = $this->backendUiDataService->loadDetailsData($contentReleaseIdentifier, $contentStore);

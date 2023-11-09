@@ -114,9 +114,14 @@ class BackendUiDataService
         return round($size / 1000000, 2);
     }
 
-    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ContentReleaseDetails
+    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ?ContentReleaseDetails
     {
         $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier, $redisInstanceIdentifier);
+
+        if (!$contentReleaseMetadata) {
+            return null;
+        }
+
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
 
         $manualTransferJobs = count($contentReleaseMetadata->getManualTransferJobIds()) ? array_map(function (PrunnerJobId $item) {
