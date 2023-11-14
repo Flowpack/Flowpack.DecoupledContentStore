@@ -84,6 +84,7 @@ class NodeEnumerator
                 'domain' => $site->getFirstActiveDomain()
             ]);
             foreach ($combinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
+                $startTime = microtime(true);
                 $dimensionValues = $siteNode->getContext()->getDimensions();
 
                 $contentReleaseLogger->debug('Publishing dimension combination', [
@@ -111,6 +112,7 @@ class NodeEnumerator
                     }
                 }
             }
+            $contentReleaseLogger->debug(sprintf('Finished enumerating site %s in %dms', $site->getName(), (microtime(true) - $startTime) * 1000));
         };
 
         if ($site === null) {
