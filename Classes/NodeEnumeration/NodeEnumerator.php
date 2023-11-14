@@ -13,8 +13,11 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCom
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
+use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeConstraintFactory;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeName;
+use Neos\ContentRepository\Domain\Utility\NodePaths;
+use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Model\Site;
 
@@ -91,10 +94,31 @@ class NodeEnumerator
                     'dimensionValues' => $dimensionValues
                 ]);
 
-                foreach ($combinator->recurseDocumentChildNodes($siteNode) as $documentNode) {
+                $documentQuery = new FlowQuery([$siteNode]);
+                /** @var NodeInterface[] $documents */
+                $documents = $documentQuery->find('[instanceof Neos.Neos:Document]')->add($siteNode)->get();
+
+                foreach ($documents as $documentNode) {
                     $contextPath = $documentNode->getContextPath();
 
-                    if ($documentNode->isHidden()) {
+                    // Verify that the node is not orphaned
+                    $parentNode = $documentNode->getParent();
+                    while ($parentNode !== $siteNode) {
+                        if ($parentNode === null) {
+                            $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
+                                'node' => $contextPath,
+                            ]);
+                            // Continue with the next document
+                            continue 2;
+                        }
+                        $parentNode = $parentNode->getParent();
+                    }
+
+                    if (!$documentNode->getParent()) {
+                        $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
+                            'node' => $contextPath,
+                        ]);
+                    } else if ($documentNode->isHidden()) {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it is hidden', [
                             'node' => $contextPath,
                         ]);
