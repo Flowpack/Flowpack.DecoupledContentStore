@@ -10,6 +10,7 @@ use Neos\Cache\Backend\RedisBackend;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
+use Neos\Flow\Package\Exception\UnknownPackageException;
 use Neos\Flow\Package\PackageManager;
 use Neos\Fusion\Core\Cache\ContentCache;
 
@@ -37,8 +38,10 @@ class RedisContentCacheReader
      */
     protected $applicationIdentifier;
 
-    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey $documentNodeCacheKey): RenderedDocumentFromContentCache
-    {
+    protected $redis;
+
+    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey $documentNodeCacheKey
+    ): RenderedDocumentFromContentCache {
         $maxNestLevel = ContentCache::MAXIMUM_NESTING_LEVEL;
         $contentCacheStartToken = ContentCache::CACHE_SEGMENT_START_TOKEN;
         $contentCacheEndToken = ContentCache::CACHE_SEGMENT_END_TOKEN;
@@ -48,26 +51,13 @@ class RedisContentCacheReader
          */
         $identifierPrefix = md5($this->applicationIdentifier) . ':';
 
-        $packageManager = $this->objectManager->get(PackageManager::class);
-        $flowPackage = $packageManager->getPackage('Neos.Flow');
-        preg_match('/^(\d+\.\d+)/', $flowPackage->getInstalledVersion(), $versionMatches);
-        $flowMajorVersion = (int)($versionMatches[1] ?? '0');
+        $redis = $this->getRedis();
 
-        $backend = $this->contentCache->getBackend();
-        if ($flowMajorVersion >= 8 && $backend instanceof RedisBackend) {
-            $reflProp = new \ReflectionProperty(RedisBackend::class, 'redis');
-            $reflProp->setAccessible(true);
-            $redis = $reflProp->getValue($backend);
-        } elseif (get_class($backend) === 'Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend') {
-            $reflProp = new \ReflectionProperty(\Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend::class, 'redis');
-            $reflProp->setAccessible(true);
-            $redis = $reflProp->getValue($backend);
-        } else {
-            throw new \RuntimeException('The cache backend for "Neos_Fusion_Content" must be an OptimizedRedisCacheBackend, but is ' . get_class($backend), 1622570000);
-        }
         $serializedCacheValues = $redis->get($documentNodeCacheKey->fullyQualifiedRedisKeyName($identifierPrefix));
         if ($serializedCacheValues === false) {
-            return RenderedDocumentFromContentCache::createIncomplete('No Redis Key "' . $documentNodeCacheKey->redisKeyName() . '" found.');
+            return RenderedDocumentFromContentCache::createIncomplete(
+                'No Redis Key "' . $documentNodeCacheKey->redisKeyName() . '" found.'
+            );
         }
         $documentNodeCacheValues = DocumentNodeCacheValues::fromJsonString($serializedCacheValues);
 
@@ -137,5 +127,45 @@ class RedisContentCacheReader
             return RenderedDocumentFromContentCache::createIncomplete($error);
         }
         return RenderedDocumentFromContentCache::createWithFullContent($content, $documentNodeCacheValues);
+    }
+
+    /**
+     * @throws UnknownPackageException
+     */
+    protected function getRedis()
+    {
+        if ($this->redis) {
+            return $this->redis;
+        }
+
+        $packageManager = $this->objectManager->get(PackageManager::class);
+        $flowPackage = $packageManager->getPackage('Neos.Flow');
+        preg_match('/^(\d+\.\d+)/', $flowPackage->getInstalledVersion(), $versionMatches);
+        $flowMajorVersion = (int)($versionMatches[1] ?? '0');
+
+        $backend = $this->contentCache->getBackend();
+
+        if ($flowMajorVersion >= 8 && $backend instanceof RedisBackend) {
+            $reflProp = new \ReflectionProperty(RedisBackend::class, 'redis');
+            $reflProp->setAccessible(true);
+            $this->redis = $reflProp->getValue($backend);
+            return $this->redis;
+        }
+
+        if (get_class($backend) === 'Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend') {
+            $reflProp = new \ReflectionProperty(
+                \Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend::class,
+                'redis'
+            );
+            $reflProp->setAccessible(true);
+            $this->redis = $reflProp->getValue($backend);
+            return $this->redis;
+        }
+
+        throw new \RuntimeException(
+            'The cache backend for "Neos_Fusion_Content" must be an OptimizedRedisCacheBackend, but is ' . get_class(
+                $backend
+            ), 1622570000
+        );
     }
 }
