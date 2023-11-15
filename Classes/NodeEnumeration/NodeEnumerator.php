@@ -81,7 +81,7 @@ class NodeEnumerator
 
         $nodeTypeWhitelist = $this->nodeTypeConstraintFactory->parseFilterString($this->nodeTypeWhitelist);
 
-        $queueSite = function (Site $site) use ($combinator, &$documentNodeVariantsToRender, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
+        $queueSite = function (Site $site) use ($combinator, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain()
@@ -94,9 +94,18 @@ class NodeEnumerator
                     'dimensionValues' => $dimensionValues
                 ]);
 
+                // Build filter from white listed nodetypes
+                $nodeTypeWhitelist = explode(',', $this->nodeTypeWhitelist ?: 'Neos.Neos:Document');
+                $nodeTypeFilter = implode(',', array_map(static function ($nodeType) {
+                    if ($nodeType[0] === '!') {
+                        return '[!instanceof ' . substr($nodeType, 1) . ']';
+                    }
+                    return '[instanceof ' . $nodeType . ']';
+                }, $nodeTypeWhitelist));
+
                 $documentQuery = new FlowQuery([$siteNode]);
                 /** @var NodeInterface[] $documents */
-                $documents = $documentQuery->find('[instanceof Neos.Neos:Document]')->add($siteNode)->get();
+                $documents = $documentQuery->find($nodeTypeFilter)->add($siteNode)->get();
 
                 foreach ($documents as $documentNode) {
                     $contextPath = $documentNode->getContextPath();
@@ -122,17 +131,11 @@ class NodeEnumerator
                         $contentReleaseLogger->debug('Skipping node from publishing, because it is hidden', [
                             'node' => $contextPath,
                         ]);
-                    } else if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->getNodeType()->getName()))) {
+                    } else {
                         $contentReleaseLogger->debug('Registering node for publishing', [
                             'node' => $contextPath
                         ]);
-
                         yield EnumeratedNode::fromNode($documentNode);
-                    } else {
-                        $contentReleaseLogger->debug('Skipping node from publishing, because it did not match the configured nodeTypeWhitelist', [
-                            'node' => $contextPath,
-                            'nodeTypeWhitelist' => $this->nodeTypeWhitelist
-                        ]);
                     }
                 }
             }
