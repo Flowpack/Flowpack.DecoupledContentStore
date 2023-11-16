@@ -38,14 +38,11 @@ class RedisContentCacheReader
      */
     protected $applicationIdentifier;
 
-    protected $redis;
+    protected ?string $scriptSha1 = null;
+    protected ?\Redis $redis = null;
 
     public function tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey $documentNodeCacheKey
     ): RenderedDocumentFromContentCache {
-        $maxNestLevel = ContentCache::MAXIMUM_NESTING_LEVEL;
-        $contentCacheStartToken = ContentCache::CACHE_SEGMENT_START_TOKEN;
-        $contentCacheEndToken = ContentCache::CACHE_SEGMENT_END_TOKEN;
-        $contentCacheMarker = ContentCache::CACHE_SEGMENT_MARKER;
         /**
          * @see AbstractBackend::setCache()
          */
@@ -60,8 +57,66 @@ class RedisContentCacheReader
             );
         }
         $documentNodeCacheValues = DocumentNodeCacheValues::fromJsonString($serializedCacheValues);
+        $res = $this->executeRedisCall([$documentNodeCacheValues->getRootIdentifier(), $identifierPrefix]);
+        [$content, $error] = $res;
 
-        $script = "
+        if (strlen($error) > 0) {
+            return RenderedDocumentFromContentCache::createIncomplete($error);
+        }
+        return RenderedDocumentFromContentCache::createWithFullContent($content, $documentNodeCacheValues);
+    }
+
+    protected function executeRedisCall(array $params): array
+    {
+        $redis = $this->getRedis();
+
+        $this->prepareRedisScript();
+        try {
+            // starting with Lua 7, eval_ro can be used.
+            $res = $redis->evalSha($this->scriptSha1, $params);
+
+            $error = $redis->getLastError();
+            if ($error !== null) {
+                throw new \RuntimeException('Redis error: ' . $error);
+            }
+        } catch (\Exception $e) {
+            throw new \RuntimeException('Redis script execution error: ' . $e->getMessage());
+        }
+
+        if (!is_array($res) || count($res) !== 2) {
+            throw new \RuntimeException('Result is no array of length 2, but: ' . count($res));
+        }
+
+        return $res;
+    }
+
+    protected function prepareRedisScript(): void
+    {
+        $redis = $this->getRedis();
+
+        try {
+            // Load script into redis if it is not already loaded
+            $scriptExists = false;
+            if ($this->scriptSha1) {
+                $scriptExists = $redis->script('exists', $this->scriptSha1)[0] ?? false;
+            }
+            if (!$scriptExists) {
+                $script = $this->buildRedisScript();
+                $this->scriptSha1 = $redis->script('load', $script);
+            }
+        } catch (\RedisException $e) {
+            throw new \RuntimeException('Redis Error: ' . $e->getMessage());
+        }
+    }
+
+    protected function buildRedisScript(): string
+    {
+        $maxNestLevel = ContentCache::MAXIMUM_NESTING_LEVEL;
+        $contentCacheStartToken = ContentCache::CACHE_SEGMENT_START_TOKEN;
+        $contentCacheEndToken = ContentCache::CACHE_SEGMENT_END_TOKEN;
+        $contentCacheMarker = ContentCache::CACHE_SEGMENT_MARKER;
+
+        return "
             local rootIdentifier = ARGV[1]
             local identifierPrefix = ARGV[2]
 
@@ -110,29 +165,12 @@ class RedisContentCacheReader
 
             return {content, error}
         ";
-        // starting with Lua 7, eval_ro can be used.
-        $res = $redis->eval($script, [$documentNodeCacheValues->getRootIdentifier(), $identifierPrefix], 0);
-        $error = $redis->getLastError();
-        if ($error !== null) {
-            throw new \RuntimeException('Redis Error: ' . $error);
-        }
-
-        if (count($res) !== 2) {
-            throw new \RuntimeException('Result is no array of length 2, but: ' . count($res));
-        }
-        $content = $res[0];
-        $error = $res[1];
-
-        if (strlen($error) > 0) {
-            return RenderedDocumentFromContentCache::createIncomplete($error);
-        }
-        return RenderedDocumentFromContentCache::createWithFullContent($content, $documentNodeCacheValues);
     }
 
     /**
      * @throws UnknownPackageException
      */
-    protected function getRedis()
+    protected function getRedis(): \Redis
     {
         if ($this->redis) {
             return $this->redis;
