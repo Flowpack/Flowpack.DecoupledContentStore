@@ -14,20 +14,12 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStat
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\NodeType\NodeTypeConstraintFactory;
-use Neos\ContentRepository\Domain\NodeType\NodeTypeName;
-use Neos\ContentRepository\Domain\Utility\NodePaths;
 use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Model\Site;
 
 class NodeEnumerator
 {
-    /**
-     * @Flow\Inject
-     * @var NodeTypeConstraintFactory
-     */
-    protected $nodeTypeConstraintFactory;
 
     /**
      * @Flow\Inject
@@ -79,9 +71,16 @@ class NodeEnumerator
     {
         $combinator = new NodeContextCombinator();
 
-        $nodeTypeWhitelist = $this->nodeTypeConstraintFactory->parseFilterString($this->nodeTypeWhitelist);
+        // Build filter from white listed nodetypes
+        $nodeTypeWhitelist = explode(',', $this->nodeTypeWhitelist ?: 'Neos.Neos:Document');
+        $nodeTypeFilter = implode(',', array_map(static function ($nodeType) {
+            if ($nodeType[0] === '!') {
+                return '[!instanceof ' . substr($nodeType, 1) . ']';
+            }
+            return '[instanceof ' . $nodeType . ']';
+        }, $nodeTypeWhitelist));
 
-        $queueSite = function (Site $site) use ($combinator, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
+        $queueSite = static function (Site $site) use ($combinator, $nodeTypeFilter, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain()
@@ -94,24 +93,15 @@ class NodeEnumerator
                     'dimensionValues' => $dimensionValues
                 ]);
 
-                // Build filter from white listed nodetypes
-                $nodeTypeWhitelist = explode(',', $this->nodeTypeWhitelist ?: 'Neos.Neos:Document');
-                $nodeTypeFilter = implode(',', array_map(static function ($nodeType) {
-                    if ($nodeType[0] === '!') {
-                        return '[!instanceof ' . substr($nodeType, 1) . ']';
-                    }
-                    return '[instanceof ' . $nodeType . ']';
-                }, $nodeTypeWhitelist));
+                $nodeQuery = new FlowQuery([$siteNode]);
+                /** @var NodeInterface[] $matchingNodes */
+                $matchingNodes = $nodeQuery->find($nodeTypeFilter)->add($siteNode)->get();
 
-                $documentQuery = new FlowQuery([$siteNode]);
-                /** @var NodeInterface[] $documents */
-                $documents = $documentQuery->find($nodeTypeFilter)->add($siteNode)->get();
-
-                foreach ($documents as $documentNode) {
-                    $contextPath = $documentNode->getContextPath();
+                foreach ($matchingNodes as $nodeToEnumerate) {
+                    $contextPath = $nodeToEnumerate->getContextPath();
 
                     // Verify that the node is not orphaned
-                    $parentNode = $documentNode->getParent();
+                    $parentNode = $nodeToEnumerate->getParent();
                     while ($parentNode !== $siteNode) {
                         if ($parentNode === null) {
                             $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
@@ -123,11 +113,7 @@ class NodeEnumerator
                         $parentNode = $parentNode->getParent();
                     }
 
-                    if (!$documentNode->getParent()) {
-                        $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
-                            'node' => $contextPath,
-                        ]);
-                    } else if ($documentNode->isHidden()) {
+                    if ($nodeToEnumerate->isHidden()) {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it is hidden', [
                             'node' => $contextPath,
                         ]);
@@ -135,7 +121,7 @@ class NodeEnumerator
                         $contentReleaseLogger->debug('Registering node for publishing', [
                             'node' => $contextPath
                         ]);
-                        yield EnumeratedNode::fromNode($documentNode);
+                        yield EnumeratedNode::fromNode($nodeToEnumerate);
                     }
                 }
             }
@@ -143,8 +129,8 @@ class NodeEnumerator
         };
 
         if ($site === null) {
-            foreach ($combinator->sites() as $site) {
-                yield from $queueSite($site);
+            foreach ($combinator->sites() as $siteInList) {
+                yield from $queueSite($siteInList);
             }
         } else {
             yield from $queueSite($site);
