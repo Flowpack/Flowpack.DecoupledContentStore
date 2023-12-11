@@ -51,6 +51,8 @@ use Neos\Neos\Domain\Repository\SiteRepository;
  */
 class NodeRenderer
 {
+    protected const RESTART_AFTER_RENDER_COUNT = 100;
+    protected const CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT = 5;
 
     /**
      * @Flow\Inject
@@ -158,12 +160,12 @@ class NodeRenderer
 
             $i++;
 
-            if ($i % 5 === 0) {
+            if (self::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0 && $i % self::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT === 0) {
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
             }
 
-            if ($i % 20 === 0) {
-                $contentReleaseLogger->info('Restarting after 20 renders.');
+            if ($i % self::RESTART_AFTER_RENDER_COUNT === 0) {
+                $contentReleaseLogger->info(sprintf('Restarting after %d renders.', self::RESTART_AFTER_RENDER_COUNT));
                 yield ExitEvent::createWithStatusCode(193);
                 return;
             }
