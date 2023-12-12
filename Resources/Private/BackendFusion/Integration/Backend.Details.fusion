@@ -40,10 +40,10 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
 
               <h2 @if.isTrue={detailTaskName} class="text-3xl py-5">Log Output for {detailTaskName}</h2>
               <pre>
-                  {String.htmlSpecialChars(jobLogs.stderr)}
+                  {String.nl2br(String.htmlSpecialChars(jobLogs.stderr))}
               </pre>
               <pre>
-                  {String.htmlSpecialChars(jobLogs.stdout)}
+                  {String.nl2br(String.htmlSpecialChars(jobLogs.stdout))}
               </pre>
             </Neos.Fusion:Fragment>
             <p @if.notData={!detailsData}>
