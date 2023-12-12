@@ -69,7 +69,7 @@ class ContentReleaseLogger
 
     protected function logToOutput($message, array $additionalPayload = []): void
     {
-        $formattedPayload = $additionalPayload ? json_encode($additionalPayload, JSON_PRETTY_PRINT) : '';
+        $formattedPayload = $additionalPayload ? json_encode($additionalPayload) : '';
         $this->output->writeln($this->logPrefix . $message . $formattedPayload);
     }
 
