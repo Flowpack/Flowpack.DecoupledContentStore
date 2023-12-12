@@ -47,24 +47,30 @@ class ContentReleaseLogger
         return new static($output, $contentReleaseIdentifier, null);
     }
 
-    public function debug($message, array $additionalPayload = [])
+    public function debug($message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->logToOutput($message, $additionalPayload);
     }
 
-    public function info($message, array $additionalPayload = [])
+    public function info($message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->logToOutput($message, $additionalPayload);
     }
 
-    public function warn($message, array $additionalPayload = [])
+    public function warn($message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->logToOutput($message, $additionalPayload);
     }
 
-    public function error($message, array $additionalPayload = [])
+    public function error($message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . $message . json_encode($additionalPayload));
+        $this->logToOutput($message, $additionalPayload);
+    }
+
+    protected function logToOutput($message, array $additionalPayload = []): void
+    {
+        $formattedPayload = $additionalPayload ? json_encode($additionalPayload, JSON_PRETTY_PRINT) : '';
+        $this->output->writeln($this->logPrefix . $message . $formattedPayload);
     }
 
     public function logException(\Exception $exception, string $message, array $additionalPayload)
