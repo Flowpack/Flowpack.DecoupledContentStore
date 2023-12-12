@@ -51,7 +51,7 @@ use Neos\Neos\Domain\Repository\SiteRepository;
  */
 class NodeRenderer
 {
-    protected const RESTART_AFTER_RENDER_COUNT = 100;
+    protected const RESTART_AFTER_RENDER_COUNT = 20;
     protected const CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT = 5;
 
     /**
@@ -160,12 +160,12 @@ class NodeRenderer
 
             $i++;
 
-            if (self::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0 && $i % self::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT === 0) {
+            if (static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0 && $i % static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT === 0) {
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
             }
 
-            if ($i % self::RESTART_AFTER_RENDER_COUNT === 0) {
-                $contentReleaseLogger->info(sprintf('Restarting after %d renders.', self::RESTART_AFTER_RENDER_COUNT));
+            if ($i % static::RESTART_AFTER_RENDER_COUNT === 0) {
+                $contentReleaseLogger->info(sprintf('Restarting after %d renders.', static::RESTART_AFTER_RENDER_COUNT));
                 yield ExitEvent::createWithStatusCode(193);
                 return;
             }
