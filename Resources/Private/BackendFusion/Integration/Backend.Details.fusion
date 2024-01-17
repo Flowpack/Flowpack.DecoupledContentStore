@@ -8,6 +8,8 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
     // - redisContentStores: array of all configured content store identifiers
     // - isPrimary: bool
 
+    stdOutLines = ${Array.filter(String.pregSplit(String.htmlSpecialChars(jobLogs.stdout), "/\r\n|\n|\r/"))}
+
     renderer = afx`
         <div id="app">
             <form id="postHelper" method="post">
@@ -38,13 +40,19 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
                   />
               </Neos.Fusion:Loop>
 
-              <h2 @if.isTrue={detailTaskName} class="text-3xl py-5">Log Output for {detailTaskName}</h2>
-              <pre @if={!String.isBlank(jobLogs.stderr)} title="stderr" class="block whitespace-pre overflow-x-scroll border border-red-800 p-2 mb-6">
-                {String.htmlSpecialChars(jobLogs.stderr)}
-              </pre>
-              <pre title="stdout" class="block whitespace-pre overflow-x-scroll">
-                {String.htmlSpecialChars(jobLogs.stdout)}
-              </pre>
+              <div @if={!String.isBlank(jobLogs.stderr)}>
+                <h2 class="text-3xl py-5">Error output for {detailTaskName}</h2>
+                <pre title="stderr" class="block whitespace-pre overflow-x-scroll border border-red-800 p-2 mb-6">
+                  {String.htmlSpecialChars(jobLogs.stderr)}
+                </pre>
+              </div>
+
+              <h2 class="text-3xl py-5">Log output for {detailTaskName}</h2>
+              <div title="stdout" class="stdout grid gap-2">
+                <Neos.Fusion:Loop items={Array.reverse(props.stdOutLines)} iterationName="iteration">
+                  <pre>{Array.length(props.stdOutLines) - iteration.index}: {String.pregReplace(item, "/(DEBUG|WARNING|ERROR|INFO): (.*)/", "<span class=\"log-level-$1\">$1:</span> <span class=\"log-content-$1\">$2</span>")}</pre>
+                </Neos.Fusion:Loop>
+              </div>
             </Neos.Fusion:Fragment>
             <p @if.notData={!detailsData}>
               No data exists for this release in Redis.

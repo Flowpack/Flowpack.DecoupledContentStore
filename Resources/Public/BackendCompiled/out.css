@@ -1,4 +1,4 @@
-/* ../../../../../../../../../var/folders/jx/0n3dgdj52yd7lhy7jz8m_lyc0000gn/T/tmp-76784-4SF1kWZd2RxP/Flowpack.DecoupledContentStore/Resources/Private/Js/1705479026689-styles.css */
+/* ../../../../../../../../../var/folders/1z/rq1_kd710hn00r35j5rzqs5h0000gn/T/tmp-24630-ZfKI51gf2y1c/Flowpack.DecoupledContentStore/Resources/Private/Js/1705488391983-styles.css */
 #app *,
 #app ::before,
 #app ::after {
@@ -70,6 +70,9 @@
 #app .table {
   display: table;
 }
+#app .grid {
+  display: grid;
+}
 #app .hidden {
   display: none;
 }
@@ -116,6 +119,9 @@
 }
 #app .justify-center {
   justify-content: center;
+}
+#app .gap-2 {
+  gap: 0.5rem;
 }
 #app .divide-y > :not([hidden]) ~ :not([hidden]) {
   --tw-divide-y-reverse: 0;
