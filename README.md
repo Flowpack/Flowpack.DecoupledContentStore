@@ -239,6 +239,15 @@ As a big improvement for stability (compared to v1), the rendering pipeline does
 it is a full or an incremental render. To trigger a full render, the content cache is flushed before
 the rendering is started.
 
+### Options
+After changing an Asset (e.g. in the Media Module) an incremental rendering is triggered.
+You can opt out of this behavior by setting the following configuration:
+````yaml
+Flowpack:
+  DecoupledContentStore:
+    startIncrementalReleaseOnAssetChange: false
+````
+
 ### What happens if edits happen during a rendering?
 
 If a change by an editor happens during a rendering, the content cache is flushed (by tag) as a result of

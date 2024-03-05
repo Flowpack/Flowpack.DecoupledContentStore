@@ -1,5 +1,8 @@
 Flowpack:
   DecoupledContentStore:
+    # Automatically start an incremental release when an asset is changed/replaced
+    startIncrementalReleaseOnAssetChange: true
+
     redisContentStores:
       # the "Primary" content store is the one Neos writes to during building the content release.
       primary:

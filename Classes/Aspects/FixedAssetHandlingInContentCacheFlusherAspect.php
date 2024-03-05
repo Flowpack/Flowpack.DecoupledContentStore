@@ -13,7 +13,6 @@ use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Neos\Neos\Fusion\Helper\CachingHelper;
 use Neos\Utility\ObjectAccess;
 
-
 /**
  * The ContentCacheFlusher::registerAssetChange() has one (general-case) bug, which we patch here.
  *
@@ -63,13 +62,19 @@ class FixedAssetHandlingInContentCacheFlusherAspect
      * @Flow\Inject
      * @var CachingHelper
      */
-    protected CachingHelper $cachingHelper;
+    protected $cachingHelper;
 
     /**
      * @Flow\Inject
      * @var ContentReleaseManager
      */
     protected $contentReleaseManager;
+
+    /**
+     * @Flow\InjectConfiguration("startIncrementalReleaseOnAssetChange")
+     * @var bool
+     */
+    protected $startIncrementalReleaseOnAssetChange;
 
     /**
      * WHY:
@@ -96,7 +101,7 @@ class FixedAssetHandlingInContentCacheFlusherAspect
             return;
         }
 
-        /* @var $contentCacheFlusher ContentCacheFlusher */
+        /* @var ContentCacheFlusher $contentCacheFlusher */
         $contentCacheFlusher = $joinPoint->getProxy();
 
         // 1. flush asset tag without workspace hash
@@ -156,6 +161,8 @@ class FixedAssetHandlingInContentCacheFlusherAspect
         $contentCacheFlusher->shutdownObject();
 
         // 4. trigger incremental rendering
-        $this->contentReleaseManager->startIncrementalContentRelease();
+        if ($this->startIncrementalReleaseOnAssetChange) {
+            $this->contentReleaseManager->startIncrementalContentRelease();
+        }
     }
 }
