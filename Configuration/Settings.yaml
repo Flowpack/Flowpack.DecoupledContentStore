@@ -180,3 +180,7 @@ Neos:
       routes:
         'Flowpack.DecoupledContentStore':
           position: 'before Neos.Neos'
+
+  Fusion:
+    defaultContext:
+      Flowpack.DecoupledContentStore: Flowpack\DecoupledContentStore\Eel\ModuleHelper
