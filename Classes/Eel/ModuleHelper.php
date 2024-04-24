@@ -12,8 +12,12 @@ use Neos\Flow\Annotations as Flow;
  */
 class ModuleHelper implements ProtectedContextAwareInterface
 {
-    public function formatStdOutput(string $stdOut): string
+    public function formatStdOutput(?string $stdOut): string
     {
+        if (!$stdOut) {
+            return '';
+        }
+
         $escapedString = $stdOut;
         $lines = array_reverse(array_filter(preg_split("/\r\n|\n|\r/", $escapedString)));
         $lineCount = count($lines);
