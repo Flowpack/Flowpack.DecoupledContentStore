@@ -10,6 +10,8 @@ Flowpack:
         hostname: 127.0.0.1
         port: 6379
         database: 11
+        username: ''
+        password: ''
 
         # How many content releases to keep before cleaning them up.
         #
