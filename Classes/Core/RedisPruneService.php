@@ -15,10 +15,10 @@ class RedisPruneService
     // check whether they are reserved keys or currently active or contain one of the currently registered releases ids
     // if not: delete
     const PRUNE_LUA_SCRIPT = '
-        local contentStoreCurrent = redis.call("GET", "contentStore:current")
+        local contentStoreCurrent = redis.call("GET", ARGV[1] .. "contentStore:current")
         local contentStoreAllKeys = redis.call("KEYS", "*")
-        local contentStoreRegisteredReleases = redis.call("ZRANGE", "contentStore:registeredReleases", 0, -1)
-        local currentContentStoreStart = "contentStore:" .. contentStoreCurrent
+        local contentStoreRegisteredReleases = redis.call("ZRANGE", ARGV[1] .."contentStore:registeredReleases", 0, -1)
+        local currentContentStoreStart = ARGV[1] .. "contentStore:" .. contentStoreCurrent
 
         local function table_contains_value(tab, val)
             for index,value in ipairs(tab) do
@@ -30,9 +30,9 @@ class RedisPruneService
         end
 
         for index,contentStoreKey in ipairs(contentStoreAllKeys) do
-            if contentStoreKey ~= "contentStore:current"
-            and contentStoreKey ~= "contentStore:registeredReleases"
-            and contentStoreKey ~= "contentStore:configEpoch"
+            if contentStoreKey ~= ARGV[1] .. "contentStore:current"
+            and contentStoreKey ~= ARGV[1] .. "contentStore:registeredReleases"
+            and contentStoreKey ~= ARGV[1] .. "contentStore:configEpoch"
             and string.sub(contentStoreKey, 1, string.len(currentContentStoreStart)) ~= currentContentStoreStart
             and not table_contains_value(contentStoreRegisteredReleases, contentStoreKey) then
                 redis.call("DEL", contentStoreKey)
@@ -49,7 +49,8 @@ class RedisPruneService
 
     public function pruneRedisInstance(RedisInstanceIdentifier $redisInstanceIdentifier)
     {
-        $this->redisClientManager->getRedis($redisInstanceIdentifier)->eval(self::PRUNE_LUA_SCRIPT, []);
+        $prefix = $this->redisClientManager->getRedis($redisInstanceIdentifier)->getOption(\Redis::OPT_PREFIX);
+        $this->redisClientManager->getRedis($redisInstanceIdentifier)->eval(self::PRUNE_LUA_SCRIPT, [$prefix]);
     }
 
 }
