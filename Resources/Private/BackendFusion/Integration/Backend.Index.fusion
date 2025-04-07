@@ -10,31 +10,6 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     // - showToggleConfigEpochButton: boolean
 
     renderer = Neos.Fusion:Component {
-        _publishAllWithoutValidationUri = Neos.Fusion:UriBuilder {
-            action = 'publishAllWithoutValidation'
-        }
-
-        _pruneContentStoreUri = Neos.Fusion:UriBuilder {
-            action = 'pruneContentStore'
-            arguments = Neos.Fusion:DataStructure {
-                redisInstanceIdentifier = ${contentStore}
-            }
-        }
-
-        _cancelRunningReleaseUri = Neos.Fusion:UriBuilder {
-            action = 'cancelRunningRelease'
-            arguments = Neos.Fusion:DataStructure {
-                redisInstanceIdentifier = ${contentStore}
-            }
-        }
-
-        _toggleConfigEpoch = Neos.Fusion:UriBuilder {
-            action = 'toggleConfigEpoch'
-            arguments = Neos.Fusion:DataStructure {
-                redisInstanceIdentifier = ${contentStore}
-            }
-        }
-
         _renderedTableBody = Neos.Fusion:Loop {
             items = ${overviewData}
             itemRenderer = Neos.Fusion:Component {
@@ -114,26 +89,78 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         <span class="neos-badge neos-badge-info">{storeSize}</span>
                     </div>
 
-                    <div style="margin-top: 5rem; display: flex; gap: 1rem;">
-                      <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger">
-                          Publish all without validation
-                      </button>
-                      <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning">
-                          Prune content store
-                      </button>
-                      <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-warning">
-                          Cancel running release
-                      </button>
-                      <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpoch} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
-                          {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
-                      </button>
-                    </div>
+                    <Flowpack.DecoupledContentStore:ContentStoreActions />
 
                     <div class="neos-footer !h-full">
                         <Flowpack.DecoupledContentStore:ListFooter />
                     </div>
                 </div>
             </div>
+        `
+    }
+}
+
+prototype(Flowpack.DecoupledContentStore:ContentStoreActions) < prototype(Neos.Fusion:Join) {
+    @process.wrap = afx`
+        <div style="margin-top: 5rem; display: flex; gap: 1rem;">
+            {value}
+        </div>
+    `
+
+    publishAllWithoutValidation = Neos.Fusion:Component {
+        _publishAllWithoutValidationUri = Neos.Fusion:UriBuilder {
+            action = 'publishAllWithoutValidation'
+        }
+
+        renderer = afx`
+            <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger">
+                Publish all without validation
+            </button>
+        `
+    }
+
+    pruneContentStore = Neos.Fusion:Component {
+        _pruneContentStoreUri = Neos.Fusion:UriBuilder {
+            action = 'pruneContentStore'
+            arguments = Neos.Fusion:DataStructure {
+                redisInstanceIdentifier = ${contentStore}
+            }
+        }
+
+        renderer = afx`
+            <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning">
+                Prune content store
+            </button>
+        `
+    }
+
+    cancelRunningRelease = Neos.Fusion:Component {
+        _cancelRunningReleaseUri = Neos.Fusion:UriBuilder {
+            action = 'cancelRunningRelease'
+            arguments = Neos.Fusion:DataStructure {
+                redisInstanceIdentifier = ${contentStore}
+            }
+        }
+
+        renderer = afx`
+            <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-warning">
+                Cancel running release
+            </button>
+        `
+    }
+
+    toggleConfigEpoch = Neos.Fusion:Component {
+        _toggleConfigEpochUri = Neos.Fusion:UriBuilder {
+            action = 'toggleConfigEpoch'
+            arguments = Neos.Fusion:DataStructure {
+                redisInstanceIdentifier = ${contentStore}
+            }
+        }
+
+        renderer = afx`
+            <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpochUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
+                {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
+            </button>
         `
     }
 }
