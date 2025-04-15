@@ -209,11 +209,15 @@ To enable this feature, do the following:
             hostname: my-redis-hostname
             port: 6379
             database: 11
+            username: ''
+            password: ''
           staging:
             label: 'Staging Site'
             hostname: my-staging-redis-hostname
             port: 6379
             database: 11
+            username: ''
+            password: ''
     ```
 
 2. In `pipelines.yml`, underneath `4) TRANSFER`, comment-in and adjust the `transfer_content` task.
