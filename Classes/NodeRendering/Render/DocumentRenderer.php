@@ -1,5 +1,7 @@
 <?php
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
+
 use Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect;
 use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -154,7 +156,7 @@ class DocumentRenderer
         return new ControllerContext(
             $request,
             new ActionResponse(),
-            new Arguments(array()),
+            new Arguments([]),
             $uriBuilder
         );
     }
@@ -227,7 +229,7 @@ class DocumentRenderer
                 );
             }
 
-            $contentReleaseLogger->debug('Rendering document for URI ' . $uri, ['baseUri' => $baseUri]);
+            $contentReleaseLogger->info('Rendering document for URI ' . $uri, ['baseUri' => $baseUri]);
 
             $controllerContext = $this->buildControllerContextAndSetBaseUri($uri, $node, $requestArguments);
             /** @var ActionRequest $request */
@@ -285,18 +287,24 @@ class DocumentRenderer
      * @param NodeInterface $node
      * @param array $arguments
      * @return string The resolved URI for the given node
+     * @throws \Exception
      */
     protected function buildNodeUri(NodeInterface $node, array $arguments)
     {
         /** @var Site $currentSite */
         $currentSite = $node->getContext()->getCurrentSite();
         if (!$currentSite->hasActiveDomains()) {
-            throw new \Exception("No configured domain!");
+            throw new Exception(sprintf("Site %s has no active domain", $currentSite->getNodeName()), 1666684522);
         }
+        $primaryDomain = $currentSite->getPrimaryDomain();
+        if ((string)$primaryDomain->getScheme() === '') {
+            throw new Exception(sprintf("Domain %s for site %s has no scheme defined", $primaryDomain->getHostname(), $currentSite->getNodeName()), 1666684523);
+        }
+
         // HINT: We cannot use a static URL here, but instead need to use an URL of the current site.
         // This is changed from the the old behavior, where we have changed the LinkingService in LinkingServiceAspect,
         // to properly generate the domain part of the routes - and this relies on the proper ControllerContext URI path.
-        $baseControllerContext = $this->buildControllerContextAndSetBaseUri($currentSite->getPrimaryDomain()->__toString(), $node, $arguments);
+        $baseControllerContext = $this->buildControllerContextAndSetBaseUri($primaryDomain->__toString(), $node, $arguments);
         $format = $arguments['@format'] ?? 'html';
         $uri = $this->linkingService->createNodeUri($baseControllerContext, $node, null, $format, true, $arguments, '', false, [], false);
         return $this->removeQueryPartFromUri($uri);

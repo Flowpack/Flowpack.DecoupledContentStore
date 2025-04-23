@@ -77,6 +77,9 @@ class NodeEnumerator
             // TODO: EXTENSION POINT HERE, TO ADD ADDITIONAL ENUMERATIONS (.metadata.json f.e.)
             // TODO: not yet fully sure how to handle Enumeration
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
+            foreach ($enumeration as $enumeratedNode) {
+                $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
+            }
         }
     }
 
@@ -165,6 +168,21 @@ class NodeEnumerator
         } else {
             yield from $queueSite($site);
         }
+    }
+
+    /**
+     * A node was enumerated for a new content release.
+     *
+     * This signal can be used to add additional EnumeratedNode entries (e.g. with added arguments for pagination or filters) based on the given node.
+     *
+     * @param EnumeratedNode $enumeratedNode
+     * @param ContentReleaseIdentifier $releaseIdentifier
+     * @param ContentReleaseLogger $contentReleaseLogger
+     * @return void
+     * @Flow\Signal
+     */
+    protected function emitNodeEnumerated(EnumeratedNode $enumeratedNode, ContentReleaseIdentifier $releaseIdentifier, ContentReleaseLogger $contentReleaseLogger)
+    {
     }
 
 }

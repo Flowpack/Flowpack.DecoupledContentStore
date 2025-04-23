@@ -92,18 +92,6 @@ class NodeRenderer
 
     /**
      * @Flow\Inject
-     * @var NodeDataRepository
-     */
-    protected $nodeDataRepository;
-
-    /**
-     * @Flow\Inject
-     * @var NodeFactory
-     */
-    protected $nodeFactory;
-
-    /**
-     * @Flow\Inject
      * @var ContentReleaseManager
      */
     protected $contentReleaseManager;
@@ -148,6 +136,11 @@ class NodeRenderer
 
             try {
                 $this->renderDocumentNodeVariant($enumeratedNode, $contentReleaseIdentifier, $contentReleaseLogger);
+                // BUGFIX: Because rendering a document node can update Thumbnails and their connected Persistent Resource
+                // objects (= Doctrine Entities), we need to *persist* these changes. Otherwise, we will have broken
+                // images, which will re-appear once you open the page in the backend (because image URL generation
+                // is fully deterministic). This happened 12/2022 to us.
+                $this->persistenceManager->persistAll();
             } finally {
                 $removalSuccess = $this->redisRenderingQueue->removeRenderingJobFromReservedList($contentReleaseIdentifier, $enumeratedNode, $rendererIdentifier);
                 if ($removalSuccess === false) {

@@ -1,6 +1,7 @@
 {
-  "description": "",
+  "description": "This is the 2nd generation of a Two-Stack CMS package for Neos.",
   "type": "neos-package",
+  "license": "GPL-3.0-or-later",
   "name": "flowpack/decoupledcontentstore",
   "require": {
     "php": "^7.4 || ^8.0",

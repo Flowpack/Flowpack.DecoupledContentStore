@@ -31,7 +31,7 @@ delivery layer part in another software (e.g. a shop system) as an extension.
 - Publish a full, read-only snapshot of your live content to Redis in a so-called *Content Release*
 - allows for *incremental publishing*; so if a change is made, only the needed pages are re-rendered. This is
   *integrated with the Neos Content Cache*; so cache flushings work correctly.
--Integration with Neos workspace publishing for automatic incremental
+- Integration with Neos workspace publishing for automatic incremental
   publishing to the Content Store
 - Configurable Content Store format, decoupled from the internal representation in Neos.
 - Extensibility: Enrich content releases with your custom data.
@@ -63,14 +63,14 @@ Copy the `pipelines_template.yml` file into your project and adjust it as needed
 The following flow chart shows the rendering pipeline for creating a content release.
 
 ```                                                                                                 
-                       ┌─────────────────────┐                                                      
-                       │   Node Rendering    │                                                      
-     ┌───────────┐     │   ┌─────────────┐   │     ┌───────────┐     ┌───────────┐     ┌───────────┐
-     │   Node    │     │   │Orchestrator │   │     │  Release  │     │Transfer to│     │  Atomic   │
-     │Enumeration│────▶│   └─────────────┘   │────▶│Validation │────▶│  Target   │────▶│  Switch   │
-     └───────────┘     │┌────────┐ ┌────────┐│     └───────────┘     └───────────┘     └───────────┘
-                       ││Renderer│ │Renderer││                                                      
-                       └┴────────┴─┴────────┴┘                                                      
+                   ┌─────────────────────┐                                                      
+                   │   Node Rendering    │                                                      
+ ┌───────────┐     │   ┌─────────────┐   │     ┌───────────┐     ┌───────────┐     ┌───────────┐
+ │   Node    │     │   │Orchestrator │   │     │  Release  │     │Transfer to│     │  Atomic   │
+ │Enumeration│────▶│   └─────────────┘   │────▶│Validation │────▶│  Target   │────▶│  Switch   │
+ └───────────┘     │┌────────┐ ┌────────┐│     └───────────┘     └───────────┘     └───────────┘
+                   ││Renderer│ │Renderer││                                                      
+                   └┴────────┴─┴────────┴┘                                                      
 ```
 
 - At the beginning of every render, all nodes are **enumerated**. The Node Enumeration contains all pages
@@ -239,7 +239,7 @@ As a big improvement for stability (compared to v1), the rendering pipeline does
 it is a full or an incremental render. To trigger a full render, the content cache is flushed before
 the rendering is started.
 
-### auto-starting of Incremental Releases on workspace changes
+### Options
 
 By default, the Package is configured to automatically start an incremental release whenever any workspace is published.
 This behavior can be disabled via Flow configuration in your Settings.yaml
@@ -252,6 +252,15 @@ Flowpack:
     startIncrementalReleaseOnWorkspacePublish: false
     # ...
 ```
+
+After changing an Asset (e.g. in the Media Module) an incremental rendering is triggered.
+You can opt out of this behavior by setting the following configuration:
+
+````yaml
+Flowpack:
+  DecoupledContentStore:
+    startIncrementalReleaseOnAssetChange: false
+````
 
 ### What happens if edits happen during a rendering?
 
@@ -351,6 +360,64 @@ Flowpack:
 
 This is needed so that the system knows which keys should be synchronized between the different content stores,
 and what data to delete if a release is removed.
+
+### Rendering additional nodes with arguments (e.g. pagination or filters)
+
+If you render a paginated list or have filters (with a predictable list of values) that can be
+added to a document via arguments, you can implement a slot for the `nodeEnumerated` signal to enumerate additional
+nodes with arguments.
+
+> **Note:** Request arguments must be mapped to URIs via custom routes, since we do not support HTTP query parameters for rendered documents.
+
+#### Example
+
+Add a slot for the `nodeEnumerated` signal via `Package.php`:
+
+```php
+<?php
+class Package extends BasePackage
+{
+    public function boot(Bootstrap $bootstrap)
+    {
+        $dispatcher = $bootstrap->getSignalSlotDispatcher();
+
+        $dispatcher->connect(NodeEnumerator::class, 'nodeEnumerated', MyNodeListsEnumerator::class, 'enumerateNodeLists');
+    }
+}
+```
+
+Implement the slot and enumerate additional nodes depending on the node type:
+
+```php
+<?php
+class NodeListsEnumerator
+{
+    public function enumerateNodeLists(EnumeratedNode $enumeratedNode, ContentReleaseIdentifier $releaseIdentifier, ContentReleaseLogger $logger)
+    {
+        $nodeTypeName = $enumeratedNode->getNodeTypeName();
+        $nodeType = $this->nodeTypeManager->getNodeType($nodeTypeName);
+        if ($nodeType->isOfType('Vendor.Site:Document.Blog.Folder')) {
+            // Get the node and count the number of pages to render
+            // $pageCount = ...
+
+            $pageCount = ceil($postCount / (float)$this->perPage);
+            if ($pageCount <= 1) {
+                return;
+            }
+
+            // Start after the first page, because the first page will be the document without arguments
+            for ($page = 2; $page <= $pageCount; $page++) {
+                $enumeratedNodes[] = EnumeratedNode::fromNode($documentNode, ['page' => $page]);
+            }
+
+            $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeratedNodes);
+        }
+    }
+}
+```
+
+The actual logic will depend on your use of the node. Having the actual filtering logic implemented in PHP is
+beneficial, because it allows you to use it in the rendering process as well as in the additional enumeration.
 
 ### Extending the backend module
 
