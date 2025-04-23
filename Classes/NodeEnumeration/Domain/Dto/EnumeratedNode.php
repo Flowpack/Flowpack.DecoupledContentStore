@@ -63,13 +63,15 @@ final class EnumeratedNode implements \JsonSerializable
         return new self($tmp['contextPath'], $tmp['nodeIdentifier'], $tmp['nodeTypeName'] ?? '', $tmp['arguments']);
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'contextPath' => $this->contextPath,
             'nodeIdentifier' => $this->nodeIdentifier,
+            'dimensions' => $this->getDimensionsFromContextPath(),
+            'workspaceName' => $this->getWorkspaceNameFromContextPath(),
+            'arguments' => $this->arguments,
             'nodeTypeName' => $this->nodeTypeName,
-            'arguments' => $this->arguments
         ];
     }
 
@@ -86,6 +88,12 @@ final class EnumeratedNode implements \JsonSerializable
     {
         $nodePathAndContext = NodePaths::explodeContextPath($this->contextPath);
         return $nodePathAndContext['dimensions'];
+    }
+
+    public function getWorkspaceNameFromContextPath(): string
+    {
+        $nodePathAndContext = NodePaths::explodeContextPath($this->contextPath);
+        return $nodePathAndContext['workspaceName'];
     }
 
     public function getNodeIdentifier(): string

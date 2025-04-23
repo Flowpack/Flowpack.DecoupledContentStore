@@ -13,18 +13,12 @@ use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
 use Neos\Flow\Security\Context;
-use Neos\Fusion\Core\Cache\ContentCache;
 
 /**
  * @Flow\Scope("singleton")
  */
 class ContentReleaseManager
 {
-    /**
-     * @Flow\Inject
-     * @var ContentCache
-     */
-    protected $contentCache;
 
     /**
      * @Flow\Inject
@@ -63,6 +57,7 @@ class ContentReleaseManager
             'contentReleaseId' => $contentReleaseId,
             'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
             'validate' => true,
+            'flushContentCache' => false,
             'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
             'accountId' => $this->getAccountId(),
         ]));
@@ -74,13 +69,11 @@ class ContentReleaseManager
     public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
     {
         $contentReleaseId = ContentReleaseIdentifier::create();
-
-        $this->contentCache->flush();
-
         $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
             'contentReleaseId' => $contentReleaseId,
             'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
             'validate' => $validate,
+            'flushContentCache' => true,
             'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
             'accountId' => $this->getAccountId(),
         ]));

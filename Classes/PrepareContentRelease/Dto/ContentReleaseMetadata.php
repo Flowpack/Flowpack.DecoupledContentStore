@@ -63,7 +63,6 @@ final class ContentReleaseMetadata implements \JsonSerializable
         $this->accountId = $accountId;
     }
 
-
     public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime, string $workspace = 'live', string $accountId = 'cli'): self
     {
         return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled(), [], $workspace, $accountId);
@@ -88,7 +87,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             isset($tmp['manualTransferJobIds']) ? array_map(function (string $item) {
                 return PrunnerJobId::fromString($item);
             }, json_decode($tmp['manualTransferJobIds'])) : [],
-            $tmp['workspace'] ?? 'live',
+            $tmp['workspaceName'] ?? 'live'
             key_exists('accountId', $tmp) ? $tmp['accountId'] : 'cli',
         );
     }
@@ -125,7 +124,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
 
     public function withAdditionalManualTransferJobId(PrunnerJobId $prunnerJobId): self
     {
-        $manualTransferIdArray = self::getManualTransferJobIds();
+        $manualTransferIdArray = $this->getManualTransferJobIds();
         $manualTransferIdArray[] = $prunnerJobId;
         return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray, $this->workspaceName, $this->accountId);
     }

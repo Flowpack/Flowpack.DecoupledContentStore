@@ -1,2 +1,2 @@
-import './foo.css';
-console.log("HI");
+import './styles.css';
+console.log('Initialized DecoupledContentStore');

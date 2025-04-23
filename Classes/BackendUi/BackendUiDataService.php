@@ -14,6 +14,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumer
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Neos\Flow\Annotations as Flow;
@@ -81,12 +82,17 @@ class BackendUiDataService
             $lastRendering = RenderingStatistics::fromJsonString($lastRenderingStatisticsEntries->getResultForContentRelease($contentReleaseId));
             $firstRendering = RenderingStatistics::fromJsonString($firstRenderingStatisticsEntries->getResultForContentRelease($contentReleaseId));
 
+            $metadataForContentRelease = $metadata->getResultForContentRelease($contentReleaseId);
+            $countForContentRelease = $counts->getResultForContentRelease($contentReleaseId);
+            $iterationsCountForContentRelease = $iterationsCounts->getResultForContentRelease($contentReleaseId);
+            $errorCountForContentRelease = $errorCounts->getResultForContentRelease($contentReleaseId);
+
             $result[] = new ContentReleaseOverviewRow(
                 $contentReleaseId,
-                $metadata->getResultForContentRelease($contentReleaseId),
-                $counts->getResultForContentRelease($contentReleaseId),
-                $iterationsCounts->getResultForContentRelease($contentReleaseId),
-                $errorCounts->getResultForContentRelease($contentReleaseId),
+                $metadataForContentRelease instanceof ContentReleaseMetadata ? $metadataForContentRelease : null,
+                is_int($countForContentRelease) ? $countForContentRelease : 0,
+                is_int($iterationsCountForContentRelease) ? $iterationsCountForContentRelease : 0,
+                is_int($errorCountForContentRelease) ? $errorCountForContentRelease : 0,
                 $lastRendering->getTotalJobs() > 0 ? round($lastRendering->getRenderedJobs()
                     / $lastRendering->getTotalJobs() * 100) : 100,
                 $firstRendering->getRenderedJobs(),
@@ -114,9 +120,14 @@ class BackendUiDataService
         return round($size / 1000000, 2);
     }
 
-    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ContentReleaseDetails
+    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ?ContentReleaseDetails
     {
         $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier, $redisInstanceIdentifier);
+
+        if (!$contentReleaseMetadata) {
+            return null;
+        }
+
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
 
         $manualTransferJobs = count($contentReleaseMetadata->getManualTransferJobIds()) ? array_map(function (PrunnerJobId $item) {

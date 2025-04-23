@@ -36,6 +36,7 @@ pipelines:
         script:
           - ./flow contentReleasePrepare:createContentRelease {{ .contentReleaseId }} {{ .__jobID }} --workspaceName {{ .workspaceName }} --accountId {{ .accountId }}
           - ./flow contentReleasePrepare:ensureAllOtherInProgressContentReleasesWillBeTerminated {{ .contentReleaseId }}
+          - ./flow contentReleasePrepare:flushContentCacheIfRequired {{ .contentReleaseId }} --flushContentCache={{ .flushContentCache }}
 
       ################################################################################
       # 1) ENUMERATION
