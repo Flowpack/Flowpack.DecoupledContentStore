@@ -87,7 +87,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             isset($tmp['manualTransferJobIds']) ? array_map(function (string $item) {
                 return PrunnerJobId::fromString($item);
             }, json_decode($tmp['manualTransferJobIds'])) : [],
-            $tmp['workspaceName'] ?? 'live'
+            $tmp['workspaceName'] ?? 'live',
             key_exists('accountId', $tmp) ? $tmp['accountId'] : 'cli',
         );
     }
