@@ -131,17 +131,20 @@ class NodeEnumerator
                 foreach ($matchingNodes as $nodeToEnumerate) {
                     $contextPath = $nodeToEnumerate->getContextPath();
 
-                    // Verify that the node is not orphaned
-                    $parentNode = $nodeToEnumerate->getParent();
-                    while ($parentNode !== $siteNode) {
-                        if ($parentNode === null) {
-                            $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
-                                'node' => $contextPath,
-                            ]);
-                            // Continue with the next document
-                            continue 2;
+                    // BUGFIX: the site node has no parent but must NOT be recognized as orphaned
+                    if ($nodeToEnumerate !== $siteNode) {
+                        // Verify that the node is not orphaned
+                        $parentNode = $nodeToEnumerate->getParent();
+                        while ($parentNode !== $siteNode) {
+                            if ($parentNode === null) {
+                                $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
+                                    'node' => $contextPath,
+                                ]);
+                                // Continue with the next document
+                                continue 2;
+                            }
+                            $parentNode = $parentNode->getParent();
                         }
-                        $parentNode = $parentNode->getParent();
                     }
 
                     if ($nodeToEnumerate->isHidden()) {
