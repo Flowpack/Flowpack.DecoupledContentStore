@@ -11,12 +11,15 @@ class Sparkline
      * @license MIT
      * @link https://github.com/jxxe/sparkline/
      */
-    private static function getY($max, $height, $diff, $value)
+    private static function getY($max, $height, $diff, $value): float
     {
-        return round(floatval(($height - ($value * $height / $max) + $diff)), 2);
+        if ($max === 0) {
+            return 0;
+        }
+        return round($height - ($value * $height / $max) + $diff, 2);
     }
 
-    private static function buildElement($tag, $attrs)
+    private static function buildElement($tag, $attrs): string
     {
         $element = '<' . $tag . ' ';
         foreach ($attrs as $attr => $value) {
@@ -38,19 +41,20 @@ class Sparkline
         $fullHeight = $options['height'];
         $height = $fullHeight - ($strokeWidth * 2);
         $max = max($values);
+        if ($max === 0) {
+            return '';
+        }
         $lastItemIndex = count($values) - 1;
         $offset = $width / $lastItemIndex;
-        $datapoints = [];
         $pathY = self::getY($max, $height, $strokeWidth, $values[0]);
-        $pathCoords = "M 0 {$pathY}";
+        $pathCoords = "M 0 $pathY";
         foreach ($values as $index => $value) {
             $x = $index * $offset;
             $y = self::getY($max, $height, $strokeWidth, $value);
-            $datapoints[$index] = ['index' => $index, 'x' => $x, 'y' => $y];
-            $pathCoords .= " L {$x} {$y}";
+            $pathCoords .= " L $x $y";
         }
         $path = self::buildElement('path', ['class' => 'sparkline--line', 'd' => $pathCoords, 'fill' => 'none', 'stroke-width' => $strokeWidth, 'stroke' => $lineColor]);
-        $fillCoords = "{$pathCoords} V {$fullHeight} L 0 {$fullHeight} Z";
+        $fillCoords = "$pathCoords V $fullHeight L 0 $fullHeight Z";
         $fill = self::buildElement('path', ['class' => 'sparkline--fill', 'd' => $fillCoords, 'stroke' => 'none', 'fill' => $fillColor]);
         $svg .= $fill;
         $svg .= $path;
