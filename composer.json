@@ -4,11 +4,13 @@
   "license": "GPL-3.0-or-later",
   "name": "flowpack/decoupledcontentstore",
   "require": {
-    "php": "^7.1 || ^8.0",
-    "neos/neos": "^7.0",
+    "php": "^7.4 || ^8.0",
+    "neos/neos": "^7.3 || ^8.0",
     "albertofem/rsync-lib": "~1.0",
-    "sandstorm/optimizedrediscachebackend": "^1.1.4",
-    "flowpack/prunner": "^0.2"
+    "flowpack/prunner": "*"
+  },
+  "suggest": {
+    "sandstorm/optimizedrediscachebackend": "This package is only needed when this package is being used with Neos 7.3"
   },
   "autoload": {
     "psr-4": {

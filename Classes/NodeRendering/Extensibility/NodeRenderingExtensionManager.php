@@ -79,18 +79,21 @@ class NodeRenderingExtensionManager
         }
     }
 
-    static private function instantiateExtensions(array $configuration, string $extensionInterfaceName): array
+    private static function instantiateExtensions(array $configuration, string $extensionInterfaceName): array
     {
-        $instanciatedExtensions = [];
+        $instantiatedExtensions = [];
         foreach ($configuration as $extensionConfig) {
+            if (!is_array($extensionConfig)) {
+                continue;
+            }
             $className = $extensionConfig['className'];
             $instance = new $className();
             if (!($instance instanceof $extensionInterfaceName)) {
                 throw new \RuntimeException('Extension ' . get_class($instance) . ' does not implement ' . $extensionInterfaceName);
             }
-            $instanciatedExtensions[] = $instance;
+            $instantiatedExtensions[] = $instance;
 
         }
-        return $instanciatedExtensions;
+        return $instantiatedExtensions;
     }
 }

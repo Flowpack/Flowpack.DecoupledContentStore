@@ -13,6 +13,11 @@ class Sparkline
      */
     private static function getY($max, $height, $diff, $value)
     {
+        // prevent division by zero
+        if ($max === 0) {
+            return round(floatval(($height + $diff)), 2);
+        }
+
         return round(floatval(($height - ($value * $height / $max) + $diff)), 2);
     }
 

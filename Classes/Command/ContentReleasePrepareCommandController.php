@@ -28,23 +28,22 @@ class ContentReleasePrepareCommandController extends CommandController
      */
     protected $concurrentBuildLock;
 
-    public function createContentReleaseCommand(string $contentReleaseIdentifier, string $prunnerJobId)
+    public function createContentReleaseCommand(string $contentReleaseIdentifier, string $prunnerJobId, string $workspaceName = 'live', string $accountId = 'cli'): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $prunnerJobId = PrunnerJobId::fromString($prunnerJobId);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
-
-        $this->redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger);
+        $this->redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger, $workspaceName, $accountId);
     }
 
-    public function ensureAllOtherInProgressContentReleasesWillBeTerminatedCommand(string $contentReleaseIdentifier)
+    public function ensureAllOtherInProgressContentReleasesWillBeTerminatedCommand(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
 
         $this->concurrentBuildLock->ensureAllOtherInProgressContentReleasesWillBeTerminated($contentReleaseIdentifier);
     }
 
-    public function registerManualTransferJobCommand(string $contentReleaseIdentifier, string $prunnerJobId)
+    public function registerManualTransferJobCommand(string $contentReleaseIdentifier, string $prunnerJobId): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $prunnerJobId = PrunnerJobId::fromString($prunnerJobId);

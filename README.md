@@ -31,7 +31,7 @@ delivery layer part in another software (e.g. a shop system) as an extension.
 - Publish a full, read-only snapshot of your live content to Redis in a so-called *Content Release*
 - allows for *incremental publishing*; so if a change is made, only the needed pages are re-rendered. This is
   *integrated with the Neos Content Cache*; so cache flushings work correctly.
--Integration with Neos workspace publishing for automatic incremental
+- Integration with Neos workspace publishing for automatic incremental
   publishing to the Content Store
 - Configurable Content Store format, decoupled from the internal representation in Neos.
 - Extensibility: Enrich content releases with your custom data.
@@ -47,7 +47,7 @@ as the basis for orchestrating and executing a content release.
 ## Requirements
 
 - Redis
-- Sandstorm.OptimizedCacheBackend recommended
+- Sandstorm.OptimizedCacheBackend is required when this package is used with Neos 7.3 (Neos 8 already has an optimized Redis backend)
 - Prunner
 
 Start up prunner via the following command:
@@ -63,14 +63,14 @@ Copy the `pipelines_template.yml` file into your project and adjust it as needed
 The following flow chart shows the rendering pipeline for creating a content release.
 
 ```                                                                                                 
-                       ┌─────────────────────┐                                                      
-                       │   Node Rendering    │                                                      
-     ┌───────────┐     │   ┌─────────────┐   │     ┌───────────┐     ┌───────────┐     ┌───────────┐
-     │   Node    │     │   │Orchestrator │   │     │  Release  │     │Transfer to│     │  Atomic   │
-     │Enumeration│────▶│   └─────────────┘   │────▶│Validation │────▶│  Target   │────▶│  Switch   │
-     └───────────┘     │┌────────┐ ┌────────┐│     └───────────┘     └───────────┘     └───────────┘
-                       ││Renderer│ │Renderer││                                                      
-                       └┴────────┴─┴────────┴┘                                                      
+                   ┌─────────────────────┐                                                      
+                   │   Node Rendering    │                                                      
+ ┌───────────┐     │   ┌─────────────┐   │     ┌───────────┐     ┌───────────┐     ┌───────────┐
+ │   Node    │     │   │Orchestrator │   │     │  Release  │     │Transfer to│     │  Atomic   │
+ │Enumeration│────▶│   └─────────────┘   │────▶│Validation │────▶│  Target   │────▶│  Switch   │
+ └───────────┘     │┌────────┐ ┌────────┐│     └───────────┘     └───────────┘     └───────────┘
+                   ││Renderer│ │Renderer││                                                      
+                   └┴────────┴─┴────────┴┘                                                      
 ```
 
 - At the beginning of every render, all nodes are **enumerated**. The Node Enumeration contains all pages
@@ -238,6 +238,15 @@ To enable this feature, do the following:
 As a big improvement for stability (compared to v1), the rendering pipeline does not make a difference whether
 it is a full or an incremental render. To trigger a full render, the content cache is flushed before
 the rendering is started.
+
+### Options
+After changing an Asset (e.g. in the Media Module) an incremental rendering is triggered.
+You can opt out of this behavior by setting the following configuration:
+````yaml
+Flowpack:
+  DecoupledContentStore:
+    startIncrementalReleaseOnAssetChange: false
+````
 
 ### What happens if edits happen during a rendering?
 

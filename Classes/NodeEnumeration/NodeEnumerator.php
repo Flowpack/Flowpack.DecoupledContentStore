@@ -50,8 +50,7 @@ class NodeEnumerator
      */
     protected $nodeTypeWhitelist;
 
-
-    public function enumerateAndStoreInRedis(?Site $site, ContentReleaseLogger $contentReleaseLogger, ContentReleaseIdentifier $releaseIdentifier)
+    public function enumerateAndStoreInRedis(?Site $site, ContentReleaseLogger $contentReleaseLogger, ContentReleaseIdentifier $releaseIdentifier): void
     {
         $contentReleaseLogger->info('Starting content release', ['contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize()]);
 
@@ -61,7 +60,7 @@ class NodeEnumerator
         $this->redisContentReleaseService->setContentReleaseMetadata($releaseIdentifier, $newMetadata, RedisInstanceIdentifier::primary());
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
-        foreach (GeneratorUtility::createArrayBatch($this->enumerateAll($site, $contentReleaseLogger), 100) as $enumeration) {
+        foreach (GeneratorUtility::createArrayBatch($this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()), 100) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.
             // TODO: EXTENSION POINT HERE, TO ADD ADDITIONAL ENUMERATIONS (.metadata.json f.e.)
@@ -74,22 +73,20 @@ class NodeEnumerator
     }
 
     /**
-     * @param Site|null $site
-     * @param ContentReleaseLogger $contentReleaseLogger
      * @return iterable<EnumeratedNode>
      */
-    private function enumerateAll(?Site $site, ContentReleaseLogger $contentReleaseLogger): iterable
+    private function enumerateAll(?Site $site, ContentReleaseLogger $contentReleaseLogger, string $workspaceName): iterable
     {
         $combinator = new NodeContextCombinator();
 
         $nodeTypeWhitelist = $this->nodeTypeConstraintFactory->parseFilterString($this->nodeTypeWhitelist);
 
-        $queueSite = function (Site $site) use ($combinator, &$documentNodeVariantsToRender, $nodeTypeWhitelist, $contentReleaseLogger) {
+        $queueSite = function (Site $site) use ($combinator, &$documentNodeVariantsToRender, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain()
             ]);
-            foreach ($combinator->siteNodeInContexts($site) as $siteNode) {
+            foreach ($combinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
                 $dimensionValues = $siteNode->getContext()->getDimensions();
 
                 $contentReleaseLogger->debug('Publishing dimension combination', [
@@ -100,13 +97,12 @@ class NodeEnumerator
                     $contextPath = $documentNode->getContextPath();
 
                     if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->getNodeType()->getName()))) {
-                        $enumeratedNode = EnumeratedNode::fromNode($documentNode);
 
                         $contentReleaseLogger->debug('Registering node for publishing', [
-                            'enumeratedNode' => $enumeratedNode->debugString()
+                            'node' => $contextPath
                         ]);
 
-                        yield $enumeratedNode;
+                        yield EnumeratedNode::fromNode($documentNode);
                     } else {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it did not match the configured nodeTypeWhitelist', [
                             'node' => $contextPath,
@@ -116,7 +112,6 @@ class NodeEnumerator
                 }
             }
         };
-
 
         if ($site === null) {
             foreach ($combinator->sites() as $site) {

@@ -158,19 +158,26 @@ class NodeRenderOrchestrator
 
                 $renderedDocumentFromContentCache = $this->redisContentCacheReader->tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey::fromEnumeratedNode($enumeratedNode));
                 if ($renderedDocumentFromContentCache->isComplete()) {
-                    $contentReleaseLogger->debug('Node fully rendered, adding to content release', ['node' => $enumeratedNode]);
+                    $contentReleaseLogger->debug(
+                        'Node fully rendered, adding to content release',
+                        ['url' => $renderedDocumentFromContentCache->getUrl(), 'node' => $enumeratedNode]
+                    );
                     // NOTE: Eventually consistent (TODO describe)
                     // If wanted more fully consistent, move to bottom....
                     $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
                 } else {
-                    $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: ' . $renderedDocumentFromContentCache->getIncompleteReason(), ['node' => $enumeratedNode]);
+                    $contentReleaseLogger->debug(
+                        'Scheduling rendering for Node, as it was not found or its content is incomplete: '
+                        . $renderedDocumentFromContentCache->getIncompleteReason(),
+                        ['url' => $renderedDocumentFromContentCache->getUrl(), 'node' => $enumeratedNode]
+                    );
                     // the rendered document was not found, or has holes. so we need to re-render.
                     $nodesScheduledForRendering[] = $enumeratedNode;
                     $this->redisRenderingQueue->appendRenderingJob($contentReleaseIdentifier, $enumeratedNode);
                 }
             }
 
-            if (count($nodesScheduledForRendering) === 0) {
+            if (empty($nodesScheduledForRendering)) {
                 // we have NO nodes scheduled for rendering anymore, so that means we FINISHED successfully.
                 $contentReleaseLogger->info('Everything rendered completely. Finishing RenderOrchestrator');
 

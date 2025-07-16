@@ -38,7 +38,20 @@ final class ContentReleaseMetadata implements \JsonSerializable
 
     private NodeRenderingCompletionStatus $status;
 
-    private function __construct(PrunnerJobId $prunnerJobId, ?\DateTimeInterface $startTime, ?\DateTimeInterface $endTime, ?\DateTimeInterface $switchTime, ?NodeRenderingCompletionStatus $status, ?array $manualTransferJobIds = [])
+    private ?string $workspaceName;
+
+    private ?string $accountId;
+
+    private function __construct(
+        PrunnerJobId $prunnerJobId,
+        ?\DateTimeInterface $startTime,
+        ?\DateTimeInterface $endTime,
+        ?\DateTimeInterface $switchTime,
+        ?NodeRenderingCompletionStatus $status,
+        ?array $manualTransferJobIds = [],
+        string $workspaceName = 'live',
+        ?string $accountId = 'cli'
+    )
     {
         $this->prunnerJobId = $prunnerJobId;
         $this->startTime = $startTime;
@@ -46,12 +59,14 @@ final class ContentReleaseMetadata implements \JsonSerializable
         $this->switchTime = $switchTime;
         $this->status = $status ?: NodeRenderingCompletionStatus::scheduled();
         $this->manualTransferJobIds = $manualTransferJobIds;
+        $this->workspaceName = $workspaceName;
+        $this->accountId = $accountId;
     }
 
 
-    public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime): self
+    public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime, string $workspace = 'live', string $accountId = 'cli'): self
     {
-        return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled());
+        return new self($prunnerJobId, $startTime, null, null, NodeRenderingCompletionStatus::scheduled(), [], $workspace, $accountId);
     }
 
     public static function fromJsonString($metadataEncoded, ContentReleaseIdentifier $contentReleaseIdentifier): self
@@ -72,12 +87,14 @@ final class ContentReleaseMetadata implements \JsonSerializable
             NodeRenderingCompletionStatus::fromString($tmp['status']),
             isset($tmp['manualTransferJobIds']) ? array_map(function (string $item) {
                 return PrunnerJobId::fromString($item);
-            }, json_decode($tmp['manualTransferJobIds'])) : []
+            }, json_decode($tmp['manualTransferJobIds'])) : [],
+            $tmp['workspace'] ?? 'live',
+            key_exists('accountId', $tmp) ? $tmp['accountId'] : 'cli',
         );
     }
 
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'prunnerJobId' => $this->prunnerJobId->getIdentifier(),
@@ -85,67 +102,54 @@ final class ContentReleaseMetadata implements \JsonSerializable
             'endTime' => $this->endTime ? $this->endTime->format(\DateTime::RFC3339_EXTENDED) : null,
             'switchTime' => $this->switchTime ? $this->switchTime->format(\DateTime::RFC3339_EXTENDED) : null,
             'status' => $this->status,
-            'manualTransferJobIds' => json_encode($this->manualTransferJobIds)
+            'manualTransferJobIds' => json_encode($this->manualTransferJobIds),
+            'workspaceName' => $this->workspaceName,
+            'accountId' => $this->accountId,
         ];
     }
 
     public function withEndTime(\DateTimeInterface $endTime): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $endTime, $this->switchTime, $this->status, $this->manualTransferJobIds);
+        return new self($this->prunnerJobId, $this->startTime, $endTime, $this->switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId);
     }
 
     public function withSwitchTime(\DateTimeInterface $switchTime): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $switchTime, $this->status, $this->manualTransferJobIds);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId);
     }
 
     public function withStatus(NodeRenderingCompletionStatus $status): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status, $this->manualTransferJobIds);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId);
     }
 
     public function withAdditionalManualTransferJobId(PrunnerJobId $prunnerJobId): self
     {
         $manualTransferIdArray = self::getManualTransferJobIds();
         $manualTransferIdArray[] = $prunnerJobId;
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray, $this->workspaceName, $this->accountId);
     }
 
-    /**
-     * @return PrunnerJobId
-     */
     public function getPrunnerJobId(): PrunnerJobId
     {
         return $this->prunnerJobId;
     }
 
-    /**
-     * @return \DateTimeInterface|null
-     */
     public function getStartTime(): ?\DateTimeInterface
     {
         return $this->startTime;
     }
 
-    /**
-     * @return \DateTimeInterface|null
-     */
     public function getEndTime(): ?\DateTimeInterface
     {
         return $this->endTime;
     }
 
-    /**
-     * @return \DateTimeInterface|null
-     */
     public function getSwitchTime(): ?\DateTimeInterface
     {
         return $this->switchTime;
     }
 
-    /**
-     * @return NodeRenderingCompletionStatus
-     */
     public function getStatus(): NodeRenderingCompletionStatus
     {
         return $this->status;
@@ -157,6 +161,16 @@ final class ContentReleaseMetadata implements \JsonSerializable
     public function getManualTransferJobIds(): ?array
     {
         return $this->manualTransferJobIds;
+    }
+
+    public function getWorkspaceName(): ?string
+    {
+        return $this->workspaceName;
+    }
+
+    public function getAccountId(): ?string
+    {
+        return $this->accountId;
     }
 
 }
