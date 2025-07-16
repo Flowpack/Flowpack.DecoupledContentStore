@@ -11,6 +11,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
+use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
@@ -39,6 +40,12 @@ class NodeEnumerator
      * @var ConcurrentBuildLockService
      */
     protected $concurrentBuildLockService;
+
+    /**
+     * @Flow\Inject
+     * @var NodeRenderingExtensionManager
+     */
+    protected $nodeRenderingExtensionManager;
 
     /**
      * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
@@ -74,9 +81,10 @@ class NodeEnumerator
         ) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.
-            // TODO: EXTENSION POINT HERE, TO ADD ADDITIONAL ENUMERATIONS (.metadata.json f.e.)
-            // TODO: not yet fully sure how to handle Enumeration
+
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
+
+            // DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
             foreach ($enumeration as $enumeratedNode) {
                 $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
             }
@@ -116,6 +124,7 @@ class NodeEnumerator
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain()
             ]);
+
             foreach ($combinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
                 $startTime = microtime(true);
                 $dimensionValues = $siteNode->getContext()->getDimensions();
@@ -177,6 +186,8 @@ class NodeEnumerator
      * A node was enumerated for a new content release.
      *
      * This signal can be used to add additional EnumeratedNode entries (e.g. with added arguments for pagination or filters) based on the given node.
+     *
+     * DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
      *
      * @param EnumeratedNode $enumeratedNode
      * @param ContentReleaseIdentifier $releaseIdentifier
