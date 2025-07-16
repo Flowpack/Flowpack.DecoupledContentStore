@@ -6,10 +6,8 @@ namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentCacheReader;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
@@ -63,12 +61,6 @@ class NodeRenderOrchestrator
      * @var RedisRenderingQueue
      */
     protected $redisRenderingQueue;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentCacheReader
-     */
-    protected $redisContentCacheReader;
 
     /**
      * @Flow\Inject
@@ -156,7 +148,7 @@ class NodeRenderOrchestrator
             foreach ($currentEnumeration as $enumeratedNode) {
                 assert($enumeratedNode instanceof EnumeratedNode);
 
-                $renderedDocumentFromContentCache = $this->redisContentCacheReader->tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey::fromEnumeratedNode($enumeratedNode));
+                $renderedDocumentFromContentCache = $this->nodeRenderingExtensionManager->tryToExtractRenderingForEnumeratedNodeFromContentCache($enumeratedNode);
                 if ($renderedDocumentFromContentCache->isComplete()) {
                     $contentReleaseLogger->debug(
                         'Node fully rendered, adding to content release',
@@ -164,7 +156,7 @@ class NodeRenderOrchestrator
                     );
                     // NOTE: Eventually consistent (TODO describe)
                     // If wanted more fully consistent, move to bottom....
-                    $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $renderedDocumentFromContentCache, $contentReleaseLogger);
+                    $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $enumeratedNode, $renderedDocumentFromContentCache, $contentReleaseLogger);
                 } else {
                     $contentReleaseLogger->debug(
                         'Scheduling rendering for Node, as it was not found or its content is incomplete: '

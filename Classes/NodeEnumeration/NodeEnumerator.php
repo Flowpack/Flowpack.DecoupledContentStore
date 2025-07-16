@@ -11,6 +11,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
+use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\ContentRepository\Domain\NodeType\NodeTypeConstraintFactory;
@@ -45,6 +46,12 @@ class NodeEnumerator
     protected $concurrentBuildLockService;
 
     /**
+     * @Flow\Inject
+     * @var NodeRenderingExtensionManager
+     */
+    protected $nodeRenderingExtensionManager;
+
+    /**
      * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
      * @var string
      */
@@ -63,9 +70,10 @@ class NodeEnumerator
         foreach (GeneratorUtility::createArrayBatch($this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()), 100) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.
-            // TODO: EXTENSION POINT HERE, TO ADD ADDITIONAL ENUMERATIONS (.metadata.json f.e.)
-            // TODO: not yet fully sure how to handle Enumeration
+
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
+
+            // DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
             foreach ($enumeration as $enumeratedNode) {
                 $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
             }
@@ -81,7 +89,7 @@ class NodeEnumerator
 
         $nodeTypeWhitelist = $this->nodeTypeConstraintFactory->parseFilterString($this->nodeTypeWhitelist);
 
-        $queueSite = function (Site $site) use ($combinator, &$documentNodeVariantsToRender, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
+        $queueSite = function (Site $site) use ($combinator, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain()
@@ -97,12 +105,15 @@ class NodeEnumerator
                     $contextPath = $documentNode->getContextPath();
 
                     if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->getNodeType()->getName()))) {
+                        foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode($documentNode) as $enumeratedNode) {
+                            $contentReleaseLogger->debug('Registering node for publishing', [
+                                'node' => $contextPath,
+                                'renderer' => $enumeratedNode->rendererId,
+                                'arguments' => $enumeratedNode->getArguments(),
+                            ]);
 
-                        $contentReleaseLogger->debug('Registering node for publishing', [
-                            'node' => $contextPath
-                        ]);
-
-                        yield EnumeratedNode::fromNode($documentNode);
+                            yield $enumeratedNode;
+                        }
                     } else {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it did not match the configured nodeTypeWhitelist', [
                             'node' => $contextPath,
@@ -126,6 +137,8 @@ class NodeEnumerator
      * A node was enumerated for a new content release.
      *
      * This signal can be used to add additional EnumeratedNode entries (e.g. with added arguments for pagination or filters) based on the given node.
+     *
+     * DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
      *
      * @param EnumeratedNode $enumeratedNode
      * @param ContentReleaseIdentifier $releaseIdentifier
