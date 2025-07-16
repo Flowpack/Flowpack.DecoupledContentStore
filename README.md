@@ -2,7 +2,7 @@
 
 This is the 2nd generation of a Two-Stack CMS package for Neos.
 
-**This Package is used in production in a bigger instance.**
+**This Package is used in production in multiple bigger instances.**
 
 The Content Store package is one part of a [Two-Stack CMS](https://martinfowler.com/articles/two-stack-cms/)
 solution with Neos. A Two-Stack architecture separates editing and publishing
@@ -13,6 +13,16 @@ delivery.
 The first iteration was not open source; developed jointly by [Networkteam](https://networkteam.com/) and [Sandstorm](https://sandstorm.de/)
 and is in use for several large customers. The second iteration (this project) is developed from scratch, in an open-source
 way, based on the learnings of the first iteration. Especially the robustness has been greatly increased.
+
+## Versioning Scheme
+
+| Package Version              | Neos / Flow Version | Released?    | Supported                           | Remarks |
+|------------------------------|---------------------|--------------|-------------------------------------|---------|
+| 1.x                          | 8.x                 | ☑️           | ☑️ (bugfixes only)                   | Currently used in production in bigger sites. |
+| 2.x (current `main` branch)  | 8.x                 | ⛔️ (not yet) | Beta Testing in some instances      | Breaking configuration changes, to support **different renderers** and more flexible rendering overall |
+| 3.x                          | 9.x                 | ⛔️           | ⛔️                                  | Not yet started with implementation for Neos 9; current ETA end of 2025 / beginning of 2026 |
+
+NOTE: There still exists the pull request https://github.com/Flowpack/Flowpack.DecoupledContentStore/pull/42 containing various improvements, which also should go to 2.x / main branch.
 
 ## What does it do?
 
