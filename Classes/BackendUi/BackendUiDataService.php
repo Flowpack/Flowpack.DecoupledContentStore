@@ -14,6 +14,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumer
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingTimeStatisticsStore;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
@@ -45,7 +46,7 @@ class BackendUiDataService
 
     /**
      * @Flow\Inject
-     * @var RedisRenderingStatisticsStore
+     * @var RedisRenderingTimeStatisticsStore
      */
     protected $redisRenderingStatisticsStore;
 
