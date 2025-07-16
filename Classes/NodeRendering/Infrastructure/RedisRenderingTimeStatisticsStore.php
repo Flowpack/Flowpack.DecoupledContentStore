@@ -14,7 +14,7 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 /**
  * @Flow\Scope("singleton")
  */
-class RedisRenderingStatisticsStore
+class RedisRenderingTimeStatisticsStore
 {
 
     /**
