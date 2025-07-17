@@ -21,5 +21,5 @@ interface DocumentRendererInterface
 {
     public function tryToExtractRenderingForEnumeratedNodeFromContentCache(EnumeratedNode $enumeratedNode): RenderedDocumentFromContentCache;
 
-    public function renderDocumentNodeVariant(NodeInterface $node, EnumeratedNode $enumeratedNode, ContentReleaseLogger $contentReleaseLogger);
+    public function renderDocumentNodeVariant(NodeInterface $node, EnumeratedNode $enumeratedNode, ContentReleaseLogger $contentReleaseLogger): void;
 }

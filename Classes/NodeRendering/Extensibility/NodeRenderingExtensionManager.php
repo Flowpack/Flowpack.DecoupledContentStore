@@ -77,9 +77,9 @@ class NodeRenderingExtensionManager
             ->tryToExtractRenderingForEnumeratedNodeFromContentCache($enumeratedNode);
     }
 
-    public function renderDocumentNodeVariant(NodeInterface $node, EnumeratedNode $enumeratedNode, ContentReleaseLogger $contentReleaseLogger)
+    public function renderDocumentNodeVariant(NodeInterface $node, EnumeratedNode $enumeratedNode, ContentReleaseLogger $contentReleaseLogger): void
     {
-        return $this->rendererFor($enumeratedNode)
+        $this->rendererFor($enumeratedNode)
             ->renderDocumentNodeVariant($node, $enumeratedNode, $contentReleaseLogger);
     }
 
