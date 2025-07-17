@@ -5,6 +5,7 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 use Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect;
 use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderingUriService;
 use Flowpack\DecoupledContentStore\Transfer\Resource\Target\MultisiteFileSystemSymlinkTarget;
 use GuzzleHttp\Psr7\ServerRequest;
 use Neos\Flow\Annotations as Flow;
@@ -39,6 +40,12 @@ class DocumentRenderer
     protected $useRelativeResourceUris;
 
     /**
+     * @Flow\Inject
+     * @var NodeRenderingUriService
+     */
+    protected $nodeRenderingUriService;
+
+    /**
      * Add HTTP message if rendering full content
      *
      * @Flow\InjectConfiguration("nodeRendering.addHttpMessage")
@@ -53,49 +60,10 @@ class DocumentRenderer
     protected $fusionView;
 
     /**
-     * @Flow\Inject
-     * @var SecurityContext
-     */
-    protected $securityContext;
-
-    /**
-     * @Flow\Inject
-     * @var ConfigurationManager
-     */
-    protected $configurationManager;
-
-    /**
      * @Flow\Inject(lazy=false)
      * @var ResourceManager
      */
     protected $resourceManager;
-
-    /**
-     * @Flow\Inject
-     * @var \Neos\Neos\Service\LinkingService
-     */
-    protected $linkingService;
-
-    /**
-     * NOTE: we need to use EAGER injection here, because in buildControllerContextAndSetBaseUri(), we
-     * directly set a property of the BaseUriProvider using ObjectAccess::setProperty() with forceDirectAccess.
-     *
-     * @Flow\Inject(lazy=false)
-     * @var BaseUriProvider
-     */
-    protected $baseUriProvider;
-
-    /**
-     * @var \Neos\Flow\Mvc\Routing\Router
-     * @Flow\Inject
-     */
-    protected $router;
-
-    /**
-     * @Flow\Inject
-     * @var \Neos\Flow\Property\PropertyMapper
-     */
-    protected $propertyMapper;
 
     /**
      * @Flow\Inject
@@ -119,7 +87,7 @@ class DocumentRenderer
     public function renderDocumentNodeVariant(NodeInterface $node, array $arguments, ContentReleaseLogger $contentReleaseLogger): string
     {
         $this->cacheUrlMappingAspect->beforeDocumentRendering($contentReleaseLogger);
-        $nodeUri = $this->buildNodeUri($node, $arguments);
+        $nodeUri = $this->nodeRenderingUriService->buildNodeUri($node, $arguments);
 
         try {
             $arguments['node'] = $node->getContextPath();
@@ -131,75 +99,6 @@ class DocumentRenderer
         }
     }
 
-    /**
-     * @param string $uri
-     * @param NodeInterface $node
-     * @param array $arguments
-     * @return ControllerContext
-     */
-    protected function buildControllerContextAndSetBaseUri(string $uri, NodeInterface $node, array $arguments = [])
-    {
-        $request = $this->getRequest($uri, $node);
-        if (isset($arguments['@format'])) {
-            $request->setFormat($arguments['@format']);
-        }
-
-        // NASTY SIDE-EFFECT: we not only build the controller context, but we also need to inject the "current" base URL to BaseUriProvider,
-        // as this is now (Flow 6.x) used in the UriBuilder to determine the domain.
-        $baseUri = rtrim(RequestInformationHelper::generateBaseUri($request->getHttpRequest()), '/');
-        ObjectAccess::setProperty($this->baseUriProvider, 'configuredBaseUri', $baseUri, true);
-
-        ObjectAccess::setProperty($this->securityContext, 'initialized', true, true);
-        $this->securityContext->setRequest($request);
-        $uriBuilder = $this->getUriBuilder($request);
-
-        return new ControllerContext(
-            $request,
-            new ActionResponse(),
-            new Arguments([]),
-            $uriBuilder
-        );
-    }
-
-    /**
-     * @param ActionRequest $request
-     * @return UriBuilder
-     * @throws \Neos\Utility\Exception\PropertyNotAccessibleException
-     */
-    protected function getUriBuilder($request)
-    {
-        $uriBuilder = new UriBuilder();
-        $uriBuilder->setRequest($request);
-
-        $routesConfiguration = $this->configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_ROUTES);
-        $router = ObjectAccess::getProperty($uriBuilder, 'router', true);
-
-        $router->setRoutesConfiguration($routesConfiguration);
-
-        return $uriBuilder;
-    }
-
-    /**
-     * @param string $uri
-     * @param NodeInterface $node
-     * @return ActionRequest
-     */
-    protected function getRequest($uri, NodeInterface $node)
-    {
-        $_SERVER['FLOW_REWRITEURLS'] = '1';
-
-        $httpRequest = new ServerRequest('GET', $uri);
-        $routingParameters = RouteParameters::createEmpty()->withParameter('requestUriHost', $httpRequest->getUri()->getHost());
-        $httpRequest = $httpRequest->withAttribute(ServerRequestAttributes::ROUTING_PARAMETERS, $routingParameters);
-
-        $request = ActionRequest::fromHttpRequest($httpRequest);
-        $request->setControllerObjectName('Neos\Neos\Controller\Frontend\NodeController');
-        $request->setControllerActionName('show');
-        $request->setFormat('html');
-        $request->setArgument('node', $node->getContextPath());
-
-        return $request;
-    }
 
     /**
      * Render the view of a document node
@@ -231,7 +130,7 @@ class DocumentRenderer
 
             $contentReleaseLogger->info('Rendering document for URI ' . $uri, ['baseUri' => $baseUri]);
 
-            $controllerContext = $this->buildControllerContextAndSetBaseUri($uri, $node, $requestArguments);
+            $controllerContext = $this->nodeRenderingUriService->buildControllerContextAndSetBaseUri($uri, $node, $requestArguments);
             /** @var ActionRequest $request */
             $request = $controllerContext->getRequest();
             $request->setArguments($requestArguments);
@@ -282,51 +181,12 @@ class DocumentRenderer
         return "HTTP/1.1" . (empty($headerLines) ? "\r\n" : implode("\r\n", $headerLines)) . "\r\n" . $output;
     }
 
-
-    /**
-     * @param NodeInterface $node
-     * @param array $arguments
-     * @return string The resolved URI for the given node
-     * @throws \Exception
-     */
-    protected function buildNodeUri(NodeInterface $node, array $arguments)
-    {
-        /** @var Site $currentSite */
-        $currentSite = $node->getContext()->getCurrentSite();
-        if (!$currentSite->hasActiveDomains()) {
-            throw new Exception(sprintf("Site %s has no active domain", $currentSite->getNodeName()), 1666684522);
-        }
-        $primaryDomain = $currentSite->getPrimaryDomain();
-        if ((string)$primaryDomain->getScheme() === '') {
-            throw new Exception(sprintf("Domain %s for site %s has no scheme defined", $primaryDomain->getHostname(), $currentSite->getNodeName()), 1666684523);
-        }
-
-        // HINT: We cannot use a static URL here, but instead need to use an URL of the current site.
-        // This is changed from the the old behavior, where we have changed the LinkingService in LinkingServiceAspect,
-        // to properly generate the domain part of the routes - and this relies on the proper ControllerContext URI path.
-        $baseControllerContext = $this->buildControllerContextAndSetBaseUri($primaryDomain->__toString(), $node, $arguments);
-        $format = $arguments['@format'] ?? 'html';
-        $uri = $this->linkingService->createNodeUri($baseControllerContext, $node, null, $format, true, $arguments, '', false, [], false);
-        return $this->removeQueryPartFromUri($uri);
-    }
-
     /**
      * @return bool
      */
     public function isRendering()
     {
         return $this->isRendering;
-    }
-
-    /**
-     * @param string $uri
-     * @return string
-     */
-    protected function removeQueryPartFromUri($uri)
-    {
-        $uriData = explode('?', $uri);
-
-        return $uriData[0];
     }
 
     public function disableCache()
@@ -338,5 +198,4 @@ class DocumentRenderer
     {
         $this->fusionView->enableCache();
     }
-
 }
