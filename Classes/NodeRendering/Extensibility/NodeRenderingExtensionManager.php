@@ -124,7 +124,7 @@ class NodeRenderingExtensionManager
     public function addRenderedDocumentToContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, EnumeratedNode $enumeratedNode, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
     {
         if (!isset($this->contentReleaseWriters[$enumeratedNode->rendererId])) {
-            $this->contentReleaseWriters[$enumeratedNode->rendererId] = self::instantiateExtensions($this->configuredDocumentRenderers[$enumeratedNode->rendererId]['contentReleaseWriters'], ContentReleaseWriterInterface::class);
+            $this->contentReleaseWriters[$enumeratedNode->rendererId] = self::instantiateExtensions($this->configuredDocumentRenderers[$enumeratedNode->rendererId]['contentReleaseWriters'], ContentReleaseWriterInterface::class, optionsKey: 'options');
         }
         foreach ($this->contentReleaseWriters[$enumeratedNode->rendererId] as $contentReleaseWriter) {
             assert($contentReleaseWriter instanceof ContentReleaseWriterInterface);
