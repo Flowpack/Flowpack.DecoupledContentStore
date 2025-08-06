@@ -57,6 +57,7 @@ Flowpack:
           enumeratorClassName: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumerators\DefaultEnumerator
           #enumeratorClassName: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumerators\LimitEnumerator
           #enumeratorOptions:
+          #  uriPathSegmentFilter: vanucci-collection
           #  limit: 20
           rendererClassName: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentRenderers\FusionHtmlRenderer
 
