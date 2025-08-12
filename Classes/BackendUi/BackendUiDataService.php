@@ -13,7 +13,7 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingTimeStatisticsStore;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Neos\Flow\Annotations as Flow;
@@ -44,7 +44,7 @@ class BackendUiDataService
 
     /**
      * @Flow\Inject
-     * @var RedisRenderingStatisticsStore
+     * @var RedisRenderingTimeStatisticsStore
      */
     protected $redisRenderingStatisticsStore;
 

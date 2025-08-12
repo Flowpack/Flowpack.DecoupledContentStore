@@ -136,6 +136,11 @@ Flowpack:
         transfer: true
         transferMode: 'dump'
         isRequired: true
+      statisticsEvents:
+        redisKeyPostfix: 'statisticsEvents'
+        transfer: false
+        transferMode: 'dump'
+        isRequired: false
 
     # can be used on the consuming site to ensure non-breaking deployments for changes in the config
     configEpoch:

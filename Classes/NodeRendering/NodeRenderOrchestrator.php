@@ -9,7 +9,7 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingStatisticsStore;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingTimeStatisticsStore;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingIterationCompletedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
@@ -70,7 +70,7 @@ class NodeRenderOrchestrator
 
     /**
      * @Flow\Inject
-     * @var RedisRenderingStatisticsStore
+     * @var RedisRenderingTimeStatisticsStore
      */
     protected $redisRenderingStatisticsStore;
 
