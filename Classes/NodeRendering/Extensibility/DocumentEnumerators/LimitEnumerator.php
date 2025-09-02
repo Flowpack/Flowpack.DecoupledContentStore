@@ -15,19 +15,29 @@ class LimitEnumerator implements DocumentEnumeratorInterface
     protected int $i = 0;
     private ?int $limit = null;
     private ?string $uriPathSegmentFilter = null;
+    private ?string $nodePathSegmentFilter = null;
 
     public function __construct(
         array $options = []
     ) {
         $this->limit = $options['limit'] ?? null;
         $this->uriPathSegmentFilter = $options['uriPathSegmentFilter'] ?? null;
+        $this->nodePathSegmentFilter = $options['nodePathSegmentFilter'] ?? null;
     }
     public function enumerateDocumentNode(NodeInterface $documentNode): iterable
     {
-        if ($this->uriPathSegmentFilter !== null) {
-            if (str_contains($documentNode->getProperty('uriPathSegment'), $this->uriPathSegmentFilter) === false) {
-                return [];
-            }
+        if (
+            $this->uriPathSegmentFilter !== null
+            && str_contains($documentNode->getProperty('uriPathSegment'), $this->uriPathSegmentFilter) === false
+        ) {
+            return [];
+        }
+
+        if (
+            $this->nodePathSegmentFilter !== null
+            && str_contains($documentNode->getPath(), $this->nodePathSegmentFilter) === false
+        ) {
+            return [];
         }
 
         // NOTE: Limiting must come LAST, after all other constraints have been evaluated (because we want
