@@ -134,7 +134,7 @@ class ContentReleaseSynchronizer
             $numberOfBatches++;
             $targetPipeline = $targetRedis->pipeline(); // we don't care for the replies or for transactionality; so we use pipelining instead of MULTI
             foreach ($arr_keys as $hashKey => $hashValue) {
-                $targetPipeline->hSet($keyToTransfer, $hashKey, $hashValue);
+                $targetPipeline->hSet($keyToTransfer, (string)$hashKey, $hashValue);
             }
             $targetPipeline->exec();
         }
