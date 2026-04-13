@@ -68,10 +68,8 @@ final class EnumeratedNode implements \JsonSerializable
         return [
             'contextPath' => $this->contextPath,
             'nodeIdentifier' => $this->nodeIdentifier,
-            'dimensions' => $this->getDimensionsFromContextPath(),
-            'workspaceName' => $this->getWorkspaceNameFromContextPath(),
-            'arguments' => $this->arguments,
             'nodeTypeName' => $this->nodeTypeName,
+            'arguments' => $this->arguments,
         ];
     }
 

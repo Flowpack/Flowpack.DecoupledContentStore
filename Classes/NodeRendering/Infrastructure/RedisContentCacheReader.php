@@ -116,7 +116,7 @@ class RedisContentCacheReader
         $contentCacheEndToken = ContentCache::CACHE_SEGMENT_END_TOKEN;
         $contentCacheMarker = ContentCache::CACHE_SEGMENT_MARKER;
 
-        return "
+        return <<<LUA
             local rootIdentifier = ARGV[1]
             local identifierPrefix = ARGV[2]
 
@@ -164,7 +164,7 @@ class RedisContentCacheReader
             end
 
             return {content, error}
-        ";
+        LUA;
     }
 
     /**
