@@ -16,11 +16,11 @@ way, based on the learnings of the first iteration. Especially the robustness ha
 
 ## Versioning Scheme
 
-| Package Version             | Neos / Flow Version | Released?    | Supported                                                                 | Remarks                                                                                                                                               |
-|-----------------------------|---------------------|--------------|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1.x                         | 8.x                 | ☑️           | ☑️ (bugfixes only)                                                        |                                                                                                                                                       |
-| 2.x (current `main` branch) | 8.x                 | ⛔️ (not yet) | alpha Testing in some instances - **still some breaking changes to come** | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. Currently used in production in bigger sites. |
-| 3.x                         | 9.x                 | ⛔️           | ⛔️                                                                        | Not yet planned                                                                                                                                       |
+| Package Version             | Neos / Flow Version | Released? | Supported              | Remarks                                                                                                                                               |
+|-----------------------------|---------------------|-----------|------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.x                         | 8.x                 | ☑️        | ⛔️                     | out of support                                                                                                                                        |
+| 2.x (current `main` branch) | 8.x                 | ☑️        | current active release | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. Currently used in production in bigger sites. |
+| 3.x                         | 9.x                 | ⛔️        | ⛔️                     | Not yet planned                                                                                                                                       |
 
 ## What does it do?
 
