@@ -51,6 +51,8 @@ use Neos\Neos\Domain\Repository\SiteRepository;
  */
 class NodeRenderer
 {
+    protected const RESTART_AFTER_RENDER_COUNT = 20;
+    protected const CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT = 5;
 
     /**
      * @Flow\Inject
@@ -151,12 +153,12 @@ class NodeRenderer
 
             $i++;
 
-            if ($i % 5 === 0) {
+            if (static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0 && $i % static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT === 0) {
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
             }
 
-            if ($i % 20 === 0) {
-                $contentReleaseLogger->info('Restarting after 20 renders.');
+            if ($i % static::RESTART_AFTER_RENDER_COUNT === 0) {
+                $contentReleaseLogger->info(sprintf('Restarting after %d renders.', static::RESTART_AFTER_RENDER_COUNT));
                 yield ExitEvent::createWithStatusCode(193);
                 return;
             }
@@ -196,7 +198,9 @@ class NodeRenderer
                 $contentReleaseLogger->debug('Rendering document node variant', [
                     'node' => $node->getContextPath(),
                     'nodeIdentifier' => $node->getIdentifier(),
-                    'arguments' => $enumeratedNode->getArguments()
+                    'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
+                    'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
+                    'arguments' => $enumeratedNode->getArguments(),
                 ]);
 
                 $this->documentRenderer->renderDocumentNodeVariant($node, $enumeratedNode->getArguments(), $contentReleaseLogger);
@@ -248,7 +252,7 @@ class NodeRenderer
         $site = $this->siteRepository->findOneByNodeName($enumeratedNode->getSiteNodeNameFromContextPath());
 
         $context = $this->contextFactory->create([
-            'workspaceName' => 'live',
+            'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
             'currentSite' => $site,
             'currentDomain' => $site->getFirstActiveDomain(),
             'dimensions' => $enumeratedNode->getDimensionsFromContextPath()

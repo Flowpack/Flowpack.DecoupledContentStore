@@ -13,18 +13,14 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCom
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
-use Neos\ContentRepository\Domain\NodeType\NodeTypeConstraintFactory;
-use Neos\ContentRepository\Domain\NodeType\NodeTypeName;
+use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\Eel\Exception;
+use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Model\Site;
 
 class NodeEnumerator
 {
-    /**
-     * @Flow\Inject
-     * @var NodeTypeConstraintFactory
-     */
-    protected $nodeTypeConstraintFactory;
 
     /**
      * @Flow\Inject
@@ -48,19 +44,34 @@ class NodeEnumerator
      * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
      * @var string
      */
-    protected $nodeTypeWhitelist;
+    protected $nodeTypeList;
 
-    public function enumerateAndStoreInRedis(?Site $site, ContentReleaseLogger $contentReleaseLogger, ContentReleaseIdentifier $releaseIdentifier): void
-    {
-        $contentReleaseLogger->info('Starting content release', ['contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize()]);
+    public function enumerateAndStoreInRedis(
+        ?Site $site,
+        ContentReleaseLogger $contentReleaseLogger,
+        ContentReleaseIdentifier $releaseIdentifier
+    ): void {
+        $contentReleaseLogger->info(
+            'Starting content release',
+            ['contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize()]
+        );
 
         // set content release status to running
         $currentMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($releaseIdentifier);
         $newMetadata = $currentMetadata->withStatus(NodeRenderingCompletionStatus::running());
-        $this->redisContentReleaseService->setContentReleaseMetadata($releaseIdentifier, $newMetadata, RedisInstanceIdentifier::primary());
+        $this->redisContentReleaseService->setContentReleaseMetadata(
+            $releaseIdentifier,
+            $newMetadata,
+            RedisInstanceIdentifier::primary()
+        );
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
-        foreach (GeneratorUtility::createArrayBatch($this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()), 100) as $enumeration) {
+        foreach (
+            GeneratorUtility::createArrayBatch(
+                $this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()),
+                100
+            ) as $enumeration
+        ) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.
             // TODO: EXTENSION POINT HERE, TO ADD ADDITIONAL ENUMERATIONS (.metadata.json f.e.)
@@ -74,48 +85,88 @@ class NodeEnumerator
 
     /**
      * @return iterable<EnumeratedNode>
+     * @throws Exception
      */
-    private function enumerateAll(?Site $site, ContentReleaseLogger $contentReleaseLogger, string $workspaceName): iterable
-    {
+    private function enumerateAll(
+        ?Site $site,
+        ContentReleaseLogger $contentReleaseLogger,
+        string $workspaceName
+    ): iterable {
         $combinator = new NodeContextCombinator();
 
-        $nodeTypeWhitelist = $this->nodeTypeConstraintFactory->parseFilterString($this->nodeTypeWhitelist);
+        // Build filter from allowed/disallowed nodetypes
+        $nodeTypeList = explode(',', $this->nodeTypeList ?: 'Neos.Neos:Document');
+        $nodeTypeFilter = implode(
+            ',',
+            array_map(static function ($nodeType) {
+                if ($nodeType[0] === '!') {
+                    return '[!instanceof ' . substr($nodeType, 1) . ']';
+                }
+                return '[instanceof ' . $nodeType . ']';
+            }, $nodeTypeList)
+        );
 
-        $queueSite = function (Site $site) use ($combinator, &$documentNodeVariantsToRender, $nodeTypeWhitelist, $contentReleaseLogger, $workspaceName) {
+        $queueSite = static function (Site $site) use (
+            $combinator,
+            $nodeTypeFilter,
+            $contentReleaseLogger,
+            $workspaceName
+        ) {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain()
             ]);
             foreach ($combinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
+                $startTime = microtime(true);
                 $dimensionValues = $siteNode->getContext()->getDimensions();
 
                 $contentReleaseLogger->debug('Publishing dimension combination', [
                     'dimensionValues' => $dimensionValues
                 ]);
 
-                foreach ($combinator->recurseDocumentChildNodes($siteNode) as $documentNode) {
-                    $contextPath = $documentNode->getContextPath();
+                $nodeQuery = new FlowQuery([$siteNode]);
+                /** @var NodeInterface[] $matchingNodes */
+                $matchingNodes = $nodeQuery->find($nodeTypeFilter)->add($siteNode)->get();
 
-                    if ($nodeTypeWhitelist->matches(NodeTypeName::fromString($documentNode->getNodeType()->getName()))) {
+                foreach ($matchingNodes as $nodeToEnumerate) {
+                    $contextPath = $nodeToEnumerate->getContextPath();
 
+                    // BUGFIX: the site node has no parent but must NOT be recognized as orphaned
+                    if ($nodeToEnumerate !== $siteNode) {
+                        // Verify that the node is not orphaned
+                        $parentNode = $nodeToEnumerate->getParent();
+                        while ($parentNode !== $siteNode) {
+                            if ($parentNode === null) {
+                                $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
+                                    'node' => $contextPath,
+                                ]);
+                                // Continue with the next document
+                                continue 2;
+                            }
+                            $parentNode = $parentNode->getParent();
+                        }
+                    }
+
+                    if ($nodeToEnumerate->isHidden()) {
+                        $contentReleaseLogger->debug('Skipping node from publishing, because it is hidden', [
+                            'node' => $contextPath,
+                        ]);
+                    } else {
                         $contentReleaseLogger->debug('Registering node for publishing', [
                             'node' => $contextPath
                         ]);
-
-                        yield EnumeratedNode::fromNode($documentNode);
-                    } else {
-                        $contentReleaseLogger->debug('Skipping node from publishing, because it did not match the configured nodeTypeWhitelist', [
-                            'node' => $contextPath,
-                            'nodeTypeWhitelist' => $this->nodeTypeWhitelist
-                        ]);
+                        yield EnumeratedNode::fromNode($nodeToEnumerate);
                     }
                 }
             }
+            $contentReleaseLogger->debug(
+                sprintf('Finished enumerating site %s in %dms', $site->getName(), (microtime(true) - $startTime) * 1000)
+            );
         };
 
         if ($site === null) {
-            foreach ($combinator->sites() as $site) {
-                yield from $queueSite($site);
+            foreach ($combinator->sites() as $siteInList) {
+                yield from $queueSite($siteInList);
             }
         } else {
             yield from $queueSite($site);

@@ -1,5 +1,8 @@
 Flowpack:
   DecoupledContentStore:
+    # auto-start an incremental release whenever a workspace publish happens
+    # if you want to disable auto-start of incremental releases, set this to false
+    startIncrementalReleaseOnWorkspacePublish: true
     # Automatically start an incremental release when an asset is changed/replaced
     startIncrementalReleaseOnAssetChange: true
 
@@ -43,6 +46,9 @@ Flowpack:
 
       # Add full HTTP message to the output of the content store
       addHttpMessage: false
+
+      # Recurse to child nodes of hidden nodes
+      recurseHiddenContent: false
 
 
 
@@ -151,7 +157,7 @@ Neos:
             label: 'Content Store'
             controller: 'Flowpack\DecoupledContentStore\Controller\BackendController'
             description: 'Decoupled Content Publishing'
-            icon: 'fas fa-exchange'
+            icon: 'fas fa-exchange-alt'
             mainStylesheet: 'Lite'
 
   Flow:
@@ -175,3 +181,7 @@ Neos:
       routes:
         'Flowpack.DecoupledContentStore':
           position: 'before Neos.Neos'
+
+  Fusion:
+    defaultContext:
+      Flowpack.DecoupledContentStore: Flowpack\DecoupledContentStore\Eel\ModuleHelper

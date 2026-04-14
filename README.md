@@ -250,8 +250,22 @@ it is a full or an incremental render. To trigger a full render, the content cac
 the rendering is started.
 
 ### Options
+
+By default, the Package is configured to automatically start an incremental release whenever any workspace is published.
+This behavior can be disabled via Flow configuration in your Settings.yaml
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    # if you want to disable auto-start of incremental releases, set this to false
+    # (default value: true)
+    startIncrementalReleaseOnWorkspacePublish: false
+    # ...
+```
+
 After changing an Asset (e.g. in the Media Module) an incremental rendering is triggered.
 You can opt out of this behavior by setting the following configuration:
+
 ````yaml
 Flowpack:
   DecoupledContentStore:

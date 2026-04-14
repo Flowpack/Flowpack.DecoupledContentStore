@@ -122,6 +122,8 @@ class NodeRenderOrchestrator
             return;
         }
 
+        $startTime = time();
+
         // Ensure we start with an empty queue here, in case this command is called multiple times.
         $this->redisRenderingQueue->flush($contentReleaseIdentifier);
         $this->redisRenderingErrorManager->flush($contentReleaseIdentifier);
@@ -179,7 +181,7 @@ class NodeRenderOrchestrator
 
             if (empty($nodesScheduledForRendering)) {
                 // we have NO nodes scheduled for rendering anymore, so that means we FINISHED successfully.
-                $contentReleaseLogger->info('Everything rendered completely. Finishing RenderOrchestrator');
+                $contentReleaseLogger->info(sprintf('Everything rendered completely in %d seconds. Finishing RenderOrchestrator',  time() - $startTime));
 
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
                 $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable()), RedisInstanceIdentifier::primary());
@@ -230,10 +232,11 @@ class NodeRenderOrchestrator
             // This is to gain better visibility into all errors currently happening; and thus maybe being able to see
             // patterns among the errors.
             // We also do NOT start a new incremental release, as this would lead very likely to the same errors.
-            $amountOfRenderingErrors = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier));
+            $renderingErrors = $this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier);
+            $amountOfRenderingErrors = count($renderingErrors);
             if ($amountOfRenderingErrors > 0) {
                 $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()), RedisInstanceIdentifier::primary());
-                $contentReleaseLogger->error('In this iteration, there happened ' . $amountOfRenderingErrors . ' rendering errors. EXITING now, as there is no chance of completing the content release successfully.');
+                $contentReleaseLogger->error('In this iteration, there happened ' . $amountOfRenderingErrors . ' rendering errors. EXITING now, as there is no chance of completing the content release successfully.', [$renderingErrors]);
                 yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RENDERING_ERRORS);
                 return;
             }

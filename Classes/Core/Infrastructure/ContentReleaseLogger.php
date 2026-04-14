@@ -19,10 +19,9 @@ class ContentReleaseLogger
      */
     protected $contentReleaseIdentifier;
 
-    /**
-     * @var string
-     */
-    protected $logPrefix = '';
+    protected string $logPrefix = '';
+
+    protected ?RendererIdentifier $rendererIdentifier;
 
     protected function __construct(OutputInterface $output, ContentReleaseIdentifier $contentReleaseIdentifier, ?RendererIdentifier $rendererIdentifier)
     {
@@ -47,24 +46,30 @@ class ContentReleaseLogger
         return new static($output, $contentReleaseIdentifier, null);
     }
 
-    public function debug($message, array $additionalPayload = [])
+    public function debug(string $message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . 'DEBUG ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
+        $this->logToOutput('DEBUG', $message, $additionalPayload);
     }
 
-    public function info($message, array $additionalPayload = [])
+    public function info(string $message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . 'INFO ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
+        $this->logToOutput('INFO', $message, $additionalPayload);
     }
 
-    public function warn($message, array $additionalPayload = [])
+    public function warn(string $message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . 'WARN ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
+        $this->logToOutput('WARNING', $message, $additionalPayload);
     }
 
-    public function error($message, array $additionalPayload = [])
+    public function error(string $message, array $additionalPayload = []): void
     {
-        $this->output->writeln($this->logPrefix . 'ERROR ' . $message . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
+        $this->logToOutput('ERROR', $message, $additionalPayload);
+    }
+
+    protected function logToOutput(string $level, string $message, array $additionalPayload = []): void
+    {
+        $formattedPayload = $additionalPayload ? ' ' . json_encode($additionalPayload) : '';
+        $this->output->writeln($this->logPrefix . $level . ': ' . $message . $formattedPayload);
     }
 
     public function logException(\Exception $exception, string $message, array $additionalPayload)
