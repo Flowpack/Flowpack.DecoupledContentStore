@@ -16,13 +16,11 @@ way, based on the learnings of the first iteration. Especially the robustness ha
 
 ## Versioning Scheme
 
-| Package Version              | Neos / Flow Version | Released?    | Supported                           | Remarks |
-|------------------------------|---------------------|--------------|-------------------------------------|---------|
-| 1.x                          | 8.x                 | ☑️           | ☑️ (bugfixes only)                   | Currently used in production in bigger sites. |
-| 2.x (current `main` branch)  | 8.x                 | ⛔️ (not yet) | alpha Testing in some instances - **still some breaking changes to come**     | Breaking configuration changes, to support **different renderers** and more flexible rendering overall |
-| 3.x                          | 9.x                 | ⛔️           | ⛔️                                  | Not yet started with implementation for Neos 9; current ETA end of 2025 / beginning of 2026 |
-
-NOTE: There still exists the pull request https://github.com/Flowpack/Flowpack.DecoupledContentStore/pull/42 containing various improvements, which also should go to 2.x / main branch.
+| Package Version             | Neos / Flow Version | Released?    | Supported                                                                 | Remarks                                                                                                                                               |
+|-----------------------------|---------------------|--------------|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.x                         | 8.x                 | ☑️           | ☑️ (bugfixes only)                                                        |                                                                                                                                                       |
+| 2.x (current `main` branch) | 8.x                 | ⛔️ (not yet) | alpha Testing in some instances - **still some breaking changes to come** | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. Currently used in production in bigger sites. |
+| 3.x                         | 9.x                 | ⛔️           | ⛔️                                                                        | Not yet planned                                                                                                                                       |
 
 ## What does it do?
 
