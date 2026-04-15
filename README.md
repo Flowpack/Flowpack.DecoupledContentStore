@@ -22,15 +22,17 @@ way, based on the learnings of the first iteration. Especially the robustness ha
 | 2.x (current `main` branch) | 8.x                 | ☑️        | current active release | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. Currently used in production in bigger sites. |
 | 3.x                         | 9.x                 | ⛔️        | ⛔️                     | Not yet planned                                                                                                                                       |
 
-### Updating from 1.x to 2.x (not yet released)
+### Updating from 1.x to 2.x
 
 You need to adjust the following things when updating from DecoupledContentStore 1.x to 2.x:
 
 NEW FEATURES / IMPROVEMENTS:
 
+* support for different output formats, with differing documentRenderers and custom enumerators
+  * this is especially handy for full or additional headless rendering 
+* define which workspaces to release
 
-
-UPDATING:
+#### UPDATING:
 
 **Settings.yaml - contentReleaseWriters must be configured differently.
 
