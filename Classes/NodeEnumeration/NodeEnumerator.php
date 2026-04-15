@@ -114,7 +114,7 @@ class NodeEnumerator
             }, $nodeTypeList)
         );
 
-        $queueSite = static function (Site $site) use (
+        $queueSite = function (Site $site) use (
             $combinator,
             $nodeTypeFilter,
             $contentReleaseLogger,
@@ -164,7 +164,10 @@ class NodeEnumerator
                         $contentReleaseLogger->debug('Registering node for publishing', [
                             'node' => $contextPath
                         ]);
-                        yield EnumeratedNode::fromNode($nodeToEnumerate);
+
+                        foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode($nodeToEnumerate) as $enumeratedNode) {
+                            yield $enumeratedNode;
+                        }
                     }
                 }
             }
