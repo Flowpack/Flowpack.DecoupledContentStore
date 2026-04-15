@@ -41,17 +41,24 @@ final class EnumeratedNode implements \JsonSerializable
      */
     protected $nodeTypeName;
 
-    private function __construct(string $contextPath, string $nodeIdentifier, string $nodeTypeName, array $arguments)
+    /**
+     * The renderer implementation to use for this EnumeratedNode;
+     * a key from Settings at Flowpack.DecoupledContentStore.extensions.documentRenderers.[key]
+     */
+    public readonly string $rendererId;
+
+    private function __construct(string $contextPath, string $nodeIdentifier, string $nodeTypeName, array $arguments, string $rendererId = '')
     {
         $this->contextPath = $contextPath;
         $this->nodeIdentifier = $nodeIdentifier;
         $this->nodeTypeName = $nodeTypeName;
         $this->arguments = $arguments;
+        $this->rendererId = $rendererId;
     }
 
     static public function fromNode(NodeInterface $node, array $arguments = []): self
     {
-        return new self($node->getContextPath(), $node->getIdentifier(), $node->getNodeType()->getName(), $arguments);
+        return new self($node->getContextPath(), $node->getIdentifier(), $node->getNodeType()->getName(), $arguments, '');
     }
 
     static public function fromJsonString(string $enumeratedNodeString): self
@@ -60,7 +67,7 @@ final class EnumeratedNode implements \JsonSerializable
         if (!is_array($tmp)) {
             throw new \Exception('EnumeratedNode cannot be constructed from: ' . $enumeratedNodeString);
         }
-        return new self($tmp['contextPath'], $tmp['nodeIdentifier'], $tmp['nodeTypeName'] ?? '', $tmp['arguments']);
+        return new self($tmp['contextPath'], $tmp['nodeIdentifier'], $tmp['nodeTypeName'] ?? '', $tmp['arguments'], $tmp['rendererId']);
     }
 
     public function jsonSerialize(): array
@@ -70,6 +77,7 @@ final class EnumeratedNode implements \JsonSerializable
             'nodeIdentifier' => $this->nodeIdentifier,
             'nodeTypeName' => $this->nodeTypeName,
             'arguments' => $this->arguments,
+            'rendererId' => $this->rendererId,
         ];
     }
 
@@ -111,6 +119,11 @@ final class EnumeratedNode implements \JsonSerializable
 
     public function debugString(): string
     {
-        return sprintf('%s %s %s(%s)', $this->nodeTypeName, $this->nodeIdentifier, $this->arguments ? http_build_query($this->arguments) . ' ' : '', $this->contextPath);
+        return sprintf('%s %s %s(%s) - %s', $this->nodeTypeName, $this->nodeIdentifier, $this->arguments ? http_build_query($this->arguments) . ' ' : '', $this->contextPath, $this->rendererId);
+    }
+
+    public function withRendererId(string $rendererId): self
+    {
+        return new self($this->contextPath, $this->nodeIdentifier, $this->nodeTypeName, $this->arguments, $rendererId);
     }
 }

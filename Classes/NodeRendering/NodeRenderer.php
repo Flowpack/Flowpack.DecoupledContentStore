@@ -6,6 +6,7 @@ namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
+use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\DocumentRenderedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
@@ -109,6 +110,11 @@ class NodeRenderer
      */
     protected $concurrentBuildLockService;
 
+    /**
+     * @Flow\Inject
+     * @var NodeRenderingExtensionManager
+     */
+    protected $nodeRenderingExtensionManager;
 
     public function render(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger, RendererIdentifier $rendererIdentifier)
     {
@@ -203,7 +209,7 @@ class NodeRenderer
                     'arguments' => $enumeratedNode->getArguments(),
                 ]);
 
-                $this->documentRenderer->renderDocumentNodeVariant($node, $enumeratedNode->getArguments(), $contentReleaseLogger);
+                $this->nodeRenderingExtensionManager->renderDocumentNodeVariant($node, $enumeratedNode, $contentReleaseLogger);
             }
             // NOTE: we do not abort rendering directly, when we encounter any error, but we try to render
             // all pages in the full iteration (and then, if errors exist, we stop).

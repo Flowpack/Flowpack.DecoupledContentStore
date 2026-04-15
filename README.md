@@ -22,6 +22,55 @@ way, based on the learnings of the first iteration. Especially the robustness ha
 | 2.x (current `main` branch) | 8.x                 | ☑️        | current active release | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. Currently used in production in bigger sites. |
 | 3.x                         | 9.x                 | ⛔️        | ⛔️                     | Not yet planned                                                                                                                                       |
 
+### Updating from 1.x to 2.x (not yet released)
+
+You need to adjust the following things when updating from DecoupledContentStore 1.x to 2.x:
+
+NEW FEATURES / IMPROVEMENTS:
+
+
+
+UPDATING:
+
+**Settings.yaml - contentReleaseWriters must be configured differently.
+
+OLD:
+```yaml
+
+Flowpack:
+  DecoupledContentStore:
+    extensions:
+      contentReleaseWriters:
+        gzipCompressed:
+          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
+        legacy:
+          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\LegacyWriter
+
+```
+
+NEW:
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    extensions:
+      # Decide how node rendering should happen. 
+      documentRenderers:
+        htmlViaFusion:
+          # ... the other config matches the old behavior ...
+
+          # Register additional content release writers, being called for every finished node which should be added
+          # to the content release.
+          #  (must implement ContentReleaseWriterInterface)
+          contentReleaseWriters:
+            gzipCompressed:
+              className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
+            legacy:
+              className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\LegacyWriter
+
+
+```
+
 ## What does it do?
 
 The Content Store package publishes content from Neos to a Redis database as
@@ -312,6 +361,15 @@ eventually executed, because that's prunner's job.
 Crafting a custom `pipelines.yml` is the main extension point for doing additional work (f.e. additional enumeration
 or rendering).
 
+### Custom Rendering
+
+(NEW with v2)
+
+DecoupledContentStore v1 was specifically tied to Fusion as rendering engine and the Neos Content cache.
+This has changed in V2, where **different renderings** of a given document can be instantiated.
+
+(TODO EXPLAIN IN DETAIL)
+
 ### Custom Document Metadata, integrated with the Content Cache
 
 Sometimes, you need to build additional data structures for every individual document. Ideally, you'll want this
@@ -539,20 +597,6 @@ In case of exceptions, it might be helpful to run the tests with `--stop-on-fail
 error. Then, you can inspect the testing database and manually reproduce the bug.
 
 Additionally, `-vvv` is a helpful CLI flag (extra-verbose) - this displays the full exception stack trace in case of errors.
-
-## TODO
-
-- clean up of old content releases
-  - in Content Store / Redis
-- generate the old content format
-- (SK) error handling tests
-- force-switch possibility
-- (AM) UI
-- check for TODOs :)
-
-## Missing Features from old
-
-data-url-next-page (or so) not supported
 
 ## License
 

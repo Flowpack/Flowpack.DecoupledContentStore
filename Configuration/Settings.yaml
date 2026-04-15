@@ -53,21 +53,35 @@ Flowpack:
 
 
     extensions:
+
+      # Extend node rendering by deciding HOW the rendering should happen. This is done during the Enumeration phase
+      # at the beginning: for each document node (=which matches nodeTypeWhitelist), all documentNodeEnumerators
+      # are called, and they can decide which DocumentNodeRenderer should be used by creating appropriate
+      # instances of EnumeratedNode and yielding them.
+      documentRenderers:
+        htmlViaFusion:
+          enumeratorClassName: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumerators\DefaultEnumerator
+          #enumeratorClassName: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumerators\LimitEnumerator
+          #enumeratorOptions:
+          #  uriPathSegmentFilter: vanucci-collection
+          #  limit: 20
+          rendererClassName: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentRenderers\FusionHtmlRenderer
+
+          # Register additional content release writers, being called for every finished node which should be added
+          # to the content release.
+          #  (must implement ContentReleaseWriterInterface)
+          contentReleaseWriters:
+            gzipCompressed:
+              className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
+            legacy:
+              className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\LegacyWriter
+
       # Extend Node Rendering by generating additional data for each rendering, interleaved with the content cache.
       #
       #  (must implement DocumentMetadataGeneratorInterface)
       # -
       #   className: Fully\Qualified\Classname
       documentMetadataGenerators: []
-
-      # Register additional content release writers, being called for every finished node which should be added
-      # to the content release.
-      #  (must implement ContentReleaseWriterInterface)
-      contentReleaseWriters:
-        gzipCompressed:
-          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\GzipWriter
-        legacy:
-          className: Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters\LegacyWriter
 
     redisKeyPostfixesForEachRelease:
       # each content release starts with a fixed prefix "contentRelease:[releaseId]:", and afterwards
@@ -128,6 +142,11 @@ Flowpack:
         transfer: true
         transferMode: 'dump'
         isRequired: true
+      statisticsEvents:
+        redisKeyPostfix: 'statisticsEvents'
+        transfer: false
+        transferMode: 'dump'
+        isRequired: false
 
     # can be used on the consuming site to ensure non-breaking deployments for changes in the config
     configEpoch:

@@ -15,6 +15,11 @@ class ContentReleaseLogger
     protected $output;
 
     /**
+     * @var StatisticsEventOutputInterface
+     */
+    protected $statisticsEventOutput;
+
+    /**
      * @var ContentReleaseIdentifier
      */
     protected $contentReleaseIdentifier;
@@ -23,10 +28,11 @@ class ContentReleaseLogger
 
     protected ?RendererIdentifier $rendererIdentifier;
 
-    protected function __construct(OutputInterface $output, ContentReleaseIdentifier $contentReleaseIdentifier, ?RendererIdentifier $rendererIdentifier)
+    protected function __construct(OutputInterface $output, ContentReleaseIdentifier $contentReleaseIdentifier, StatisticsEventOutputInterface $statisticsEventOutput, ?RendererIdentifier $rendererIdentifier)
     {
         $this->output = $output;
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
+        $this->statisticsEventOutput = $statisticsEventOutput;
         $this->rendererIdentifier = $rendererIdentifier;
         $this->logPrefix = '';
 
@@ -36,14 +42,14 @@ class ContentReleaseLogger
     }
 
 
-    public static function fromConsoleOutput(ConsoleOutput $output, ContentReleaseIdentifier $contentReleaseIdentifier): self
+    public static function fromConsoleOutput(ConsoleOutput $output, ContentReleaseIdentifier $contentReleaseIdentifier, StatisticsEventOutputInterface $statisticsEventOutput = new RedisStatisticsEventOutput()): self
     {
-        return new static($output->getOutput(), $contentReleaseIdentifier, null);
+        return new static($output->getOutput(), $contentReleaseIdentifier, $statisticsEventOutput, null);
     }
 
-    public static function fromSymfonyOutput(OutputInterface $output, ContentReleaseIdentifier $contentReleaseIdentifier): self
+    public static function fromSymfonyOutput(OutputInterface $output, ContentReleaseIdentifier $contentReleaseIdentifier, StatisticsEventOutputInterface $statisticsEventOutput = new RedisStatisticsEventOutput()): self
     {
-        return new static($output, $contentReleaseIdentifier, null);
+        return new static($output, $contentReleaseIdentifier, $statisticsEventOutput, null);
     }
 
     public function debug(string $message, array $additionalPayload = []): void
@@ -77,8 +83,13 @@ class ContentReleaseLogger
         $this->output->writeln($this->logPrefix . $message . "\n\n" . $exception->getMessage() . "\n\n" . $exception->getTraceAsString() . "\n\n" . json_encode($additionalPayload));
     }
 
+    public function logStatisticsEvent(string $event, array $additionalPayload = [])
+    {
+        $this->statisticsEventOutput->writeEvent($this->contentReleaseIdentifier, $this->logPrefix, $event, $additionalPayload);
+    }
+
     public function withRenderer(RendererIdentifier $rendererIdentifier): self
     {
-        return new ContentReleaseLogger($this->output, $this->contentReleaseIdentifier, $rendererIdentifier);
+        return new ContentReleaseLogger($this->output, $this->contentReleaseIdentifier, $this->statisticsEventOutput, $rendererIdentifier);
     }
 }
