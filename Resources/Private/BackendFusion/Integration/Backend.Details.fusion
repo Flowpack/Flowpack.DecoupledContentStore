@@ -53,6 +53,10 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
             <p @if.notData={!detailsData}>
               No data exists for this release in Redis.
             </p>
+            <Flowpack.DecoupledContentStore:AggregatedRenderingErrors
+                    @if.hasErrorLogs={workerErrorLogs}
+                    workerErrorLogs={workerErrorLogs}
+            />
         </div>
         <Flowpack.DecoupledContentStore:DetailsFooter />
     `
@@ -137,6 +141,10 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                     </Neos.Fusion:Loop>
                 </div>
                 <div class="pl-5 pr-10 py-2 flex justify-end">
+                    <Flowpack.DecoupledContentStore:ContentReleaseSteps.AllRenderingErrorsButton
+                            @if.hasError={props._taskResults.filteredByPrefix('render_').aggregatedStatus == 'error'}
+                            prunnerJobId={props.prunnerJobId}
+                    />
                     <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                             task={props._taskResults.get('render_orchestrator')}
                             title="orchestrator"
@@ -327,6 +335,69 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask) < prototy
            class={"inline-flex items-center mx-1 px-2.5 py-0.5 rounded-full border-2 text-xs font-medium text-white " + props._statusClass}>
             {props.title}
         </a>
+    `
+}
+
+prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.AllRenderingErrorsButton) < prototype(Neos.Fusion:Component) {
+    prunnerJobId = ''
+
+    _href = Neos.Fusion:UriBuilder {
+        action = 'details'
+        arguments.showAllRenderingErrors = 1
+        arguments.detailTaskName = ''
+        arguments.prunnerJobId = ${props.prunnerJobId}
+        addQueryString = true
+    }
+
+    renderer = afx`
+        <a href={props._href} title="Show ERROR logs from all failed workers"
+           class="inline-flex items-center mx-1 px-2.5 py-0.5 rounded-full border-2 text-xs font-medium text-white bg-red-500 border-red-500">
+            all errors
+        </a>
+    `
+}
+
+prototype(Flowpack.DecoupledContentStore:AggregatedRenderingErrors) < prototype(Neos.Fusion:Component) {
+    workerErrorLogs = null
+
+    renderer = afx`
+        <h2 class="text-3xl py-5">Rendering errors across all workers</h2>
+        <Neos.Fusion:Loop items={props.workerErrorLogs} itemName="workerErrorLog">
+            <Flowpack.DecoupledContentStore:AggregatedRenderingErrors.WorkerEntry workerErrorLog={workerErrorLog} />
+        </Neos.Fusion:Loop>
+    `
+}
+
+prototype(Flowpack.DecoupledContentStore:AggregatedRenderingErrors.WorkerEntry) < prototype(Neos.Fusion:Component) {
+    workerErrorLog = null
+
+    _statusClass = ${this.workerErrorLog.status}
+    _statusClass.@process.replace = Flowpack.DecoupledContentStore:StatusToClassMapping
+
+    renderer = afx`
+        <div class={(props.workerErrorLog.wasKilledByOrchestrator() ? 'my-1 p-2 ' : 'my-4 p-4 ') + 'bg-white shadow rounded-lg text-gray-900'}>
+            <div class="flex items-center mb-2">
+                <span class={"inline-flex items-center mr-2 px-2.5 py-0.5 rounded-full border-2 text-xs font-medium text-white " + props._statusClass}>
+                    {props.workerErrorLog.status}
+                </span>
+                <span class="font-mono text-sm text-gray-900 mr-2">{props.workerErrorLog.workerName}</span>
+                <span class="text-xs text-gray-500">exit {props.workerErrorLog.exitCode}</span>
+                <span @if.killed={props.workerErrorLog.wasKilledByOrchestrator()} class="ml-2 text-xs text-gray-500 italic">
+                    killed by orchestrator after another worker failed
+                </span>
+            </div>
+            <p @if.hasTaskError={props.workerErrorLog.taskError && !props.workerErrorLog.wasKilledByOrchestrator()} class="text-sm text-red-700 mb-2">{props.workerErrorLog.taskError}</p>
+            <div @if.hasNode={props.workerErrorLog.lastAttemptedNode} class="mb-3 p-3 bg-red-100 border-l-4 border-red-500 rounded">
+                <p class="text-xs font-semibold text-red-800 mb-1 uppercase tracking-wide">Last node attempted before failure</p>
+                <p class="text-sm text-gray-900 font-mono break-all">{props.workerErrorLog.lastAttemptedNode}</p>
+            </div>
+            <Neos.Fusion:Loop items={props.workerErrorLog.errorBlocks} itemName="block">
+                <pre class="text-gray-900 bg-gray-100 p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap mb-2">{block}</pre>
+            </Neos.Fusion:Loop>
+            <p @if.noBlocks={!props.workerErrorLog.errorBlocks && !props.workerErrorLog.wasKilledByOrchestrator() && !props.workerErrorLog.taskError} class="text-sm text-gray-500 italic">
+                No log output from this worker.
+            </p>
+        </div>
     `
 }
 
