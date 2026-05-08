@@ -1,0 +1,2 @@
+# to prevent installation of malicious dependencies (came up with increasing Supply-Chain-Attacks in npm packages)
+minimumReleaseAge: 20160 # 14 days
