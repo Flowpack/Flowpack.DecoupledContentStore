@@ -2,6 +2,7 @@
 namespace Flowpack\DecoupledContentStore\Controller;
 
 use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
+use Flowpack\DecoupledContentStore\BackendUi\WorkerErrorLogAggregator;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
@@ -39,6 +40,12 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
      * @var BackendUiDataService
      */
     protected $backendUiDataService;
+
+    /**
+     * @Flow\Inject
+     * @var WorkerErrorLogAggregator
+     */
+    protected $workerErrorLogAggregator;
 
     /**
      * @Flow\Inject
@@ -109,7 +116,7 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->view->assign('showToggleConfigEpochButton', $showToggleConfigEpochButton);
     }
 
-    public function detailsAction(string $contentReleaseIdentifier, ?string $contentStore = null, ?string $detailTaskName = '', ?string $prunnerJobId = '')
+    public function detailsAction(string $contentReleaseIdentifier, ?string $contentStore = null, ?string $detailTaskName = '', ?string $prunnerJobId = '', bool $showAllRenderingErrors = false)
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
@@ -125,6 +132,8 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         if ($detailTaskName !== '') {
             $this->view->assign('detailTaskName', $detailTaskName);
             $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs($prunnerJobId ? PrunnerJobId::fromString($prunnerJobId)->toJobId() : $detailsData->getJob()->getId(), $detailTaskName));
+        } elseif ($showAllRenderingErrors && $detailsData->getJob() !== null) {
+            $this->view->assign('workerErrorLogs', $this->workerErrorLogAggregator->aggregate($detailsData->getJob()));
         }
     }
 
