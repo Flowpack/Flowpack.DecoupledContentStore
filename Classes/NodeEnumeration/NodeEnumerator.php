@@ -92,6 +92,30 @@ class NodeEnumerator
     }
 
     /**
+     * Builds a FlowQuery filter string from the comma-separated node type whitelist,
+     * where entries prefixed with "!" are excluded.
+     *
+     * The filter parts must be concatenated without a separator: FlowQuery parses
+     * comma-separated filter groups independently, and a group consisting only of
+     * "[!instanceof ...]" makes find() throw "find() needs an identifier, path or
+     * instanceof filter for the first filter part" (exception 1436884196). For the same
+     * reason, the positive "[instanceof ...]" filters are put first.
+     */
+    private static function buildNodeTypeFilter(string $nodeTypeWhitelist): string
+    {
+        $includes = [];
+        $excludes = [];
+        foreach (explode(',', $nodeTypeWhitelist) as $nodeType) {
+            if ($nodeType[0] === '!') {
+                $excludes[] = '[!instanceof ' . substr($nodeType, 1) . ']';
+                continue;
+            }
+            $includes[] = '[instanceof ' . $nodeType . ']';
+        }
+        return implode('', array_merge($includes, $excludes));
+    }
+
+    /**
      * @return iterable<EnumeratedNode>
      * @throws Exception
      */
@@ -102,17 +126,7 @@ class NodeEnumerator
     ): iterable {
         $combinator = new NodeContextCombinator();
 
-        // Build filter from allowed/disallowed nodetypes
-        $nodeTypeList = explode(',', $this->nodeTypeList ?: 'Neos.Neos:Document');
-        $nodeTypeFilter = implode(
-            ',',
-            array_map(static function ($nodeType) {
-                if ($nodeType[0] === '!') {
-                    return '[!instanceof ' . substr($nodeType, 1) . ']';
-                }
-                return '[instanceof ' . $nodeType . ']';
-            }, $nodeTypeList)
-        );
+        $nodeTypeFilter = self::buildNodeTypeFilter($this->nodeTypeList ?: 'Neos.Neos:Document');
 
         $queueSite = function (Site $site) use (
             $combinator,
@@ -165,7 +179,11 @@ class NodeEnumerator
                             'node' => $contextPath
                         ]);
 
-                        foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode($nodeToEnumerate) as $enumeratedNode) {
+                        foreach (
+                            $this->nodeRenderingExtensionManager->enumerateDocumentNode(
+                                $nodeToEnumerate
+                            ) as $enumeratedNode
+                        ) {
                             yield $enumeratedNode;
                         }
                     }
@@ -198,8 +216,11 @@ class NodeEnumerator
      * @return void
      * @Flow\Signal
      */
-    protected function emitNodeEnumerated(EnumeratedNode $enumeratedNode, ContentReleaseIdentifier $releaseIdentifier, ContentReleaseLogger $contentReleaseLogger)
-    {
+    protected function emitNodeEnumerated(
+        EnumeratedNode $enumeratedNode,
+        ContentReleaseIdentifier $releaseIdentifier,
+        ContentReleaseLogger $contentReleaseLogger
+    ) {
     }
 
 }
