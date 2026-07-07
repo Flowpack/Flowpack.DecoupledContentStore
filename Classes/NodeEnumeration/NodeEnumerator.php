@@ -49,9 +49,9 @@ class NodeEnumerator
 
     /**
      * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
-     * @var string
+     * @var array
      */
-    protected $nodeTypeList;
+    protected $nodeTypeWhitelist;
 
     public function enumerateAndStoreInRedis(
         ?Site $site,
@@ -92,7 +92,7 @@ class NodeEnumerator
     }
 
     /**
-     * Builds a FlowQuery filter string from the comma-separated node type whitelist,
+     * Builds a FlowQuery filter string from the node type whitelist,
      * where entries prefixed with "!" are excluded.
      *
      * The filter parts must be concatenated without a separator: FlowQuery parses
@@ -101,11 +101,15 @@ class NodeEnumerator
      * instanceof filter for the first filter part" (exception 1436884196). For the same
      * reason, the positive "[instanceof ...]" filters are put first.
      */
-    private static function buildNodeTypeFilter(string $nodeTypeWhitelist): string
+    private static function buildNodeTypeFilter(array $nodeTypeWhitelist): string
     {
         $includes = [];
         $excludes = [];
-        foreach (explode(',', $nodeTypeWhitelist) as $nodeType) {
+        foreach ($nodeTypeWhitelist as $nodeType) {
+            $nodeType = trim($nodeType);
+            if ($nodeType === '') {
+                continue;
+            }
             if ($nodeType[0] === '!') {
                 $excludes[] = '[!instanceof ' . substr($nodeType, 1) . ']';
                 continue;
@@ -126,7 +130,7 @@ class NodeEnumerator
     ): iterable {
         $combinator = new NodeContextCombinator();
 
-        $nodeTypeFilter = self::buildNodeTypeFilter($this->nodeTypeList ?: 'Neos.Neos:Document');
+        $nodeTypeFilter = self::buildNodeTypeFilter($this->nodeTypeWhitelist ?: ['Neos.Neos:Document']);
 
         $queueSite = function (Site $site) use (
             $combinator,
