@@ -25,11 +25,12 @@ Flowpack:
 
     nodeRendering:
       # Allows to filter the list of node types which should end up in the content store; and in the content
-      # enumeration. Supports the format of NodeInterface::getChildren() (or NodeTypeConstraintFactory, which is
-      # its internal implementation)
+      # enumeration. Entries prefixed with "!" are excluded.
       # Example:
-      # Neos.Neos:Document,!My.Package:Bar
-      nodeTypeWhitelist: 'Neos.Neos:Document'
+      #   - 'Neos.Neos:Document'
+      #   - '!My.Package:Bar'
+      nodeTypeWhitelist:
+        - 'Neos.Neos:Document'
 
       # Allows to filter the list of enumerated URLs which should end up in the content store.
       #
