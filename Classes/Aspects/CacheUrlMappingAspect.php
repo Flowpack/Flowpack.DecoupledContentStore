@@ -81,6 +81,13 @@ class CacheUrlMappingAspect
     protected $contentReleaseLogger;
 
     /**
+     * Did the current document rendering lead to a "doc--..." mapping entry? {@see afterDocumentRendering()}
+     *
+     * @var bool
+     */
+    protected $mappingWasWrittenForCurrentDocument = false;
+
+    /**
      * @Flow\Before("method(Neos\Fusion\Core\Cache\RuntimeContentCache->postProcess())")
      */
     public function getCurrentEvaluateAndControllerContext(JoinPointInterface $joinPoint)
@@ -153,6 +160,7 @@ class CacheUrlMappingAspect
         // allow other document metadata generators here
         $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators($node, $arguments, $this->controllerContext, $rootCacheValues);
         $this->contentCacheFrontend->set($rootKey->redisKeyName(), json_encode($rootCacheValues), $rootTags);
+        $this->mappingWasWrittenForCurrentDocument = true;
     }
 
     /**
@@ -207,11 +215,21 @@ class CacheUrlMappingAspect
         $this->isActive = true;
         $this->contentReleaseLogger = $contentReleaseLogger;
         $this->renderTimestamp = (int)(microtime(true) * 1000);
+        $this->mappingWasWrittenForCurrentDocument = false;
     }
 
     public function afterDocumentRendering(): void
     {
+        // Without a mapping entry, the NodeRenderOrchestrator can never see this document as rendered, and will
+        // schedule it again in the next iteration. Most ways of getting here are silent (no exception, no rendering
+        // error), so we make some noise - otherwise the content release just fails with the retry limit and no hint
+        // about the reason. {@see storeRootCacheIdentifier()}
+        if (!$this->mappingWasWrittenForCurrentDocument && $this->contentReleaseLogger !== null) {
+            $this->contentReleaseLogger->warn('No "doc--..." mapping entry was written for this rendering, so it can never be added to the content release. Either the rendering was fully served from the content cache (then the content cache entries of this node need to be flushed before re-rendering), or its URL is excluded via nodeRendering.urlExcludelistRegex while the node is still part of the enumeration.');
+        }
+
         $this->isActive = false;
         $this->contentReleaseLogger = null;
+        $this->mappingWasWrittenForCurrentDocument = false;
     }
 }

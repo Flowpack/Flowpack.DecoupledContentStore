@@ -77,6 +77,22 @@ class RedisRenderingQueue
     }
 
     /**
+     * Counts how often the given node has been handed out for rendering within this content release, and returns
+     * the number of the attempt which is about to start (1 for the first attempt).
+     *
+     * A node which is handed out more than once means the previous rendering did not lead to a complete content
+     * cache entry, {@see \Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator}.
+     */
+    public function registerRenderingAttempt(ContentReleaseIdentifier $contentReleaseIdentifier, EnumeratedNode $enumeratedNode): int
+    {
+        return (int)$this->redisClientManager->getPrimaryRedis()->hIncrBy(
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderAttempts'),
+            json_encode($enumeratedNode),
+            1
+        );
+    }
+
+    /**
      * @param ContentReleaseIdentifier $contentReleaseIdentifier
      * @param EnumeratedNode $enumeratedNode
      * @param RendererIdentifier $rendererIdentifier
@@ -109,6 +125,6 @@ class RedisRenderingQueue
 
     public function flush(ContentReleaseIdentifier $contentReleaseIdentifier)
     {
-        $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'), $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'));
+        $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'), $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'), $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderAttempts'));
     }
 }
