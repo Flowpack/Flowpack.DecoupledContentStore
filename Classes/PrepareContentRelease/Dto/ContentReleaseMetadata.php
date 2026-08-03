@@ -42,6 +42,12 @@ final class ContentReleaseMetadata implements \JsonSerializable
 
     private ?string $accountId;
 
+    /**
+     * Size of the content release in Redis, in megabytes. Determined once when the release is finished,
+     * as calculating it is expensive.
+     */
+    private ?float $contentReleaseSize;
+
     private function __construct(
         PrunnerJobId $prunnerJobId,
         ?\DateTimeInterface $startTime,
@@ -50,7 +56,8 @@ final class ContentReleaseMetadata implements \JsonSerializable
         ?NodeRenderingCompletionStatus $status,
         ?array $manualTransferJobIds = [],
         string $workspaceName = 'live',
-        ?string $accountId = 'cli'
+        ?string $accountId = 'cli',
+        ?float $contentReleaseSize = null
     )
     {
         $this->prunnerJobId = $prunnerJobId;
@@ -61,6 +68,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
         $this->manualTransferJobIds = $manualTransferJobIds;
         $this->workspaceName = $workspaceName;
         $this->accountId = $accountId;
+        $this->contentReleaseSize = $contentReleaseSize;
     }
 
     public static function create(PrunnerJobId $prunnerJobId, \DateTimeInterface $startTime, string $workspace = 'live', string $accountId = 'cli'): self
@@ -89,6 +97,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             }, json_decode($tmp['manualTransferJobIds'])) : [],
             $tmp['workspaceName'] ?? 'live',
             key_exists('accountId', $tmp) ? $tmp['accountId'] : 'cli',
+            isset($tmp['contentReleaseSize']) ? (float)$tmp['contentReleaseSize'] : null,
         );
     }
 
@@ -104,29 +113,35 @@ final class ContentReleaseMetadata implements \JsonSerializable
             'manualTransferJobIds' => json_encode($this->manualTransferJobIds),
             'workspaceName' => $this->workspaceName,
             'accountId' => $this->accountId,
+            'contentReleaseSize' => $this->contentReleaseSize,
         ];
     }
 
     public function withEndTime(\DateTimeInterface $endTime): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $endTime, $this->switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId);
+        return new self($this->prunnerJobId, $this->startTime, $endTime, $this->switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId, $this->contentReleaseSize);
     }
 
     public function withSwitchTime(\DateTimeInterface $switchTime): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId, $this->contentReleaseSize);
     }
 
     public function withStatus(NodeRenderingCompletionStatus $status): self
     {
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId, $this->contentReleaseSize);
     }
 
     public function withAdditionalManualTransferJobId(PrunnerJobId $prunnerJobId): self
     {
         $manualTransferIdArray = $this->getManualTransferJobIds();
         $manualTransferIdArray[] = $prunnerJobId;
-        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray, $this->workspaceName, $this->accountId);
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $manualTransferIdArray, $this->workspaceName, $this->accountId, $this->contentReleaseSize);
+    }
+
+    public function withContentReleaseSize(float $contentReleaseSize): self
+    {
+        return new self($this->prunnerJobId, $this->startTime, $this->endTime, $this->switchTime, $this->status, $this->manualTransferJobIds, $this->workspaceName, $this->accountId, $contentReleaseSize);
     }
 
     public function getPrunnerJobId(): PrunnerJobId
@@ -170,6 +185,14 @@ final class ContentReleaseMetadata implements \JsonSerializable
     public function getAccountId(): ?string
     {
         return $this->accountId;
+    }
+
+    /**
+     * @return float|null size of the content release in megabytes, or NULL if it was not determined (yet)
+     */
+    public function getContentReleaseSize(): ?float
+    {
+        return $this->contentReleaseSize;
     }
 
 }

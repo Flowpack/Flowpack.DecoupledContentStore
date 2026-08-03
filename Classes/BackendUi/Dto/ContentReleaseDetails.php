@@ -19,6 +19,7 @@ class ContentReleaseDetails
     private int $enumeratedDocumentNodesCount;
     private int $renderingErrorCount;
     private bool $isActive;
+    private ?float $contentReleaseSize;
 
     /**
      * @var Job[]
@@ -30,7 +31,7 @@ class ContentReleaseDetails
      */
     private array $renderingStatistics;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount, bool $isActive, array $manualTransferJobIds)
+    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount, bool $isActive, array $manualTransferJobIds, ?float $contentReleaseSize = null)
     {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;
@@ -39,6 +40,15 @@ class ContentReleaseDetails
         $this->renderingErrorCount = $renderingErrorCount;
         $this->isActive = $isActive;
         $this->manualTransferJobs = $manualTransferJobIds;
+        $this->contentReleaseSize = $contentReleaseSize;
+    }
+
+    /**
+     * @return float|null size of the content release in megabytes, or NULL if it was not determined (yet)
+     */
+    public function getContentReleaseSize(): ?float
+    {
+        return $this->contentReleaseSize;
     }
 
     /**

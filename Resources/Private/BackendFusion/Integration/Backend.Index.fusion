@@ -47,7 +47,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                         <td>{props.start}</td>
                         <td>{props.end}</td>
                         <td>{props.switch}</td>
-                        <td>{item.releaseSize} MB</td>
+                        <td>{item.releaseSize ? item.releaseSize + " MB" : "-"}</td>
                     </tr>
                 `
             }
