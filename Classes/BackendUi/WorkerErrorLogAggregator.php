@@ -55,10 +55,13 @@ class WorkerErrorLogAggregator
             }
         }
 
-        // Real failures (non-SIGTERM) carry the actual error — show them first.
+        // Real failures (non-SIGTERM) carry the actual error — show them first. Within both groups,
+        // sort worker names naturally (1, 2, ..., 10 instead of 1, 10, ..., 2).
         usort($erroredTasks, static function (TaskResult $a, TaskResult $b): int {
-            return ($a->getExitCode() === self::EXIT_CODE_SIGTERM ? 1 : 0)
+            $killedComparison = ($a->getExitCode() === self::EXIT_CODE_SIGTERM ? 1 : 0)
                 <=> ($b->getExitCode() === self::EXIT_CODE_SIGTERM ? 1 : 0);
+
+            return $killedComparison !== 0 ? $killedComparison : strnatcasecmp($a->getName(), $b->getName());
         });
 
         $result = [];

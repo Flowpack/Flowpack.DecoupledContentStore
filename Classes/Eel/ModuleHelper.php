@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Eel;
 
+use Flowpack\Prunner\Dto\TaskResult;
 use Neos\Eel\ProtectedContextAwareInterface;
 use Neos\Flow\Annotations as Flow;
 
@@ -12,6 +13,28 @@ use Neos\Flow\Annotations as Flow;
  */
 class ModuleHelper implements ProtectedContextAwareInterface
 {
+    /**
+     * Sort task results by name using a natural order, so that numeric render workers appear as
+     * 1, 2, ..., 10, 11 instead of the lexicographic 1, 10, 11, ..., 2, 20. Named workers follow
+     * the numeric ones alphabetically.
+     *
+     * @param iterable<TaskResult> $tasks
+     * @return TaskResult[]
+     */
+    public function sortTasksNaturally(?iterable $tasks): array
+    {
+        if (!$tasks) {
+            return [];
+        }
+
+        $sortedTasks = is_array($tasks) ? $tasks : iterator_to_array($tasks, false);
+        usort($sortedTasks, static function (TaskResult $a, TaskResult $b): int {
+            return strnatcasecmp($a->getName(), $b->getName());
+        });
+
+        return $sortedTasks;
+    }
+
     public function formatStdOutput(?string $stdOut): string
     {
         if (!$stdOut) {
@@ -39,8 +62,8 @@ class ModuleHelper implements ProtectedContextAwareInterface
             // Add highlighting for log levels
             $line = preg_replace("/(DEBUG|WARNING|ERROR|INFO): (.*)/", "<span class=\"log-level-$1\">$1:</span> <span class=\"log-content-$1\">$2</span>", htmlSpecialChars($line));
 
-            // Add line numbers
-            $line = ($lineCount - $index) . ': ' . $line;
+            // Add line numbers. The lines are reversed (newest first), so the numbering counts down to 1.
+            $line = ($lineCount - $index + 1) . ': ' . $line;
 
             // Insert formatted JSON data
             if ($jsonData) {
