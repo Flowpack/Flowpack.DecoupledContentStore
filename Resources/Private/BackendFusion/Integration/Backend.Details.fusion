@@ -48,7 +48,9 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
               </div>
 
               <h2 class="text-3xl py-5">Log output for {detailTaskName}</h2>
-              <div title="stdout" class="stdout grid gap-2">{props.stdOutLines}</div>
+              <!-- NOTE: this must not be a CSS grid: the orchestrator log can have way more lines than a
+                   grid supports tracks, and the surplus lines then all end up stacked in the last row. -->
+              <div title="stdout" class="stdout flex flex-col gap-2 overflow-x-auto">{props.stdOutLines}</div>
             </Neos.Fusion:Fragment>
             <p @if.notData={!detailsData}>
               No data exists for this release in Redis.
@@ -131,7 +133,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
                     status={props._taskResults.filteredByPrefix('render_').aggregatedStatus}>
                 <div class="pl-5 pr-10 flex-1 leading-6">
                     <Neos.Fusion:Loop
-                            items={props._taskResults.filteredByPrefix('render_').withoutTasks('render_finished', 'render_orchestrator')}
+                            items={Flowpack.DecoupledContentStore.sortTasksNaturally(props._taskResults.filteredByPrefix('render_').withoutTasks('render_finished', 'render_orchestrator'))}
                             itemName="task">
                         <Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask
                                 task={task}
@@ -436,7 +438,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseStats.Stat) < prototype(N
     title = "Foo"
 
     renderer = afx`
-        <dt class="pt-2 text-sm font-medium text-gray-500 truncate">
+        <dt class="pt-2 text-sm font-medium text-gray-500">
             {props.title}
         </dt>
         <dd class="mt-1 mb-2 text-3xl font-semibold text-gray-900">
