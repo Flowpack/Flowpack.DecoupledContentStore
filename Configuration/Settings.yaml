@@ -42,6 +42,16 @@ Flowpack:
       # If "FALSE", the blacklisting is disabled.
       urlExcludelistRegex: false
 
+      # If a node has to be rendered more than once within the same content release, its content cache entries are
+      # flushed before the retry.
+      #
+      # Without this, a retry can be served completely from the content cache - and then CacheUrlMappingAspect never
+      # writes the "doc--..." mapping entry the NodeRenderOrchestrator is waiting for. The result is a content release
+      # which re-schedules the very same nodes until the retry limit is reached, without any rendering error.
+      #
+      # Set to `false` to get the old behaviour back.
+      flushDocumentCacheOnRetry: true
+
       # Set to `true` to render relative resource URIs
       useRelativeResourceUris: false
 
@@ -130,6 +140,11 @@ Flowpack:
         isRequired: false
       renderingJobQueue:
         redisKeyPostfix: 'renderingJobQueue'
+        transfer: false
+        transferMode: 'dump'
+        isRequired: false
+      renderAttempts:
+        redisKeyPostfix: 'renderAttempts'
         transfer: false
         transferMode: 'dump'
         isRequired: false

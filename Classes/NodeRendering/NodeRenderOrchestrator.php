@@ -5,22 +5,22 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
+use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingTimeStatisticsStore;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingIterationCompletedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
-use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
-use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
 
 /**
  * TODO: explain concept of Working Set
@@ -98,6 +98,13 @@ class NodeRenderOrchestrator
     private const EXIT_ERRORSTATUSCODE_RENDERING_ERRORS = 4;
 
     /**
+     * How often the very same set of nodes may be scheduled in a row before we give up on them. The rendering gets
+     * one real retry (which flushes the content cache for these nodes, {@see NodeRenderer::flushContentCacheForNode()})
+     * before this kicks in.
+     */
+    private const MAX_ITERATIONS_WITHOUT_PROGRESS = 3;
+
+    /**
      * !!! You need to wrap this in the {@see InterruptibleProcessRuntime} so that it works correctly.
      *
      * @param ContentReleaseIdentifier $contentReleaseIdentifier
@@ -129,6 +136,9 @@ class NodeRenderOrchestrator
         }
 
         $currentEnumeration = $this->redisEnumerationRepository->findAll($contentReleaseIdentifier);
+
+        $previouslyScheduledNodes = null;
+        $identicalIterationCount = 0;
 
         $i = 0;
         do {
@@ -180,6 +190,45 @@ class NodeRenderOrchestrator
 
                 // Exit successfully.
                 yield ExitEvent::createWithStatusCode(0);
+                return;
+            }
+
+            // If an iteration schedules exactly the same nodes as the previous one, the renderings did not get us any
+            // closer to a complete content release. Retrying this until the retry limit is reached only wastes time -
+            // and (because no exception happened) leaves no trace anywhere. So we register a rendering error naming
+            // these nodes, which makes them visible in the Backend UI.
+            $scheduledNodes = array_map(fn(EnumeratedNode $enumeratedNode) => json_encode($enumeratedNode),
+                $nodesScheduledForRendering);
+            sort($scheduledNodes);
+            $identicalIterationCount = $scheduledNodes === $previouslyScheduledNodes ? $identicalIterationCount + 1 : 1;
+            $previouslyScheduledNodes = $scheduledNodes;
+
+            if ($identicalIterationCount >= self::MAX_ITERATIONS_WITHOUT_PROGRESS) {
+                foreach ($nodesScheduledForRendering as $enumeratedNode) {
+                    $this->redisRenderingErrorManager->registerRenderingError(
+                        $contentReleaseIdentifier,
+                        ['node' => $enumeratedNode->debugString()],
+                        new \Exception(
+                            sprintf(
+                                'This node was scheduled for rendering %d times in a row without ever becoming complete in the content cache. Check the render worker logs for this node - most likely no "doc--..." mapping entry is written for it.',
+                                self::MAX_ITERATIONS_WITHOUT_PROGRESS
+                            )
+                        )
+                    );
+                }
+                $this->redisContentReleaseService->setContentReleaseMetadata(
+                    $contentReleaseIdentifier,
+                    $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()),
+                    RedisInstanceIdentifier::primary()
+                );
+                $contentReleaseLogger->error(
+                    sprintf(
+                        'The same %d nodes were scheduled for rendering %d iterations in a row without any progress. EXITING now.',
+                        count($nodesScheduledForRendering),
+                        self::MAX_ITERATIONS_WITHOUT_PROGRESS
+                    )
+                );
+                yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RENDERING_ERRORS);
                 return;
             }
 

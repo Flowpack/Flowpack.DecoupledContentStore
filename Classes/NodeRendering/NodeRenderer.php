@@ -6,26 +6,26 @@ namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Exception\RenderingException;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
+use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\DocumentRenderedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
-use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
-use Neos\ContentRepository\Domain\Factory\NodeFactory;
-use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
-use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Exception\RenderingException;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
-use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
-use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
-use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQueue;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
+use Neos\Fusion\Core\Cache\ContentCache;
 use Neos\Neos\Domain\Repository\SiteRepository;
+use Neos\Neos\Fusion\Helper\CachingHelper;
 
 /**
  * Not called directly, but through Scripts/renderWorker.sh.
@@ -60,6 +60,24 @@ class NodeRenderer
      * @var DocumentRenderer
      */
     protected $documentRenderer;
+
+    /**
+     * @Flow\Inject
+     * @var ContentCache
+     */
+    protected $contentCache;
+
+    /**
+     * @Flow\Inject
+     * @var CachingHelper
+     */
+    protected $cachingHelper;
+
+    /**
+     * @Flow\InjectConfiguration("nodeRendering.flushDocumentCacheOnRetry")
+     * @var bool
+     */
+    protected $flushDocumentCacheOnRetry;
 
     /**
      * @Flow\Inject
@@ -140,8 +158,18 @@ class NodeRenderer
                 continue;
             }
 
+            $renderingAttempt = $this->redisRenderingQueue->registerRenderingAttempt(
+                $contentReleaseIdentifier,
+                $enumeratedNode
+            );
+
             try {
-                $this->renderDocumentNodeVariant($enumeratedNode, $contentReleaseIdentifier, $contentReleaseLogger);
+                $this->renderDocumentNodeVariant(
+                    $enumeratedNode,
+                    $contentReleaseIdentifier,
+                    $contentReleaseLogger,
+                    $renderingAttempt
+                );
                 // BUGFIX: Because rendering a document node can update Thumbnails and their connected Persistent Resource
                 // objects (= Doctrine Entities), we need to *persist* these changes. Otherwise, we will have broken
                 // images, which will re-appear once you open the page in the backend (because image URL generation
@@ -188,8 +216,14 @@ class NodeRenderer
      * @param string $contextPath
      * @param array $arguments Request arguments when rendering the node
      * @param integer $releaseIdentifier
+     * @param int $renderingAttempt Number of the current attempt for this node within this content release (1 = first attempt)
      */
-    protected function renderDocumentNodeVariant(EnumeratedNode $enumeratedNode, ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger)
+    protected function renderDocumentNodeVariant(
+        EnumeratedNode $enumeratedNode,
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        ContentReleaseLogger $contentReleaseLogger,
+        int $renderingAttempt = 1
+    )
     {
         $nodeWasFound = false;
         try {
@@ -200,6 +234,10 @@ class NodeRenderer
                 $nodeWasFound = false;
             } else {
                 $nodeWasFound = true;
+
+                if ($renderingAttempt > 1) {
+                    $this->flushContentCacheForNode($node, $enumeratedNode, $renderingAttempt, $contentReleaseLogger);
+                }
 
                 $contentReleaseLogger->debug('Rendering document node variant', [
                     'node' => $node->getContextPath(),
@@ -246,6 +284,44 @@ class NodeRenderer
             $this->redisRenderingErrorManager->registerRenderingError($contentReleaseIdentifier, ['node' => $enumeratedNode->debugString()], new \Exception('We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error'));
             $this->contentReleaseManager->startIncrementalContentRelease();
         }
+    }
+
+    /**
+     * A node is handed out for rendering more than once if the previous rendering did not produce a complete content
+     * cache entry for it - see {@see NodeRenderOrchestrator}.
+     *
+     * Simply rendering it again does not necessarily help: if the document's cache entries are still valid, the
+     * rendering is served straight from the content cache. In that case Fusion never processes a document-level cache
+     * segment, so {@see CacheUrlMappingAspect} does not write the "doc--..." mapping entry which the orchestrator is
+     * waiting for - and the node is scheduled again, and again, until the retry limit aborts the whole release.
+     *
+     * Flushing the node's cache entries before the retry turns the re-rendering into a real rendering again.
+     */
+    private function flushContentCacheForNode(
+        NodeInterface $node,
+        EnumeratedNode $enumeratedNode,
+        int $renderingAttempt,
+        ContentReleaseLogger $contentReleaseLogger
+    ): void {
+        if (!$this->flushDocumentCacheOnRetry) {
+            return;
+        }
+
+        $flushedEntriesCount = 0;
+        foreach ($this->cachingHelper->nodeTag($node) as $tag) {
+            $flushedEntriesCount += $this->contentCache->flushByTag($tag);
+        }
+
+        $contentReleaseLogger->warn(
+            sprintf(
+                'Rendering attempt %d for this node; flushed %d content cache entries before re-rendering it.',
+                $renderingAttempt,
+                $flushedEntriesCount
+            ),
+            [
+                'node' => $enumeratedNode->debugString(),
+            ]
+        );
     }
 
     /**

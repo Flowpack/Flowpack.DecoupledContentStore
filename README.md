@@ -98,6 +98,14 @@ The following flow chart shows the rendering pipeline for creating a content rel
   successfully work, because an editor has changed pages at the same time; leading to content cache flushes and
   "holes" in the output.
 
+  From the second attempt on, the renderer **flushes the document's content cache entries** (by node tag) before
+  re-rendering it. Without this, a retry can be answered completely from the content cache - then no document-level
+  cache segment is processed, `CacheUrlMappingAspect` writes no `doc--...` mapping entry, and the orchestrator
+  schedules the very same node again in the next iteration. Can be turned off via the setting
+  `nodeRendering.flushDocumentCacheOnRetry`. If the identical set of nodes is scheduled three iterations in a row,
+  the orchestrator gives up early and registers a rendering error per node instead of running into the
+  10-attempt limit.
+
 - During **validation**, checks can happen to see whether the content release is fully complete; to check whether
   it really can go online.
 
@@ -525,6 +533,26 @@ CacheUrlMappingAspect - * NOTE: This aspect is NOT active during interactive pag
 
 If you need to debug single steps of the pipeline just run the corresponding commands from CLI, 
 e.g. `./flow nodeEnumeration:enumerateAllNodes {{ .contentReleaseId }}`.
+
+#### The orchestrator schedules the same nodes over and over again
+
+Symptom: `Scheduling rendering for Node, as it was not found or its content is incomplete: No Redis Key "doc--..."
+found.` for the same nodes in every iteration, and the release finally exits with code 3
+(`FAILED to build a complete content release after 10 rendering attempts`).
+
+`doc--<nodeId>-<dimensions>-<arguments>` is not content - it is the URL → root cache identifier mapping, written by
+`CacheUrlMappingAspect` *after* the document's content cache entries were stored. So anything interrupting a
+rendering between those two steps leaves content cache entries behind without a mapping entry, and a node in that
+state used to be unrecoverable: the re-render was served from the content cache, so the mapping entry was never
+written again.
+
+That case is self-healing now (see *Approach to Rendering* above), and both the aspect (`No "doc--..." mapping entry
+was written for this rendering`) and the orchestrator (rendering error per node, visible in the backend module) say
+so out loud. If you hit it on an older version, flush the affected documents from the Neos content cache
+(`./flow flow:cache:flushOne Neos_Fusion_Content` flushes all of it) and start a new content release.
+
+The orchestrator's exit codes: `1` release already completed, `2` empty enumeration, `3` retry limit reached,
+`4` rendering errors.
 
 ### Testing the Rendering
 
