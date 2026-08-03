@@ -261,7 +261,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Total Content Release Size">
-                    TODO
+                    {detailsData.contentReleaseSize ? detailsData.contentReleaseSize + " MB" : "-"}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>

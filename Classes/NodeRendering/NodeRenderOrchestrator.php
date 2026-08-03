@@ -8,6 +8,7 @@ use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisContentReleaseSizeService;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
@@ -91,6 +92,12 @@ class NodeRenderOrchestrator
      * @var ConcurrentBuildLockService
      */
     protected $concurrentBuildLockService;
+
+    /**
+     * @Flow\Inject
+     * @var RedisContentReleaseSizeService
+     */
+    protected $redisContentReleaseSizeService;
 
     private const EXIT_ERRORSTATUSCODE_RELEASE_ALREADY_COMPLETED = 1;
     private const EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION = 2;
@@ -185,8 +192,13 @@ class NodeRenderOrchestrator
                 // we have NO nodes scheduled for rendering anymore, so that means we FINISHED successfully.
                 $contentReleaseLogger->info(sprintf('Everything rendered completely in %d seconds. Finishing RenderOrchestrator',  time() - $startTime));
 
+                // The release is complete now, so this is the point where we can determine its size once. Calculating
+                // it is expensive, which is why the Backend UI relies on this stored value instead of re-calculating it.
+                $contentReleaseSize = $this->redisContentReleaseSizeService->calculateReleaseSize(RedisInstanceIdentifier::primary(), $contentReleaseIdentifier);
+                $contentReleaseLogger->info(sprintf('Content release size: %.2f MB', $contentReleaseSize));
+
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable()), RedisInstanceIdentifier::primary());
+                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable())->withContentReleaseSize($contentReleaseSize), RedisInstanceIdentifier::primary());
 
                 // Exit successfully.
                 yield ExitEvent::createWithStatusCode(0);

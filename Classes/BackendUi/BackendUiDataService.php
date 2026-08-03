@@ -9,7 +9,6 @@ use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -61,12 +60,6 @@ class BackendUiDataService
      */
     protected $redisReleaseSwitchService;
 
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
-
     public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier)
     {
         $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier);
@@ -97,27 +90,11 @@ class BackendUiDataService
                     / $lastRendering->getTotalJobs() * 100) : 100,
                 $firstRendering->getRenderedJobs(),
                 $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier)),
-                $this->calculateReleaseSize($redisInstanceIdentifier, $contentReleaseId)
+                $metadataForContentRelease instanceof ContentReleaseMetadata ? $metadataForContentRelease->getContentReleaseSize() : null
             );
         }
 
         return $result;
-    }
-
-    private function calculateReleaseSize(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier $contentReleaseIdentifier)
-    {
-        $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
-        $allKeys = $redis->keys('contentStore:' . $contentReleaseIdentifier->getIdentifier() . ':*');
-        $size = 0;
-
-        foreach ($allKeys as $key) {
-            // We need to set the `samples` option to 0 here, as the default value is 5 and specifies the number of
-            // sampled nested values. With 0 all nested values are sampled.
-            $size += $redis->rawCommand('memory', 'usage', $key, 'samples', '0');
-        }
-
-        // bytes are returned, convert to megabytes
-        return round($size / 1000000, 2);
     }
 
     public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ?ContentReleaseDetails
@@ -149,7 +126,8 @@ class BackendUiDataService
             $renderingStatistics,
             $renderingErrorCount,
             $contentReleaseIdentifier->equals($currentReleaseIdentifier),
-            $manualTransferJobs
+            $manualTransferJobs,
+            $contentReleaseMetadata->getContentReleaseSize()
         );
     }
 }
