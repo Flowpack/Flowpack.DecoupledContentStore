@@ -60,7 +60,9 @@ class RenderingErrorExtractor
         // noise levels.
         $kept = [];
         foreach (explode("\n", $log) as $line) {
-            if (preg_match('/^\s*(?:\[[^]]+]\s*)?(?:INFO|DEBUG|NOTICE|WARN(?:ING)?)\b/', $line)) {
+            // Bracketed sections in front of the level: the timestamp, and for render workers
+            // additionally "[Renderer X]".
+            if (preg_match('/^\s*(?:\[[^]]+]\s*)*(?:INFO|DEBUG|NOTICE|WARN(?:ING)?)\b/', $line)) {
                 continue;
             }
             if (preg_match('/Restarting render worker\.?/', $line)) {

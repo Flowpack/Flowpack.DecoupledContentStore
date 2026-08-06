@@ -75,12 +75,21 @@ class ContentReleaseLogger
     protected function logToOutput(string $level, string $message, array $additionalPayload = []): void
     {
         $formattedPayload = $additionalPayload ? ' ' . json_encode($additionalPayload) : '';
-        $this->output->writeln($this->logPrefix . $level . ': ' . $message . $formattedPayload);
+        $this->output->writeln($this->timePrefix() . $this->logPrefix . $level . ': ' . $message . $formattedPayload);
     }
 
     public function logException(\Exception $exception, string $message, array $additionalPayload)
     {
-        $this->output->writeln($this->logPrefix . $message . "\n\n" . $exception->getMessage() . "\n\n" . $exception->getTraceAsString() . "\n\n" . json_encode($additionalPayload));
+        $this->output->writeln($this->timePrefix() . $this->logPrefix . $message . "\n\n" . $exception->getMessage() . "\n\n" . $exception->getTraceAsString() . "\n\n" . json_encode($additionalPayload));
+    }
+
+    /**
+     * Every log line carries the wall-clock time it was written, so that a pipeline task which looks
+     * stuck in the UI can be told apart from one which is simply slow (compare the last line's time).
+     */
+    protected function timePrefix(): string
+    {
+        return '[' . date('H:i:s') . '] ';
     }
 
     public function logStatisticsEvent(string $event, array $additionalPayload = [])
