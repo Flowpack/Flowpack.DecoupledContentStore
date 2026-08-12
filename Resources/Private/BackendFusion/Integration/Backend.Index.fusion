@@ -90,20 +90,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                             <span class="neos-badge neos-badge-info">{storeSize}</span>
                         </div>
 
-                        <div style="margin-top: 5rem; display: flex; gap: 1rem;">
-                          <button form="postHelper" formaction={props._publishAllWithoutValidationUri} type="submit" class="neos-button neos-button-danger">
-                              Publish all without validation
-                          </button>
-                          <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning">
-                              Prune content store
-                          </button>
-                          <button form="postHelper" formaction={props._cancelRunningReleaseUri} type="submit" class="neos-button neos-button-warning">
-                              Cancel running release
-                          </button>
-                          <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpoch} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
-                              {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
-                          </button>
-                        </div>
+                        <Flowpack.DecoupledContentStore:ContentStoreActions />
                     </div>
                 </div>
             </div>
