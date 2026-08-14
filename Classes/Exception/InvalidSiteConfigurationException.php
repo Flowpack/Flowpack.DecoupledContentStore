@@ -1,6 +1,11 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Exception;
 
-class InvalidSiteConfigurationException extends \Flowpack\DecoupledContentStore\Exception
+use Flowpack\DecoupledContentStore\Exception;
+
+class InvalidSiteConfigurationException extends Exception
 {
 }

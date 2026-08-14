@@ -63,17 +63,36 @@ class BackendUiDataService
     public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier)
     {
         $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier);
-        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases($redisInstanceIdentifier, ...$contentReleaseIds);
+        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(
+            $redisInstanceIdentifier,
+            ...$contentReleaseIds
+        );
         $counts = $this->redisEnumerationRepository->countMultiple($redisInstanceIdentifier, ...$contentReleaseIds);
-        $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics($redisInstanceIdentifier, ...$contentReleaseIds);
-        $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors($redisInstanceIdentifier, ...$contentReleaseIds);
-        $lastRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry($redisInstanceIdentifier, ...$contentReleaseIds);
-        $firstRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getFirstRenderingStatisticsEntry($redisInstanceIdentifier, ...$contentReleaseIds);
+        $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics(
+            $redisInstanceIdentifier,
+            ...$contentReleaseIds
+        );
+        $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors(
+            $redisInstanceIdentifier,
+            ...$contentReleaseIds
+        );
+        $lastRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry(
+            $redisInstanceIdentifier,
+            ...$contentReleaseIds
+        );
+        $firstRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getFirstRenderingStatisticsEntry(
+            $redisInstanceIdentifier,
+            ...$contentReleaseIds
+        );
 
         $result = [];
         foreach ($contentReleaseIds as $contentReleaseId) {
-            $lastRendering = RenderingStatistics::fromJsonString($lastRenderingStatisticsEntries->getResultForContentRelease($contentReleaseId));
-            $firstRendering = RenderingStatistics::fromJsonString($firstRenderingStatisticsEntries->getResultForContentRelease($contentReleaseId));
+            $lastRendering = RenderingStatistics::fromJsonString($lastRenderingStatisticsEntries->getResultForContentRelease(
+                $contentReleaseId
+            ));
+            $firstRendering = RenderingStatistics::fromJsonString($firstRenderingStatisticsEntries->getResultForContentRelease(
+                $contentReleaseId
+            ));
 
             $metadataForContentRelease = $metadata->getResultForContentRelease($contentReleaseId);
             $countForContentRelease = $counts->getResultForContentRelease($contentReleaseId);
@@ -86,36 +105,59 @@ class BackendUiDataService
                 is_int($countForContentRelease) ? $countForContentRelease : 0,
                 is_int($iterationsCountForContentRelease) ? $iterationsCountForContentRelease : 0,
                 is_int($errorCountForContentRelease) ? $errorCountForContentRelease : 0,
-                $lastRendering->getTotalJobs() > 0 ? round($lastRendering->getRenderedJobs()
-                    / $lastRendering->getTotalJobs() * 100) : 100,
+                $lastRendering->getTotalJobs() > 0
+                    ? round(( $lastRendering->getRenderedJobs() / $lastRendering->getTotalJobs() ) * 100)
+                    : 100,
                 $firstRendering->getRenderedJobs(),
-                $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier)),
-                $metadataForContentRelease instanceof ContentReleaseMetadata ? $metadataForContentRelease->getContentReleaseSize() : null
+                $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease(
+                    $redisInstanceIdentifier
+                )),
+                $metadataForContentRelease instanceof ContentReleaseMetadata
+                    ? $metadataForContentRelease->getContentReleaseSize()
+                    : null
             );
         }
 
         return $result;
     }
 
-    public function loadDetailsData(ContentReleaseIdentifier $contentReleaseIdentifier, RedisInstanceIdentifier $redisInstanceIdentifier): ?ContentReleaseDetails
-    {
-        $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier, $redisInstanceIdentifier);
+    public function loadDetailsData(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        RedisInstanceIdentifier $redisInstanceIdentifier
+    ): ?ContentReleaseDetails {
+        $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease(
+            $contentReleaseIdentifier,
+            $redisInstanceIdentifier
+        );
 
         if (!$contentReleaseMetadata) {
             return null;
         }
 
-        $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->getPrunnerJobId()->toJobId());
+        $contentReleaseJob = $this->prunnerApiService->loadJobDetail(
+            $contentReleaseMetadata->getPrunnerJobId()->toJobId()
+        );
 
-        $manualTransferJobs = count($contentReleaseMetadata->getManualTransferJobIds()) ? array_map(function (PrunnerJobId $item) {
-            return $this->prunnerApiService->loadJobDetail($item->toJobId());
-        }, $contentReleaseMetadata->getManualTransferJobIds()) : [];
+        $manualTransferJobs = count($contentReleaseMetadata->getManualTransferJobIds())
+            ? array_map(function (PrunnerJobId $item) {
+                return $this->prunnerApiService->loadJobDetail($item->toJobId());
+            }, $contentReleaseMetadata->getManualTransferJobIds())
+            : [];
 
-        $renderingStatistics = array_map(function(string $item) {
-            return RenderingStatistics::fromJsonString($item);
-        }, $this->redisRenderingStatisticsStore->getRenderingStatistics($contentReleaseIdentifier, $redisInstanceIdentifier));
+        $renderingStatistics = array_map(
+            function (string $item) {
+                return RenderingStatistics::fromJsonString($item);
+            },
+            $this->redisRenderingStatisticsStore->getRenderingStatistics(
+                $contentReleaseIdentifier,
+                $redisInstanceIdentifier
+            )
+        );
 
-        $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier, $redisInstanceIdentifier));
+        $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors(
+            $contentReleaseIdentifier,
+            $redisInstanceIdentifier
+        ));
 
         $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier);
 

@@ -1,9 +1,11 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
 class ExtractedExceptionDto
 {
-
     /**
      * @var string
      */
@@ -52,7 +54,10 @@ class ExtractedExceptionDto
 
     public function __toString()
     {
-        return $this->getMessage() . (!empty($this->getStackTrace()) ? "\n{$this->getStackTrace()}" : '') . (!empty($this->getReferenceCode()) ? "\n(reference code {$this->getReferenceCode()})" : '');
+        return (
+            $this->getMessage()
+            . ( !empty($this->getStackTrace()) ? "\n{$this->getStackTrace()}" : '' )
+            . ( !empty($this->getReferenceCode()) ? "\n(reference code {$this->getReferenceCode()})" : '' )
+        );
     }
-
 }

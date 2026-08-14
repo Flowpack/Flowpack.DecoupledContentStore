@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Transfer\Resource\Target;
 
 use Neos\Flow\ResourceManagement\ResourceManager;
@@ -7,7 +9,6 @@ use Neos\Flow\ResourceManagement\Target\FileSystemSymlinkTarget;
 
 class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
 {
-
     /**
      * @var string
      */
@@ -22,8 +23,10 @@ class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
      * @param string $baseUri
      * @throws \Neos\Utility\Exception\PropertyNotAccessibleException
      */
-    public static function injectBaseUriIntoRelevantResourcePublishingTargets(string $baseUri, ResourceManager $resourceManager)
-    {
+    public static function injectBaseUriIntoRelevantResourcePublishingTargets(
+        string $baseUri,
+        ResourceManager $resourceManager
+    ) {
         // Make sure the base URI ends with a slash
         $baseUri = rtrim($baseUri, '/') . '/';
 
@@ -55,5 +58,4 @@ class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
     {
         $this->overrideHttpBaseUri = $overrideHttpBaseUri;
     }
-
 }

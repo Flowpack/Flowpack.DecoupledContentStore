@@ -35,7 +35,10 @@ class NodeRenderingCommandController extends CommandController
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
-        InterruptibleProcessRuntime::create($this->nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $logger))->runUntilEnd();
+        InterruptibleProcessRuntime::create($this->nodeRenderOrchestrator->renderContentRelease(
+            $contentReleaseIdentifier,
+            $logger
+        ))->runUntilEnd();
     }
 
     public function renderWorkerCommand(string $contentReleaseIdentifier, string $rendererIdentifier)
@@ -44,6 +47,10 @@ class NodeRenderingCommandController extends CommandController
         $rendererIdentifier = RendererIdentifier::fromString($rendererIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
-        InterruptibleProcessRuntime::create($this->nodeRenderer->render($contentReleaseIdentifier, $logger, $rendererIdentifier))->runUntilEnd();
+        InterruptibleProcessRuntime::create($this->nodeRenderer->render(
+            $contentReleaseIdentifier,
+            $logger,
+            $rendererIdentifier
+        ))->runUntilEnd();
     }
 }

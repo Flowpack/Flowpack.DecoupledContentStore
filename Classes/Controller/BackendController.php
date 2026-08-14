@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Controller;
 
 use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
@@ -22,7 +25,6 @@ use Symfony\Component\Console\Output\BufferedOutput;
 
 class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 {
-
     /**
      * @Flow\Inject
      * @var PrunnerApiService
@@ -99,7 +101,9 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 
     public function indexAction(?string $contentStore = null)
     {
-        $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
+        $contentStore = $contentStore
+            ? RedisInstanceIdentifier::fromString($contentStore)
+            : RedisInstanceIdentifier::primary();
         $redis = $this->redisClientManager->getRedis($contentStore);
         $storeSize = $redis->info('memory')['used_memory_human'];
         $currentConfigEpoch = $this->configEpochSettings['current'] ?? null;
@@ -112,14 +116,24 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->view->assign('redisContentStores', array_keys($this->redisContentStores));
         $this->view->assign('storeSize', $storeSize);
         $this->view->assign('toggleFromConfigEpoch', $configEpochRedis);
-        $this->view->assign('toggleToConfigEpoch', $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch);
+        $this->view->assign(
+            'toggleToConfigEpoch',
+            $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch
+        );
         $this->view->assign('showToggleConfigEpochButton', $showToggleConfigEpochButton);
     }
 
-    public function detailsAction(string $contentReleaseIdentifier, ?string $contentStore = null, ?string $detailTaskName = '', ?string $prunnerJobId = '', bool $showAllRenderingErrors = false)
-    {
+    public function detailsAction(
+        string $contentReleaseIdentifier,
+        ?string $contentStore = null,
+        ?string $detailTaskName = '',
+        ?string $prunnerJobId = '',
+        bool $showAllRenderingErrors = false
+    ) {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
-        $contentStore = $contentStore ? RedisInstanceIdentifier::fromString($contentStore) : RedisInstanceIdentifier::primary();
+        $contentStore = $contentStore
+            ? RedisInstanceIdentifier::fromString($contentStore)
+            : RedisInstanceIdentifier::primary();
 
         $this->view->assign('contentReleaseIdentifier', $contentReleaseIdentifier);
         $this->view->assign('contentStore', $contentStore->getIdentifier());
@@ -131,12 +145,14 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
 
         if ($detailTaskName !== '') {
             $this->view->assign('detailTaskName', $detailTaskName);
-            $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs($prunnerJobId ? PrunnerJobId::fromString($prunnerJobId)->toJobId() : $detailsData->getJob()->getId(), $detailTaskName));
+            $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs(
+                $prunnerJobId ? PrunnerJobId::fromString($prunnerJobId)->toJobId() : $detailsData->getJob()->getId(),
+                $detailTaskName
+            ));
         } elseif ($showAllRenderingErrors && $detailsData->getJob() !== null) {
             $this->view->assign('workerErrorLogs', $this->workerErrorLogAggregator->aggregate($detailsData->getJob()));
         }
     }
-
 
     public function publishAllAction()
     {
@@ -160,12 +176,18 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         }
 
         $contentReleaseIdentifierToRemove = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
-        $redisInstanceIdentifier = $redisInstanceIdentifier ? RedisInstanceIdentifier::fromString($redisInstanceIdentifier) : RedisInstanceIdentifier::primary();
+        $redisInstanceIdentifier = $redisInstanceIdentifier
+            ? RedisInstanceIdentifier::fromString($redisInstanceIdentifier)
+            : RedisInstanceIdentifier::primary();
 
         $bufferedOutput = new BufferedOutput();
         $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifierToRemove);
 
-        $this->contentReleaseCleaner->removeRelease($contentReleaseIdentifierToRemove, $redisInstanceIdentifier, $logger);
+        $this->contentReleaseCleaner->removeRelease(
+            $contentReleaseIdentifierToRemove,
+            $redisInstanceIdentifier,
+            $logger
+        );
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
@@ -178,23 +200,34 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         }
 
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
-        $redisInstanceIdentifier = $redisInstanceIdentifier ? RedisInstanceIdentifier::fromString($redisInstanceIdentifier) : RedisInstanceIdentifier::primary();
+        $redisInstanceIdentifier = $redisInstanceIdentifier
+            ? RedisInstanceIdentifier::fromString($redisInstanceIdentifier)
+            : RedisInstanceIdentifier::primary();
 
         $bufferedOutput = new BufferedOutput();
         $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
 
-        $this->redisReleaseSwitchService->switchContentRelease($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
+        $this->redisReleaseSwitchService->switchContentRelease(
+            $redisInstanceIdentifier,
+            $contentReleaseIdentifier,
+            $logger
+        );
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
 
-    public function switchContentReleaseOnOtherInstanceAction(string $targetRedisInstanceIdentifier, string $contentReleaseIdentifier)
-    {
+    public function switchContentReleaseOnOtherInstanceAction(
+        string $targetRedisInstanceIdentifier,
+        string $contentReleaseIdentifier
+    ) {
         $redis = $this->redisClientManager->getPrimaryRedis();
         $currentContentReleaseId = $redis->get('contentStore:current');
 
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('manually_transfer_content_release'),
-            ['contentReleaseId' => $contentReleaseIdentifier, 'currentContentReleaseId' => $currentContentReleaseId ?: ContentReleaseManager::NO_PREVIOUS_RELEASE, 'redisInstanceId' => $targetRedisInstanceIdentifier]);
+        $this->prunnerApiService->schedulePipeline(PipelineName::create('manually_transfer_content_release'), [
+            'contentReleaseId' => $contentReleaseIdentifier,
+            'currentContentReleaseId' => $currentContentReleaseId ?: ContentReleaseManager::NO_PREVIOUS_RELEASE,
+            'redisInstanceId' => $targetRedisInstanceIdentifier
+        ]);
 
         $this->redirect('index', null, null, ['contentStore' => $targetRedisInstanceIdentifier]);
     }

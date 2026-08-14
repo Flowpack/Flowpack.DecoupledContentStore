@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
-use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentRendererInterface;
 use GuzzleHttp\Psr7\ServerRequest;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Http\BaseUriProvider;
 use Neos\Flow\Http\Helper\RequestInformationHelper;
@@ -57,19 +57,41 @@ final class NodeRenderingUriService
         /** @var Site $currentSite */
         $currentSite = $node->getContext()->getCurrentSite();
         if (!$currentSite->hasActiveDomains()) {
-            throw new Exception(sprintf("Site %s has no active domain", $currentSite->getNodeName()), 1666684522);
+            throw new Exception(sprintf('Site %s has no active domain', $currentSite->getNodeName()), 1666684522);
         }
         $primaryDomain = $currentSite->getPrimaryDomain();
-        if ((string)$primaryDomain->getScheme() === '') {
-            throw new Exception(sprintf("Domain %s for site %s has no scheme defined", $primaryDomain->getHostname(), $currentSite->getNodeName()), 1666684523);
+        if ((string) $primaryDomain->getScheme() === '') {
+            throw new Exception(
+                sprintf(
+                    'Domain %s for site %s has no scheme defined',
+                    $primaryDomain->getHostname(),
+                    $currentSite->getNodeName()
+                ),
+                1666684523
+            );
         }
 
         // HINT: We cannot use a static URL here, but instead need to use an URL of the current site.
         // This is changed from the the old behavior, where we have changed the LinkingService in LinkingServiceAspect,
         // to properly generate the domain part of the routes - and this relies on the proper ControllerContext URI path.
-        $baseControllerContext = $this->buildControllerContextAndSetBaseUri($primaryDomain->__toString(), $node, $arguments);
+        $baseControllerContext = $this->buildControllerContextAndSetBaseUri(
+            $primaryDomain->__toString(),
+            $node,
+            $arguments
+        );
         $format = $arguments['@format'] ?? 'html';
-        $uri = $this->linkingService->createNodeUri($baseControllerContext, $node, null, $format, true, $arguments, '', false, [], false);
+        $uri = $this->linkingService->createNodeUri(
+            $baseControllerContext,
+            $node,
+            null,
+            $format,
+            true,
+            $arguments,
+            '',
+            false,
+            [],
+            false
+        );
         return self::removeQueryPartFromUri($uri);
     }
 
@@ -95,25 +117,18 @@ final class NodeRenderingUriService
         $this->securityContext->setRequest($request);
         $uriBuilder = $this->uriBuilderForRequest($request);
 
-        return new ControllerContext(
-            $request,
-            new ActionResponse(),
-            new Arguments([]),
-            $uriBuilder
-        );
+        return new ControllerContext($request, new ActionResponse(), new Arguments([]), $uriBuilder);
     }
 
-    /**
-     * @param string $uri
-     * @param NodeInterface $node
-     * @return ActionRequest
-     */
-    protected function buildFakeRequest($uri, NodeInterface $node): ActionRequest
+    private function buildFakeRequest(string $uri, NodeInterface $node): ActionRequest
     {
         $_SERVER['FLOW_REWRITEURLS'] = '1';
 
         $httpRequest = new ServerRequest('GET', $uri);
-        $routingParameters = RouteParameters::createEmpty()->withParameter('requestUriHost', $httpRequest->getUri()->getHost());
+        $routingParameters = RouteParameters::createEmpty()->withParameter(
+            'requestUriHost',
+            $httpRequest->getUri()->getHost()
+        );
         $httpRequest = $httpRequest->withAttribute(ServerRequestAttributes::ROUTING_PARAMETERS, $routingParameters);
 
         $request = ActionRequest::fromHttpRequest($httpRequest);
@@ -125,13 +140,12 @@ final class NodeRenderingUriService
         return $request;
     }
 
-
     /**
      * @param ActionRequest $request
      * @return UriBuilder
      * @throws \Neos\Utility\Exception\PropertyNotAccessibleException
      */
-    protected function uriBuilderForRequest(ActionRequest $request): UriBuilder
+    private function uriBuilderForRequest(ActionRequest $request): UriBuilder
     {
         $uriBuilder = new UriBuilder();
         $uriBuilder->setRequest($request);
@@ -144,12 +158,7 @@ final class NodeRenderingUriService
         return $uriBuilder;
     }
 
-
-    /**
-     * @param string $uri
-     * @return string
-     */
-    protected static function removeQueryPartFromUri($uri)
+    private static function removeQueryPartFromUri(string $uri): string
     {
         $uriData = explode('?', $uri);
 

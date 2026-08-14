@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility;
@@ -21,5 +22,9 @@ interface DocumentRendererInterface
 {
     public function tryToExtractRenderingForEnumeratedNodeFromContentCache(EnumeratedNode $enumeratedNode): RenderedDocumentFromContentCache;
 
-    public function renderDocumentNodeVariant(NodeInterface $node, EnumeratedNode $enumeratedNode, ContentReleaseLogger $contentReleaseLogger): void;
+    public function renderDocumentNodeVariant(
+        NodeInterface $node,
+        EnumeratedNode $enumeratedNode,
+        ContentReleaseLogger $contentReleaseLogger
+    ): void;
 }

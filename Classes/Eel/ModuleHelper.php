@@ -45,36 +45,51 @@ class ModuleHelper implements ProtectedContextAwareInterface
         $lines = array_reverse(array_filter(preg_split("/\r\n|\n|\r/", $escapedString)));
         $lineCount = count($lines);
 
-        $formattedLines = array_map(static function (string $line, int $index) use ($lineCount) {
-            // Extract additional JSON data
-            preg_match("/\{.*}/", $line, $jsonMatches);
-            $jsonData = array_filter(array_map(static function (string $match) {
-                $matchData = json_decode($match, true);
-                return $matchData['message'] ?? $matchData;
-            }, $jsonMatches));
-            if (count($jsonData) === 1) {
-                $jsonData = array_shift($jsonData);
-            }
+        $formattedLines = array_map(
+            static function (string $line, int $index) use ($lineCount) {
+                // Extract additional JSON data
+                preg_match("/\{.*}/", $line, $jsonMatches);
+                $jsonData = array_filter(array_map(static function (string $match) {
+                    $matchData = json_decode($match, true);
+                    return $matchData['message'] ?? $matchData;
+                }, $jsonMatches));
+                if (count($jsonData) === 1) {
+                    $jsonData = array_shift($jsonData);
+                }
 
-            // Remove additional JSON data from log line
-            $line = preg_replace("/\{.*}/", '', $line);
+                // Remove additional JSON data from log line
+                $line = preg_replace("/\{.*}/", '', $line);
 
-            // Add highlighting for log levels
-            $line = preg_replace("/(DEBUG|WARNING|ERROR|INFO): (.*)/", "<span class=\"log-level-$1\">$1:</span> <span class=\"log-content-$1\">$2</span>", htmlSpecialChars($line));
+                // Add highlighting for log levels
+                $line = preg_replace(
+                    '/(DEBUG|WARNING|ERROR|INFO): (.*)/',
+                    '<span class="log-level-$1">$1:</span> <span class="log-content-$1">$2</span>',
+                    htmlSpecialChars($line)
+                );
 
-            // Add line numbers. The lines are reversed (newest first), so the numbering counts down to 1.
-            $line = ($lineCount - $index + 1) . ': ' . $line;
+                // Add line numbers. The lines are reversed (newest first), so the numbering counts down to 1.
+                $line = ( $lineCount - $index + 1 ) . ': ' . $line;
 
-            // Insert formatted JSON data
-            if ($jsonData) {
-                $isDebug = strpos($line, 'DEBUG:') !== false;
-                $jsonString = "\n<span class=\"json\">" . json_encode($jsonData, JSON_PRETTY_PRINT) . "</span>";
-                $line = $isDebug ? '<details class="json-details">' . '<summary>' . $line . '</summary>' . $jsonString . '</details>' : $line . $jsonString;
-            }
+                // Insert formatted JSON data
+                if ($jsonData) {
+                    $isDebug = strpos($line, 'DEBUG:') !== false;
+                    $jsonString = "\n<span class=\"json\">" . json_encode($jsonData, JSON_PRETTY_PRINT) . '</span>';
+                    $line = $isDebug
+                        ? '<details class="json-details">'
+                        . '<summary>'
+                        . $line
+                        . '</summary>'
+                        . $jsonString
+                        . '</details>'
+                        : $line . $jsonString;
+                }
 
-            // Wrap in <pre> tags
-            return '<pre>' . $line . '</pre>';
-        }, $lines, range(1, $lineCount));
+                // Wrap in <pre> tags
+                return '<pre>' . $line . '</pre>';
+            },
+            $lines,
+            range(1, $lineCount)
+        );
 
         return implode("\n", $formattedLines);
     }

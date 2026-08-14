@@ -9,7 +9,6 @@ use Flowpack\DecoupledContentStore\Core\RedisPruneService;
 use Neos\Flow\Cli\CommandController;
 use Neos\Flow\Annotations as Flow;
 
-
 class ContentStorePruneCommandController extends CommandController
 {
     /**
@@ -24,5 +23,4 @@ class ContentStorePruneCommandController extends CommandController
 
         $this->redisPruneService->pruneRedisInstance($redisInstanceIdentifier);
     }
-
 }

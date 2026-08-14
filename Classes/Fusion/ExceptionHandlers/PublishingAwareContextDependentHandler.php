@@ -1,11 +1,14 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Fusion\ExceptionHandlers;
 
-use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
+use Neos\Flow\Annotations as Flow;
 
-class PublishingAwareContextDependentHandler extends \Neos\Fusion\Core\ExceptionHandlers\ContextDependentHandler {
-
+class PublishingAwareContextDependentHandler extends \Neos\Fusion\Core\ExceptionHandlers\ContextDependentHandler
+{
     /**
      * @Flow\Inject
      * @var DocumentRenderer
@@ -23,5 +26,4 @@ class PublishingAwareContextDependentHandler extends \Neos\Fusion\Core\Exception
             return parent::handle($fusionPath, $exception, $referenceCode);
         }
     }
-
 }

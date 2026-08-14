@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure;
@@ -19,7 +20,6 @@ use Neos\Flow\Annotations as Flow;
  */
 class RedisContentReleaseService
 {
-
     /**
      * @Flow\Inject
      * @var RedisClientManager
@@ -31,22 +31,39 @@ class RedisContentReleaseService
      * @var RedisKeyService
      */
     protected $redisKeyService;
-  
+
     /**
      * @Flow\Inject
      * @var RedisContentReleaseService
      */
     protected $redisContentReleaseService;
 
-    public function createContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger, string $workspaceName = 'live', string $accountId = 'cli'): void
-    {
+    public function createContentRelease(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        PrunnerJobId $prunnerJobId,
+        ContentReleaseLogger $contentReleaseLogger,
+        string $workspaceName = 'live',
+        string $accountId = 'cli'
+    ): void {
         $redis = $this->redisClientManager->getPrimaryRedis();
 
         // Check there is no existing release with the same identifier
-        $existingRelease = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'));
+        $existingRelease = $redis->get($this->redisKeyService->getRedisKeyForPostfix(
+            $contentReleaseIdentifier,
+            'meta:info'
+        ));
         if ($existingRelease) {
-            $contentReleaseLogger->error(sprintf('Content Release "%s" already exists', $contentReleaseIdentifier->getIdentifier()));
-            throw new \RuntimeException(sprintf('Content Release "%s" already exists, cannot create a release with the same identifier', $contentReleaseIdentifier->getIdentifier()), 1689750292);
+            $contentReleaseLogger->error(sprintf(
+                'Content Release "%s" already exists',
+                $contentReleaseIdentifier->getIdentifier()
+            ));
+            throw new \RuntimeException(
+                sprintf(
+                    'Content Release "%s" already exists, cannot create a release with the same identifier',
+                    $contentReleaseIdentifier->getIdentifier()
+                ),
+                1689750292
+            );
         }
 
         $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable(), $workspaceName, $accountId);
@@ -54,28 +71,50 @@ class RedisContentReleaseService
         $redis->multi();
         try {
             $redis->zAdd('contentStore:registeredReleases', 0, $contentReleaseIdentifier->getIdentifier());
-            $redis->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
+            $redis->set(
+                $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'),
+                json_encode($metadata)
+            );
             $redis->exec();
         } catch (\Exception $e) {
             $redis->discard();
             throw $e;
         }
-        $contentReleaseLogger->info(sprintf('Registered Content Release %s', $contentReleaseIdentifier->getIdentifier()), [
-            'metadata' => $metadata
-        ]);
+        $contentReleaseLogger->info(
+            sprintf('Registered Content Release %s', $contentReleaseIdentifier->getIdentifier()),
+            [
+                'metadata' => $metadata
+            ]
+        );
     }
 
-    public function setContentReleaseMetadata(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseMetadata $metadata, RedisInstanceIdentifier $redisInstanceIdentifier): void
-    {
-        $this->redisClientManager->getRedis($redisInstanceIdentifier)->set($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'), json_encode($metadata));
+    public function setContentReleaseMetadata(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        ContentReleaseMetadata $metadata,
+        RedisInstanceIdentifier $redisInstanceIdentifier
+    ): void {
+        $this->redisClientManager->getRedis($redisInstanceIdentifier)->set(
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'),
+            json_encode($metadata)
+        );
     }
 
-    public function registerManualTransferJob(ContentReleaseIdentifier $contentReleaseIdentifier, PrunnerJobId $prunnerJobId, ContentReleaseLogger $contentReleaseLogger): void
-    {
+    public function registerManualTransferJob(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        PrunnerJobId $prunnerJobId,
+        ContentReleaseLogger $contentReleaseLogger
+    ): void {
         $releaseMetadata = $this->fetchMetadataForContentRelease($contentReleaseIdentifier);
-        $this->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withAdditionalManualTransferJobId($prunnerJobId), RedisInstanceIdentifier::primary());
+        $this->setContentReleaseMetadata(
+            $contentReleaseIdentifier,
+            $releaseMetadata->withAdditionalManualTransferJobId($prunnerJobId),
+            RedisInstanceIdentifier::primary()
+        );
 
-        $contentReleaseLogger->info(sprintf('Register new pipeline for release %s', $contentReleaseIdentifier->getIdentifier()));
+        $contentReleaseLogger->info(sprintf(
+            'Register new pipeline for release %s',
+            $contentReleaseIdentifier->getIdentifier()
+        ));
     }
 
     /**
@@ -94,19 +133,26 @@ class RedisContentReleaseService
         return $result;
     }
 
-    public function fetchMetadataForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ?RedisInstanceIdentifier $redisInstanceIdentifier = null): ?ContentReleaseMetadata
-    {
+    public function fetchMetadataForContentRelease(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        ?RedisInstanceIdentifier $redisInstanceIdentifier = null
+    ): ?ContentReleaseMetadata {
         $redisInstanceIdentifier = $redisInstanceIdentifier ?: RedisInstanceIdentifier::primary();
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
-        $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:info'));
+        $metadataEncoded = $redis->get($this->redisKeyService->getRedisKeyForPostfix(
+            $contentReleaseIdentifier,
+            'meta:info'
+        ));
         if (!$metadataEncoded) {
             return null;
         }
         return ContentReleaseMetadata::fromJsonString($metadataEncoded, $contentReleaseIdentifier);
     }
 
-    public function fetchMetadataForContentReleases(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
-    {
+    public function fetchMetadataForContentReleases(
+        RedisInstanceIdentifier $redisInstanceIdentifier,
+        ContentReleaseIdentifier ...$releaseIdentifiers
+    ): ContentReleaseBatchResult {
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         $result = []; // KEY == contentReleaseIdentifier. VALUE == enumerated count
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
@@ -116,10 +162,11 @@ class RedisContentReleaseService
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {
-                $result[(string)$releaseIdentifier] = $res[$i] ? ContentReleaseMetadata::fromJsonString($res[$i], $releaseIdentifier) : null;
+                $result[(string) $releaseIdentifier] = $res[$i]
+                    ? ContentReleaseMetadata::fromJsonString($res[$i], $releaseIdentifier)
+                    : null;
             }
         }
         return ContentReleaseBatchResult::createFromArray($result);
     }
-
 }

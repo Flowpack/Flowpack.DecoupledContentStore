@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
 use Flowpack\DecoupledContentStore\Exception;
@@ -10,7 +12,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class ContentReleaseIdentifier implements \JsonSerializable
 {
-
     private string $identifier;
 
     private function __construct(string $identifier)
@@ -28,7 +29,7 @@ final class ContentReleaseIdentifier implements \JsonSerializable
 
     public static function create(): self
     {
-        return new self("" . time());
+        return new self('' . time());
     }
 
     public function jsonSerialize(): string

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
@@ -27,6 +28,10 @@ class ContentReleaseSwitchCommandController extends CommandController
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
-        $this->redisReleaseSwitchService->switchContentRelease($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
+        $this->redisReleaseSwitchService->switchContentRelease(
+            $redisInstanceIdentifier,
+            $contentReleaseIdentifier,
+            $logger
+        );
     }
 }

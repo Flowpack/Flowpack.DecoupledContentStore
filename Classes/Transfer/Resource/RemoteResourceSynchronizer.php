@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Transfer\Resource;
 
 use AFM\Rsync\Rsync;
@@ -19,9 +22,9 @@ class RemoteResourceSynchronizer
     protected $targets = array();
 
     /**
-     *
+     * @throws Exception
      */
-    public function synchronize(ContentReleaseLogger $logger)
+    public function synchronize(ContentReleaseLogger $logger): void
     {
         if ($this->targets === array()) {
             $logger->debug('Skipping resource synchronization, no targets configured');
@@ -52,12 +55,9 @@ class RemoteResourceSynchronizer
                 if (!isset($targetConfiguration['user'])) {
                     throw new Exception('Missing "user" for resource sync target', 1472126083);
                 }
-                if (!isset($targetConfiguration['user'])) {
-                    throw new Exception('Missing "user" for resource sync target', 1472126084);
-                }
 
                 $port = 22;
-                if (isset($targetConfiguration['port']) && (string)$targetConfiguration['port'] !== '') {
+                if (isset($targetConfiguration['port']) && (string) $targetConfiguration['port'] !== '') {
                     $port = intval($targetConfiguration['port']);
                 }
 
@@ -68,7 +68,12 @@ class RemoteResourceSynchronizer
                     ]);
                 }
 
-                $target = $targetConfiguration['user'] . '@' . $targetConfiguration['host'] . ':' . $targetConfiguration['directory'];
+                $target =
+                    $targetConfiguration['user']
+                    . '@'
+                    . $targetConfiguration['host']
+                    . ':'
+                    . $targetConfiguration['directory'];
             }
 
             // TODO This does not return errors yet, which we most probably need / want for production

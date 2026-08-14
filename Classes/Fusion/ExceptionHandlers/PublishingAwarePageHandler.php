@@ -1,11 +1,14 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Fusion\ExceptionHandlers;
 
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Neos\Flow\Annotations as Flow;
 
-class PublishingAwarePageHandler extends \Neos\Neos\Fusion\ExceptionHandlers\PageHandler {
-
+class PublishingAwarePageHandler extends \Neos\Neos\Fusion\ExceptionHandlers\PageHandler
+{
     /**
      * @Flow\Inject
      * @var DocumentRenderer
@@ -23,5 +26,4 @@ class PublishingAwarePageHandler extends \Neos\Neos\Fusion\ExceptionHandlers\Pag
             return parent::handle($fusionPath, $exception, $referenceCode);
         }
     }
-
 }

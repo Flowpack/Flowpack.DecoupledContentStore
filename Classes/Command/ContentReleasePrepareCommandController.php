@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
@@ -35,12 +36,22 @@ class ContentReleasePrepareCommandController extends CommandController
      */
     protected $contentCache;
 
-    public function createContentReleaseCommand(string $contentReleaseIdentifier, string $prunnerJobId, string $workspaceName = 'live', string $accountId = 'cli'): void
-    {
+    public function createContentReleaseCommand(
+        string $contentReleaseIdentifier,
+        string $prunnerJobId,
+        string $workspaceName = 'live',
+        string $accountId = 'cli'
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $prunnerJobId = PrunnerJobId::fromString($prunnerJobId);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
-        $this->redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger, $workspaceName, $accountId);
+        $this->redisContentReleaseService->createContentRelease(
+            $contentReleaseIdentifier,
+            $prunnerJobId,
+            $logger,
+            $workspaceName,
+            $accountId
+        );
     }
 
     public function ensureAllOtherInProgressContentReleasesWillBeTerminatedCommand(string $contentReleaseIdentifier): void
@@ -59,9 +70,14 @@ class ContentReleasePrepareCommandController extends CommandController
         $this->redisContentReleaseService->registerManualTransferJob($contentReleaseIdentifier, $prunnerJobId, $logger);
     }
 
-    public function flushContentCacheIfRequiredCommand(string $contentReleaseIdentifier, bool $flushContentCache = false): void
-    {
-        $logger = ContentReleaseLogger::fromConsoleOutput($this->output, ContentReleaseIdentifier::fromString($contentReleaseIdentifier));
+    public function flushContentCacheIfRequiredCommand(
+        string $contentReleaseIdentifier,
+        bool $flushContentCache = false
+    ): void {
+        $logger = ContentReleaseLogger::fromConsoleOutput(
+            $this->output,
+            ContentReleaseIdentifier::fromString($contentReleaseIdentifier)
+        );
         if (!$flushContentCache) {
             $logger->info('Not flushing content cache');
             return;

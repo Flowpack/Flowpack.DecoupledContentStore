@@ -1,8 +1,10 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
+use Exception;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -12,7 +14,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class DocumentNodeCacheValues implements \JsonSerializable
 {
-
     /**
      * the root cache identifier which contains the actual content (possibly nested)
      * @var string
@@ -48,51 +49,40 @@ final class DocumentNodeCacheValues implements \JsonSerializable
         return new self($rootIdentifier, $url, []);
     }
 
+    /**
+     * @throws Exception
+     */
     public static function fromJsonString($jsonString): self
     {
         $tmp = json_decode($jsonString, true);
         if (!is_array($tmp)) {
-            throw new \Exception('DocumentNodeCacheValues cannot be constructed from: ' . $jsonString);
+            throw new Exception('DocumentNodeCacheValues cannot be constructed from: ' . $jsonString);
         }
         return new self($tmp['rootIdentifier'], $tmp['url'], $tmp['metadata']);
     }
 
-    /**
-     * @return string
-     */
     public function getRootIdentifier(): string
     {
         return $this->rootIdentifier;
     }
 
-    /**
-     * @return string
-     */
     public function getUrl(): string
     {
         return $this->url;
     }
 
-    /**
-     * @return array
-     */
     public function getMetadata(): array
     {
         return $this->metadata;
     }
 
-
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return ['rootIdentifier' => $this->rootIdentifier, 'url' => $this->url, 'metadata' => $this->metadata];
     }
 
     /**
-     * add additional metadata
-     *
-     * @param string $key
-     * @param $value
-     * @return $this
+     * Add additional metadata.
      */
     public function withMetadata(string $key, $value): self
     {
@@ -100,6 +90,4 @@ final class DocumentNodeCacheValues implements \JsonSerializable
         $metadata[$key] = $value;
         return new self($this->rootIdentifier, $this->url, $metadata);
     }
-
-
 }

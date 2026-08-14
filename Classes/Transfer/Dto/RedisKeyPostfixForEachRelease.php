@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer\Dto;
@@ -12,7 +13,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class RedisKeyPostfixForEachRelease
 {
-
     private const TRANSFER_MODE_HASH_INCREMENTAL = 'hash_incremental';
     private const TRANSFER_MODE_DUMP = 'dump';
 
@@ -46,15 +46,9 @@ final class RedisKeyPostfixForEachRelease
         $this->isRequired = $isRequired;
     }
 
-
     public static function fromArray(array $in): self
     {
-        return new self(
-            $in['redisKeyPostfix'],
-            $in['transfer'],
-            $in['transferMode'],
-            $in['isRequired']
-        );
+        return new self($in['redisKeyPostfix'], $in['transfer'], $in['transferMode'], $in['isRequired']);
     }
 
     /**
@@ -93,5 +87,4 @@ final class RedisKeyPostfixForEachRelease
     {
         return $this->transferMode === self::TRANSFER_MODE_HASH_INCREMENTAL;
     }
-
 }

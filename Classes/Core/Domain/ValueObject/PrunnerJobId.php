@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
 use Flowpack\Prunner\ValueObject\JobId;
@@ -10,7 +12,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class PrunnerJobId implements \JsonSerializable
 {
-
     /**
      * @var string
      */

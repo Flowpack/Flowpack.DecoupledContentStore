@@ -1,14 +1,16 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
 use Flowpack\DecoupledContentStore\Exception;
+use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Model\Site;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
 
 class NodeContextCombinator
 {
-
     /**
      * @Flow\Inject
      * @var \Neos\Neos\Domain\Service\ContentDimensionPresetSourceInterface
@@ -50,8 +52,10 @@ class NodeContextCombinator
         }
 
         if (!$nodeFound) {
-            throw new Exception\NodeNotFoundException('Could not find node by identifier ' . $nodeIdentifier . ' in any context',
-                1467285561);
+            throw new Exception\NodeNotFoundException(
+                'Could not find node by identifier ' . $nodeIdentifier . ' in any context',
+                1467285561
+            );
         }
     }
 
@@ -80,11 +84,11 @@ class NodeContextCombinator
         $presets = $this->dimensionPresetSource->getAllPresets();
         if ($presets === []) {
             $contentContext = $this->contextFactory->create(array(
-                    'currentSite' => $site,
-                    'workspaceName' => 'live',
-                    'dimensions' => [],
-                    'targetDimensions' => []
-                ));
+                'currentSite' => $site,
+                'workspaceName' => 'live',
+                'dimensions' => [],
+                'targetDimensions' => []
+            ));
 
             $siteNode = $contentContext->getNode('/sites/' . $site->getNodeName());
 
@@ -127,5 +131,4 @@ class NodeContextCombinator
             }
         }
     }
-
 }

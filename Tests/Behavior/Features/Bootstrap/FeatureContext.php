@@ -44,9 +44,13 @@ use PHPUnit\Framework\Assert;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Yaml\Yaml;
 
-require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.Behat/Tests/Behat/FlowContextTrait.php');
-require_once(__DIR__ . '/../../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php');
-require_once(__DIR__ . '/../../../../../../Packages/Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/SecurityOperationsTrait.php');
+require_once __DIR__ . '/../../../../../../Packages/Application/Neos.Behat/Tests/Behat/FlowContextTrait.php';
+require_once
+    __DIR__
+        . '/../../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php';
+require_once
+    __DIR__
+        . '/../../../../../../Packages/Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/SecurityOperationsTrait.php';
 
 /**
  * Features context
@@ -114,7 +118,6 @@ class FeatureContext implements Context
         $redisClientManager->getPrimaryRedis()->flushAll();
     }
 
-
     /**
      * @Given I have a site for Site Node :siteNodeName with site package key :sitePackageKey with domain :domainName
      */
@@ -135,7 +138,6 @@ class FeatureContext implements Context
         $domain->setHostname($domainName);
         $domain->setScheme('http');
 
-
         $domainRepository = $this->objectManager->get(DomainRepository::class);
         $domainRepository->add($domain);
 
@@ -150,7 +152,7 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->getObjectManager()->get(RedisContentReleaseService::class);
         $bufferedOutput = new BufferedOutput();
-        $prunnerJobId = PrunnerJobId::fromString("...");
+        $prunnerJobId = PrunnerJobId::fromString('...');
         $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
         $redisContentReleaseService->createContentRelease($contentReleaseIdentifier, $prunnerJobId, $logger);
         $concurrentBuildLockService = $this->getObjectManager()->get(ConcurrentBuildLockService::class);
@@ -180,11 +182,14 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisEnumerationRepository = $this->getObjectManager()->get(RedisEnumerationRepository::class);
         $iterable = $redisEnumerationRepository->findAll($contentReleaseIdentifier);
-        $enumerationAsArray = iterator_to_array((function() use ($iterable) {yield from $iterable;})());
+        $enumerationAsArray = iterator_to_array(
+            ( function () use ($iterable) {
+                yield from $iterable;
+            } )()
+        );
 
         Assert::assertCount($expectedCount, $enumerationAsArray);
     }
-
 
     /**
      * @When I run the render-orchestrator control loop once for content release :contentReleaseIdentifier
@@ -195,8 +200,14 @@ class FeatureContext implements Context
         $nodeRenderOrchestrator = $this->getObjectManager()->get(NodeRenderOrchestrator::class);
 
         $this->renderOrchestratorProcessBufferedOutput = new BufferedOutput();
-        $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($this->renderOrchestratorProcessBufferedOutput, $contentReleaseIdentifier);
-        $this->renderOrchestratorProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderOrchestrator->renderContentRelease($contentReleaseIdentifier, $contentReleaseLogger));
+        $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput(
+            $this->renderOrchestratorProcessBufferedOutput,
+            $contentReleaseIdentifier
+        );
+        $this->renderOrchestratorProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderOrchestrator->renderContentRelease(
+            $contentReleaseIdentifier,
+            $contentReleaseLogger
+        ));
         $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
 
         echo $this->renderOrchestratorProcessBufferedOutput->fetch();
@@ -216,10 +227,21 @@ class FeatureContext implements Context
      */
     public function iExpectTheRenderOrchestratorControlLoopToExitWithStatusCode($expectedStatusCode)
     {
-        Assert::assertNotNull($this->renderOrchestratorProcessLastEvent, 'renderOrchestratorProcessLastEvent cannot be null');
-        Assert::assertInstanceOf(ExitEvent::class, $this->renderOrchestratorProcessLastEvent, 'renderOrchestratorProcessLastEvent needs to be an ExitEvent');
+        Assert::assertNotNull(
+            $this->renderOrchestratorProcessLastEvent,
+            'renderOrchestratorProcessLastEvent cannot be null'
+        );
+        Assert::assertInstanceOf(
+            ExitEvent::class,
+            $this->renderOrchestratorProcessLastEvent,
+            'renderOrchestratorProcessLastEvent needs to be an ExitEvent'
+        );
         assert($this->renderOrchestratorProcessLastEvent instanceof ExitEvent);
-        Assert::assertEquals($expectedStatusCode, $this->renderOrchestratorProcessLastEvent->getStatusCode(), 'Status Code Mismatch');
+        Assert::assertEquals(
+            $expectedStatusCode,
+            $this->renderOrchestratorProcessLastEvent->getStatusCode(),
+            'Status Code Mismatch'
+        );
     }
 
     /**
@@ -230,11 +252,12 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
         assert($redisContentReleaseService instanceof RedisContentReleaseService);
-        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->getStatus();
+        $renderStatus = $redisContentReleaseService
+            ->fetchMetadataForContentRelease($contentReleaseIdentifier)
+            ->getStatus();
         Assert::isTrue($renderStatus->isFailed(), 'Completion Status should be failed');
         Assert::isFalse($renderStatus->isSuccessful(), 'Completion Status should not be successful');
     }
-
 
     /**
      * @Then I expect the content release :contentReleaseIdentifier to have the completion status success
@@ -244,7 +267,9 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
         assert($redisContentReleaseService instanceof RedisContentReleaseService);
-        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->getStatus();
+        $renderStatus = $redisContentReleaseService
+            ->fetchMetadataForContentRelease($contentReleaseIdentifier)
+            ->getStatus();
         Assert::isTrue($renderStatus->isSuccessful(), 'Completion Status should be success');
         Assert::isFalse($renderStatus->isFailed(), 'Completion Status should not be failed');
     }
@@ -260,7 +285,11 @@ class FeatureContext implements Context
         $bufferedOutput = new BufferedOutput();
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
 
-        $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render($contentReleaseIdentifier, $contentReleaseLogger, RendererIdentifier::fromString('rdr')));
+        $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render(
+            $contentReleaseIdentifier,
+            $contentReleaseLogger,
+            RendererIdentifier::fromString('rdr')
+        ));
         $renderProcess->runUntilEventEncountered(QueueEmptyEvent::class);
 
         echo $bufferedOutput->fetch();
@@ -277,7 +306,11 @@ class FeatureContext implements Context
         $bufferedOutput = new BufferedOutput();
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
 
-        $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render($contentReleaseIdentifier, $contentReleaseLogger, RendererIdentifier::fromString('rdr')));
+        $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render(
+            $contentReleaseIdentifier,
+            $contentReleaseLogger,
+            RendererIdentifier::fromString('rdr')
+        ));
 
         for ($i = 0; $i < $expectedRenderCount; $i++) {
             $renderProcess->runUntilEventEncountered(DocumentRenderedEvent::class);
@@ -315,26 +348,24 @@ class FeatureContext implements Context
         Assert::assertCount($expectedNumberOfErrors, $renderingErrors);
     }
 
-
     private const DEFAULT_NODETYPES_CONFIG = <<<EOF
-unstructured:
-  abstract: true
+        unstructured:
+          abstract: true
 
-Neos.Neos:FallbackNode:
-  abstract: true
+        Neos.Neos:FallbackNode:
+          abstract: true
 
-Neos.Neos:Document:
-  abstract: true
+        Neos.Neos:Document:
+          abstract: true
 
-Neos.Neos:Content:
-  abstract: true
+        Neos.Neos:Content:
+          abstract: true
 
-Neos.Neos:ContentCollection:
-  abstract: true
+        Neos.Neos:ContentCollection:
+          abstract: true
 
 
-EOF;
-
+        EOF;
 
     /**
      * @Given /^I have the following (additional |)NodeTypes configuration:$/
@@ -342,27 +373,38 @@ EOF;
     public function iHaveTheFollowingNodetypesConfiguration($additional, $nodeTypesConfiguration)
     {
         if (strlen($additional) > 0) {
-            $configuration = Arrays::arrayMergeRecursiveOverrule($this->nodeTypesConfiguration, Yaml::parse($nodeTypesConfiguration->getRaw()));
+            $configuration = Arrays::arrayMergeRecursiveOverrule(
+                $this->nodeTypesConfiguration,
+                Yaml::parse($nodeTypesConfiguration->getRaw())
+            );
         } else {
             $combined = self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw();
-            $this->nodeTypesConfiguration = Yaml::parse(self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw());
+            $this->nodeTypesConfiguration = Yaml::parse(
+                self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw()
+            );
             $configuration = $this->nodeTypesConfiguration;
         }
         $this->getObjectManager()->get(NodeTypeManager::class)->overrideNodeTypes($configuration);
     }
 
-
     /**
      * @Then I expect the content release :contentReleaseIdentifier to contain the following content for URI :uri at CSS selector :cssSelector:
      */
-    public function iExpectTheContentReleaseToContainTheFollowingContentForUriAtCssSelector($contentReleaseIdentifier, $uri, $cssSelector, PyStringNode $expected)
-    {
+    public function iExpectTheContentReleaseToContainTheFollowingContentForUriAtCssSelector(
+        $contentReleaseIdentifier,
+        $uri,
+        $cssSelector,
+        PyStringNode $expected
+    ) {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
         $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
 
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $uri);
-        Assert::assertIsString($actualContent, "Did not find rendered document");
+        $actualContent = $redisClient->getPrimaryRedis()->hGet(
+            $redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
+            $uri
+        );
+        Assert::assertIsString($actualContent, 'Did not find rendered document');
         $actualContentDecompressed = gzdecode($actualContent);
 
         $domCrawler = new Symfony\Component\DomCrawler\Crawler($actualContentDecompressed);
@@ -370,18 +412,24 @@ EOF;
         Assert::assertSame($expected->getRaw(), $actual, 'Full Output was: ' . $actualContentDecompressed);
     }
 
-
     /**
      * @Then I expect the content release :contentReleaseIdentifier to contain the following HTML content for URI :uri at CSS selector :cssSelector:
      */
-    public function iExpectTheContentReleaseToContainTheFollowingHtmlContentForUriAtCssSelector($contentReleaseIdentifier, $uri, $cssSelector, PyStringNode $expected)
-    {
+    public function iExpectTheContentReleaseToContainTheFollowingHtmlContentForUriAtCssSelector(
+        $contentReleaseIdentifier,
+        $uri,
+        $cssSelector,
+        PyStringNode $expected
+    ) {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
         $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
 
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $uri);
-        Assert::assertIsString($actualContent, "Did not find rendered document");
+        $actualContent = $redisClient->getPrimaryRedis()->hGet(
+            $redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
+            $uri
+        );
+        Assert::assertIsString($actualContent, 'Did not find rendered document');
         $actualContentDecompressed = gzdecode($actualContent);
 
         $domCrawler = new Symfony\Component\DomCrawler\Crawler($actualContentDecompressed);
@@ -397,7 +445,10 @@ EOF;
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
         $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
-        $actualContent = $redisClient->getPrimaryRedis()->hGet($redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $uri);
+        $actualContent = $redisClient->getPrimaryRedis()->hGet(
+            $redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
+            $uri
+        );
         Assert::assertFalse($actualContent);
     }
 
@@ -473,7 +524,5 @@ EOF;
         $publishingService->publishNodes($unpublishedNodes, $workspace->getBaseWorkspace());
         $this->objectManager->get(PersistenceManagerInterface::class)->persistAll();
         $this->resetNodeInstances();
-
     }
-
 }

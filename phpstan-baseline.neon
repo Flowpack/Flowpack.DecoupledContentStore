@@ -31,12 +31,6 @@ parameters:
 			path: Classes/Aspects/CacheUrlMappingAspect.php
 
 		-
-			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:storeRootCacheIdentifier\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: Classes/Aspects/CacheUrlMappingAspect.php
-
-		-
 			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
 			identifier: booleanNot.exprNotBoolean
 			count: 1
@@ -51,12 +45,6 @@ parameters:
 		-
 			message: '#^PHPDoc tag @var with type Neos\\Fusion\\Core\\Cache\\RuntimeContentCache is not subtype of type Neos\\Flow\\ObjectManagement\\Proxy\\ProxyInterface\.$#'
 			identifier: varTag.type
-			count: 1
-			path: Classes/Aspects/CacheUrlMappingAspect.php
-
-		-
-			message: '#^Parameter \#2 \$string of method Neos\\Cache\\Frontend\\StringFrontend\:\:set\(\) expects string, string\|false given\.$#'
-			identifier: argument.type
 			count: 1
 			path: Classes/Aspects/CacheUrlMappingAspect.php
 
@@ -613,12 +601,6 @@ parameters:
 			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
 
 		-
-			message: '#^Parameter \#1 \$key of function array_key_exists expects int\|string, string\|false given\.$#'
-			identifier: argument.type
-			count: 1
-			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
-
-		-
 			message: '#^Parameter \#2 \$callback of function usort contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
@@ -943,12 +925,6 @@ parameters:
 			path: Classes/NodeRendering/Dto/RenderedDocumentFromContentCache.php
 
 		-
-			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderedDocumentFromContentCache\:\:getLegacyMetadataString\(\) should return string but returns string\|false\.$#'
-			identifier: return.type
-			count: 1
-			path: Classes/NodeRendering/Dto/RenderedDocumentFromContentCache.php
-
-		-
 			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderedDocumentFromContentCache\:\:getMetadata\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1173,12 +1149,6 @@ parameters:
 		-
 			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingQueue\:\:flush\(\) has no return type specified\.$#'
 			identifier: missingType.return
-			count: 1
-			path: Classes/NodeRendering/Infrastructure/RedisRenderingQueue.php
-
-		-
-			message: '#^Parameter \#2 \$field of method Redis\:\:hIncrBy\(\) expects string, string\|false given\.$#'
-			identifier: argument.type
 			count: 1
 			path: Classes/NodeRendering/Infrastructure/RedisRenderingQueue.php
 

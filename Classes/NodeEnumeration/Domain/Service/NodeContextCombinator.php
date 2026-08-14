@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service;
@@ -13,7 +14,6 @@ use Neos\Neos\Domain\Repository\SiteRepository;
 
 class NodeContextCombinator
 {
-
     /**
      * @Flow\Inject
      * @var ContentDimensionCombinator
@@ -59,8 +59,10 @@ class NodeContextCombinator
         }
 
         if (!$nodeFound) {
-            throw new NodeNotFoundException('Could not find node by identifier ' . $nodeIdentifier . ' in any context',
-                1467285561);
+            throw new NodeNotFoundException(
+                'Could not find node by identifier ' . $nodeIdentifier . ' in any context',
+                1467285561
+            );
         }
     }
 
@@ -93,7 +95,7 @@ class NodeContextCombinator
                 'workspaceName' => $workspaceName,
                 'dimensions' => $dimensionContextCombination,
                 'targetDimensions' => [],
-                'invisibleContentShown' => $this->recurseHiddenContent,
+                'invisibleContentShown' => $this->recurseHiddenContent
             ));
 
             $siteNode = $contentContext->getNode('/sites/' . $site->getNodeName());
@@ -117,5 +119,4 @@ class NodeContextCombinator
             yield from $this->recurseDocumentChildNodes($childNode);
         }
     }
-
 }

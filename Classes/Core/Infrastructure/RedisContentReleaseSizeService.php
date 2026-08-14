@@ -28,8 +28,10 @@ class RedisContentReleaseSizeService
     /**
      * @return float size of the content release in megabytes
      */
-    public function calculateReleaseSize(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier $contentReleaseIdentifier): float
-    {
+    public function calculateReleaseSize(
+        RedisInstanceIdentifier $redisInstanceIdentifier,
+        ContentReleaseIdentifier $contentReleaseIdentifier
+    ): float {
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         $allKeys = $redis->keys('contentStore:' . $contentReleaseIdentifier->getIdentifier() . ':*');
         $size = 0;

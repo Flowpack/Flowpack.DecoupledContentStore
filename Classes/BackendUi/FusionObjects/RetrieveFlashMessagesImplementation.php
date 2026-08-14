@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\BackendUi\FusionObjects;
 
 use Neos\Flow\Annotations as Flow;
@@ -16,6 +18,8 @@ class RetrieveFlashMessagesImplementation extends AbstractFusionObject
 
     public function evaluate()
     {
-        return $this->flashMessageService->getFlashMessageContainerForRequest($this->runtime->getControllerContext()->getRequest())->getMessagesAndFlush();
+        return $this->flashMessageService
+            ->getFlashMessageContainerForRequest($this->runtime->getControllerContext()->getRequest())
+            ->getMessagesAndFlush();
     }
 }

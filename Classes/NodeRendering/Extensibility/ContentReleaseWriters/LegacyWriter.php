@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters;
@@ -19,7 +20,6 @@ use Ramsey\Uuid\Uuid;
  */
 class LegacyWriter implements ContentReleaseWriterInterface
 {
-
     /**
      * @Flow\Inject
      * @var RedisClientManager
@@ -38,8 +38,11 @@ class LegacyWriter implements ContentReleaseWriterInterface
      */
     protected $contentCache;
 
-    public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
-    {
+    public function processRenderedDocument(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
+        ContentReleaseLogger $logger
+    ): void {
         $urlKey = $renderedDocumentFromContentCache->getLegacyUrlKey();
         $metadataUrlKey = $renderedDocumentFromContentCache->getLegacyMetadataKey();
 
@@ -56,12 +59,13 @@ class LegacyWriter implements ContentReleaseWriterInterface
         $redis->hSet($redisDataKey, $metadataUrlKey, $rootMetadataKey);
         $redis->hSet($redisDataKey, $rootMetadataKey, $renderedDocumentFromContentCache->getLegacyMetadataString());
 
-
         // Published URLs, lexicographically sorted
         // we use the same score "0" for all URLs, this way, they are lexicographically sorted
         // as explained in https://redis.io/topics/data-types-intro#lexicographical-scores
-        $redis->zAdd($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'), 0, $renderedDocumentFromContentCache->getUrl());
-
+        $redis->zAdd(
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'),
+            0,
+            $renderedDocumentFromContentCache->getUrl()
+        );
     }
-
 }

@@ -29,6 +29,7 @@ Flowpack:
       # Example:
       #   - 'Neos.Neos:Document'
       #   - '!My.Package:Bar'
+      # If only exclusions are configured, 'Neos.Neos:Document' is used as the included node type.
       nodeTypeWhitelist:
         - 'Neos.Neos:Document'
 

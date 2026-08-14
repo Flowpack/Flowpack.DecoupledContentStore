@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Core\Infrastructure;
@@ -26,8 +27,14 @@ class ConsoleStatisticsEventOutput implements StatisticsEventOutputInterface
         return new static($output);
     }
 
-    public function writeEvent(ContentReleaseIdentifier $contentReleaseIdentifier, string $prefix, string $event, array $additionalPayload): void
-    {
-        $this->output->writeln($prefix . 'STATISTICS EVENT ' . $event . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''));
+    public function writeEvent(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        string $prefix,
+        string $event,
+        array $additionalPayload
+    ): void {
+        $this->output->writeln(
+            $prefix . 'STATISTICS EVENT ' . $event . ( $additionalPayload ? ' ' . json_encode($additionalPayload) : '' )
+        );
     }
 }
