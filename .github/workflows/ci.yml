@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php_version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php_version: [ '8.1', '8.5' ]
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: php-actions/composer@v6
+        with:
+          php_version: ${{ matrix.php_version }}
+      - name: PHPUnit Tests
+        uses: php-actions/phpunit@v4
+        with:
+          php_version: ${{ matrix.php_version }}
+          php_extensions: xdebug
+          bootstrap: vendor/autoload.php
+          configuration: phpunit.xml
+          coverage_text: true
+        env:
+          XDEBUG_MODE: coverage
+
+  phpstan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: php-actions/composer@v6
+        with:
+          php_version: '8.1'
+      - uses: php-actions/phpstan@v3
+        with:
+          php_version: '8.1'
+          configuration: phpstan.neon

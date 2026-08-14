@@ -1,0 +1,1861 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:getCurrentArguments\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:getCurrentEvaluateAndControllerContext\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:sanitizeTags\(\) has parameter \$tags with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:sanitizeTags\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:storeRootCacheIdentifier\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Only numeric types are allowed in \-, int\|null given on the right side\.$#'
+			identifier: minus.rightNonNumeric
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^PHPDoc tag @var with type Neos\\Fusion\\Core\\Cache\\RuntimeContentCache is not subtype of type Neos\\Flow\\ObjectManagement\\Proxy\\ProxyInterface\.$#'
+			identifier: varTag.type
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Parameter \#2 \$string of method Neos\\Cache\\Frontend\\StringFrontend\:\:set\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:\$contentReleaseLogger \(Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\) does not accept null\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Aspects\\CacheUrlMappingAspect\:\:\$currentEvaluateContext type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\ExtractedExceptionDto and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: Classes/Aspects/CacheUrlMappingAspect.php
+
+		-
+			message: '#^Call to an undefined method Neos\\Media\\Domain\\Model\\Dto\\UsageReference\:\:getDimensionValues\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Call to an undefined method Neos\\Media\\Domain\\Model\\Dto\\UsageReference\:\:getNodeIdentifier\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Call to an undefined method Neos\\Media\\Domain\\Model\\Dto\\UsageReference\:\:getWorkspaceName\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Cannot call method getNodeType\(\) on Neos\\ContentRepository\\Domain\\Model\\NodeInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Cannot call method getParent\(\) on Neos\\ContentRepository\\Domain\\Model\\NodeInterface\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\FixedAssetHandlingInContentCacheFlusherAspect\:\:registerAssetChange\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between Neos\\ContentRepository\\Domain\\Model\\NodeInterface and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\FixedNodeLinkHandlingInContentCacheFlusherAspect\:\:registerNodeChange\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Aspects/FixedNodeLinkHandlingInContentCacheFlusherAspect.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\BackendUi\\BackendUiDataService\:\:loadBackendOverviewData\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/BackendUi/BackendUiDataService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/BackendUi/BackendUiDataService.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, array\<Flowpack\\DecoupledContentStore\\Core\\Domain\\ValueObject\\PrunnerJobId\>\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/BackendUi/BackendUiDataService.php
+
+		-
+			message: '#^Parameter \#2 \$array of function array_map expects array, array\<Flowpack\\DecoupledContentStore\\Core\\Domain\\ValueObject\\PrunnerJobId\>\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/BackendUi/BackendUiDataService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\:\:__construct\(\) has parameter \$manualTransferJobIds with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/BackendUi/Dto/ContentReleaseDetails.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\:\:__construct\(\) has parameter \$renderingStatistics with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/BackendUi/Dto/ContentReleaseDetails.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 2
+			path: Classes/BackendUi/RenderingErrorExtractor.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\<0, max\>\|false given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/BackendUi/RenderingErrorExtractor.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int\|false given\.$#'
+			identifier: if.condNotBoolean
+			count: 2
+			path: Classes/BackendUi/RenderingErrorExtractor.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: Classes/BackendUi/RenderingErrorExtractor.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: Classes/BackendUi/WorkerErrorLogAggregator.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, string given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 2
+			path: Classes/Command/ContentReleaseEventsCommandController.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, array\<string, string\> given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/Command/ContentReleaseEventsCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentReleaseSwitchCommandController\:\:switchActiveContentReleaseCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentReleaseSwitchCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentReleaseTransferCommandController\:\:removeOldReleasesCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentReleaseTransferCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentReleaseTransferCommandController\:\:syncResourcesCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentReleaseTransferCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentReleaseTransferCommandController\:\:transferToContentStoreCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentReleaseTransferCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentReleaseValidationCommandController\:\:ensureNoValidationErrorsExistCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentReleaseValidationCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentReleaseValidationCommandController\:\:validateCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentReleaseValidationCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentStorePruneCommandController\:\:pruneRedisInstanceCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentStorePruneCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\ContentStorePublishCommandController\:\:allCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/ContentStorePublishCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\NodeEnumerationCommandController\:\:enumerateAllNodesCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/NodeEnumerationCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\NodeRenderingCommandController\:\:orchestrateRenderingCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/NodeRenderingCommandController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Command\\NodeRenderingCommandController\:\:renderWorkerCommand\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Command/NodeRenderingCommandController.php
+
+		-
+			message: '#^Call to function is_null\(\) with Neos\\Flow\\Security\\Account will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: Classes/ContentReleaseManager.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\ContentReleaseManager\:\:startFullContentRelease\(\) has parameter \$additionalVariables with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/ContentReleaseManager.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\ContentReleaseManager\:\:startIncrementalContentRelease\(\) has parameter \$additionalVariables with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/ContentReleaseManager.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\ContentReleaseManager\:\:\$configEpochSettings type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/ContentReleaseManager.php
+
+		-
+			message: '#^Cannot call method getId\(\) on Flowpack\\Prunner\\Dto\\Job\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Cannot call method getJob\(\) on Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\|null\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:cancelRunningReleaseAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:detailsAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:indexAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:pruneContentStoreAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:publishAllAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:publishAllWithoutValidationAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:removeAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:switchAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:switchContentReleaseOnOtherInstanceAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:toggleConfigEpochAction\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, string given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 2
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, string\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 3
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Parameter \#2 \$taskName of method Flowpack\\Prunner\\PrunnerApiService\:\:loadJobLogs\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:\$configEpochSettings type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Controller\\BackendController\:\:\$redisContentStores type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: Classes/Controller/BackendController.php
+
+		-
+			message: '#^Cannot call method getWorkspaceName\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: Classes/Core/ConcurrentBuildLockService.php
+
+		-
+			message: '#^Parameter \#2 \$fields_and_vals of method Redis\:\:hSet\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/Core/ConcurrentBuildLockService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Domain\\Dto\\ContentReleaseBatchResult\:\:__construct\(\) has parameter \$results with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Domain/Dto/ContentReleaseBatchResult.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Domain\\Dto\\ContentReleaseBatchResult\:\:createFromArray\(\) has parameter \$in with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Domain/Dto/ContentReleaseBatchResult.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Domain\\Dto\\ContentReleaseBatchResult\:\:getResultForContentRelease\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Core/Domain/Dto/ContentReleaseBatchResult.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Core\\Domain\\Dto\\ContentReleaseBatchResult\:\:\$results type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Domain/Dto/ContentReleaseBatchResult.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|false given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/Core/Domain/ValueObject/ContentReleaseIdentifier.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ConsoleStatisticsEventOutput\:\:writeEvent\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ConsoleStatisticsEventOutput.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, array given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: Classes/Core/Infrastructure/ConsoleStatisticsEventOutput.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 1
+			path: Classes/Core/Infrastructure/ConsoleStatisticsEventOutput.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:debug\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:error\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:info\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:logException\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:logException\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:logStatisticsEvent\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:logStatisticsEvent\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:logToOutput\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:warn\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, array given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 2
+			path: Classes/Core/Infrastructure/ContentReleaseLogger.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 2
+			path: Classes/Core/Infrastructure/RedisClientManager.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\RedisClientManager\:\:\$configuration type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/RedisClientManager.php
+
+		-
+			message: '#^Call to method Redis\:\:rawcommand\(\) with incorrect case\: rawCommand$#'
+			identifier: method.nameCase
+			count: 1
+			path: Classes/Core/Infrastructure/RedisContentReleaseSizeService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\RedisStatisticsEventOutput\:\:writeEvent\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventOutput.php
+
+		-
+			message: '#^Call to method Redis\:\:lrange\(\) with incorrect case\: lRange$#'
+			identifier: method.nameCase
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Construct empty\(\) is not allowed\. Use more strict comparison\.$#'
+			identifier: empty.notAllowed
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\RedisStatisticsEventService\:\:addEvent\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\RedisStatisticsEventService\:\:countEvents\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\RedisStatisticsEventService\:\:flatten\(\) has parameter \$array with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\RedisStatisticsEventService\:\:groupValues\(\) should return array\<string, string\> but returns array\<string, string\|null\>\.$#'
+			identifier: return.type
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^PHPDoc tag @param for parameter \$array with type Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\JSONArray is incompatible with native type array\.$#'
+			identifier: parameter.phpDocType
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^PHPDoc tag @return has invalid value \(array\<\>\)\: Unexpected token "\>", expected type at offset 164 on line 5$#'
+			identifier: phpDoc.parseError
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Parameter \#1 \$array of function usort contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Parameter \#1 \$key of function array_key_exists expects int\|string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Parameter \#2 \$callback of function usort contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Parameter \$array of method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\RedisStatisticsEventService\:\:flatten\(\) has invalid type Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\JSONArray\.$#'
+			identifier: class.notFound
+			count: 1
+			path: Classes/Core/Infrastructure/RedisStatisticsEventService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\StatisticsEventOutputInterface\:\:writeEvent\(\) has parameter \$additionalPayload with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/Infrastructure/StatisticsEventOutputInterface.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Core\\RedisKeyService\:\:\$redisKeyPostfixesForEachReleaseConfiguration type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Core/RedisKeyService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\RedisPruneService\:\:pruneRedisInstance\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Core/RedisPruneService.php
+
+		-
+			message: '#^Call to function array_filter\(\) requires parameter \#2 to be passed to avoid loose comparison semantics\.$#'
+			identifier: arrayFilter.strict
+			count: 2
+			path: Classes/Eel/ModuleHelper.php
+
+		-
+			message: '#^Call to function htmlspecialchars\(\) with incorrect case\: htmlSpecialChars$#'
+			identifier: function.nameCase
+			count: 1
+			path: Classes/Eel/ModuleHelper.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, iterable\<Flowpack\\Prunner\\Dto\\TaskResult\>\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/Eel/ModuleHelper.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/Eel/ModuleHelper.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, mixed given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/Eel/ModuleHelper.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_filter expects array, list\<string\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/Eel/ModuleHelper.php
+
+		-
+			message: '#^Parameter \#1 \$string of function htmlspecialchars expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/Eel/ModuleHelper.php
+
+		-
+			message: '#^Constructor of class Flowpack\\DecoupledContentStore\\Exception\\RenderingException has an unused parameter \$node\.$#'
+			identifier: constructor.unusedParameter
+			count: 1
+			path: Classes/Exception/RenderingException.php
+
+		-
+			message: '#^If condition is always true\.$#'
+			identifier: if.alwaysTrue
+			count: 1
+			path: Classes/Fusion/ImageUriImplementation.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, Neos\\Media\\Domain\\Model\\AssetInterface given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/Fusion/ImageUriImplementation.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\IncrementalContentReleaseHandler\:\:nodePublished\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/IncrementalContentReleaseHandler.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\IncrementalContentReleaseHandler\:\:startContentReleaseIfNodesWerePublishedBefore\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/IncrementalContentReleaseHandler.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\IncrementalContentReleaseHandler\:\:\$nodePublishedInThisRequest has no type specified\.$#'
+			identifier: missingType.property
+			count: 1
+			path: Classes/IncrementalContentReleaseHandler.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\IncrementalContentReleaseHandler\:\:\$startIncrementalReleaseOnWorkspacePublish has no type specified\.$#'
+			identifier: missingType.property
+			count: 1
+			path: Classes/IncrementalContentReleaseHandler.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode\:\:__construct\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode\:\:fromNode\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode\:\:getArguments\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode\:\:getDimensionsFromContextPath\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode\:\:jsonSerialize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, array given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int\|false given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode\:\:\$arguments type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Dto/EnumeratedNode.php
+
+		-
+			message: '#^Call to method Redis\:\:lrange\(\) with incorrect case\: lRange$#'
+			identifier: method.nameCase
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Repository/RedisEnumerationRepository.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Repository\\RedisEnumerationRepository\:\:addDocumentNodesToEnumeration\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Repository/RedisEnumerationRepository.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Repository\\RedisEnumerationRepository\:\:clearDocumentNodesEnumeration\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Repository/RedisEnumerationRepository.php
+
+		-
+			message: '#^Instanceof between Neos\\ContentRepository\\Domain\\Model\\NodeInterface and Neos\\ContentRepository\\Domain\\Model\\NodeInterface will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: Classes/NodeEnumeration/Domain/Service/NodeContextCombinator.php
+
+		-
+			message: '#^Call to an undefined method Neos\\Eel\\FlowQuery\\FlowQuery\:\:find\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/NodeEnumeration/NodeEnumerator.php
+
+		-
+			message: '#^Cannot call method withStatus\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/NodeEnumeration/NodeEnumerator.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeEnumeration\\NodeEnumerator\:\:buildNodeTypeFilter\(\) has parameter \$nodeTypeWhitelist with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/NodeEnumerator.php
+
+		-
+			message: '#^Parameter \#3 \$workspaceName of method Flowpack\\DecoupledContentStore\\NodeEnumeration\\NodeEnumerator\:\:enumerateAll\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/NodeEnumeration/NodeEnumerator.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeEnumeration\\NodeEnumerator\:\:\$nodeTypeWhitelist type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeEnumeration/NodeEnumerator.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between Neos\\ContentRepository\\Domain\\Model\\NodeInterface and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: Classes/NodeEnumeration/NodeEnumerator.php
+
+		-
+			message: '#^Variable \$startTime might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: Classes/NodeEnumeration/NodeEnumerator.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheKey\:\:__construct\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheKey.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheKey\:\:__construct\(\) has parameter \$dimensions with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheKey.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheKey\:\:fromEnumeratedNode\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheKey.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheKey\:\:fromNodeAndArguments\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheKey.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheKey\:\:redisKeyName\(\) should return string but returns string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheKey.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheKey\:\:\$arguments type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheKey.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheKey\:\:\$dimensions type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheKey.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheValues\:\:__construct\(\) has parameter \$metadata with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheValues.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheValues\:\:fromJsonString\(\) has parameter \$jsonString with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheValues.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheValues\:\:getMetadata\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheValues.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheValues\:\:jsonSerialize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheValues.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheValues\:\:withMetadata\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheValues.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\DocumentNodeCacheValues\:\:\$metadata type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/DocumentNodeCacheValues.php
+
+		-
+			message: '#^Call to function in_array\(\) requires parameter \#3 to be set\.$#'
+			identifier: function.strict
+			count: 1
+			path: Classes/NodeRendering/Dto/NodeRenderingCompletionStatus.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\NodeRenderingCompletionStatus\:\:fromJsonString\(\) has parameter \$jsonString with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/NodeRendering/Dto/NodeRenderingCompletionStatus.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderedDocumentFromContentCache.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderedDocumentFromContentCache\:\:getLegacyMetadataString\(\) should return string but returns string\|false\.$#'
+			identifier: return.type
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderedDocumentFromContentCache.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderedDocumentFromContentCache\:\:getMetadata\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderedDocumentFromContentCache.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderingStatistics\:\:__construct\(\) has parameter \$renderingsPerSecond with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderingStatistics.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderingStatistics\:\:create\(\) has parameter \$renderingsPerSecond with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderingStatistics.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderingStatistics\:\:fromJsonString\(\) has parameter \$jsonString with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderingStatistics.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderingStatistics\:\:getRenderingsPerSecond\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderingStatistics.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderingStatistics\:\:jsonSerialize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderingStatistics.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Dto\\RenderingStatistics\:\:\$renderingsPerSecond type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Dto/RenderingStatistics.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentEnumeratorInterface\:\:__construct\(\) has parameter \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/DocumentEnumeratorInterface.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentEnumerators\\DefaultEnumerator\:\:__construct\(\) has parameter \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/DocumentEnumerators/DefaultEnumerator.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentEnumerators\\LimitEnumerator\:\:__construct\(\) has parameter \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/DocumentEnumerators/LimitEnumerator.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentMetadataGeneratorInterface\:\:generateMetadata\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/DocumentMetadataGeneratorInterface.php
+
+		-
+			message: '#^Call to function assert\(\) with true will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Instanceof between Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode and Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Instanceof between Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentMetadataGeneratorInterface and Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentMetadataGeneratorInterface will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 4
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:instantiateExtensions\(\) has parameter \$configuration with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:instantiateExtensions\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:runDocumentMetadataGenerators\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:\$configuredDocumentMetadataGenerators type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:\$configuredDocumentRenderers type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:\$documentEnumerators \(array\<Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentEnumeratorInterface\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 2
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:\$documentMetadataGenerators \(array\<Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentMetadataGeneratorInterface\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Call to an undefined method object\:\:getPackage\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Call to method Redis\:\:evalsha\(\) with incorrect case\: evalSha$#'
+			identifier: method.nameCase
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Class Sandstorm\\OptimizedRedisCacheBackend\\OptimizedRedisCacheBackend not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisContentCacheReader\:\:executeRedisCall\(\) has parameter \$params with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisContentCacheReader\:\:executeRedisCall\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisContentCacheReader\:\:getRedis\(\) should return Redis but returns Redis\|null\.$#'
+			identifier: return.type
+			count: 2
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, Redis\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, string\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Parameter \#1 \$sha1 of method Redis\:\:evalsha\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisContentCacheReader.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingErrorManager\:\:getRenderingErrors\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingErrorManager.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingErrorManager\:\:registerRenderingError\(\) has parameter \$additionalData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingErrorManager.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingErrorManager.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 2
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingQueue.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingQueue\:\:appendRenderingJob\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingQueue.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingQueue\:\:flush\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingQueue.php
+
+		-
+			message: '#^Parameter \#2 \$field of method Redis\:\:hIncrBy\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingQueue.php
+
+		-
+			message: '#^Call to method Redis\:\:lLen\(\) with incorrect case\: llen$#'
+			identifier: method.nameCase
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingTimeStatisticsStore.php
+
+		-
+			message: '#^Call to method Redis\:\:lrange\(\) with incorrect case\: lRange$#'
+			identifier: method.nameCase
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingTimeStatisticsStore.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingTimeStatisticsStore\:\:addStatisticsIteration\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingTimeStatisticsStore.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingTimeStatisticsStore\:\:flush\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingTimeStatisticsStore.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingTimeStatisticsStore\:\:getRenderingStatistics\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingTimeStatisticsStore.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingTimeStatisticsStore\:\:replaceLastStatisticsIteration\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Infrastructure/RedisRenderingTimeStatisticsStore.php
+
+		-
+			message: '#^Call to function assert\(\) with true will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: Classes/NodeRendering/NodeRenderOrchestrator.php
+
+		-
+			message: '#^Cannot call method getStatus\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/NodeRendering/NodeRenderOrchestrator.php
+
+		-
+			message: '#^Cannot call method withStatus\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 5
+			path: Classes/NodeRendering/NodeRenderOrchestrator.php
+
+		-
+			message: '#^Construct empty\(\) is not allowed\. Use more strict comparison\.$#'
+			identifier: empty.notAllowed
+			count: 2
+			path: Classes/NodeRendering/NodeRenderOrchestrator.php
+
+		-
+			message: '#^Instanceof between Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode and Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: Classes/NodeRendering/NodeRenderOrchestrator.php
+
+		-
+			message: '#^Variable \$currentEnumeration in empty\(\) always exists and is not falsy\.$#'
+			identifier: empty.variable
+			count: 1
+			path: Classes/NodeRendering/NodeRenderOrchestrator.php
+
+		-
+			message: '#^Cannot call method getFirstActiveDomain\(\) on Neos\\Neos\\Domain\\Model\\Site\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^Cannot call method getStatus\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\NodeRenderer\:\:render\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\NodeRenderer\:\:renderDocumentNodeVariant\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$arguments$#'
+			identifier: parameter.notFound
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$contextPath$#'
+			identifier: parameter.notFound
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$nodeIdentifier$#'
+			identifier: parameter.notFound
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^PHPDoc tag @param references unknown parameter\: \$releaseIdentifier$#'
+			identifier: parameter.notFound
+			count: 1
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^Parameter \#1 \$exception of method Flowpack\\DecoupledContentStore\\Core\\Infrastructure\\ContentReleaseLogger\:\:logException\(\) expects Exception, Throwable\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^Parameter \#3 \$exception of method Flowpack\\DecoupledContentStore\\NodeRendering\\Infrastructure\\RedisRenderingErrorManager\:\:registerRenderingError\(\) expects Exception, Throwable\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: Classes/NodeRendering/NodeRenderer.php
+
+		-
+			message: '#^Call to an undefined method Neos\\ContentRepository\\Domain\\Service\\Context\:\:getCurrentSite\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/NodeRendering/NodeRenderingUriService.php
+
+		-
+			message: '#^Casting to string something that''s already string\.$#'
+			identifier: cast.useless
+			count: 1
+			path: Classes/NodeRendering/NodeRenderingUriService.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 1
+			path: Classes/NodeRendering/NodeRenderingUriService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\NodeRenderingUriService\:\:buildControllerContextAndSetBaseUri\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/NodeRenderingUriService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\NodeRenderingUriService\:\:buildNodeUri\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/NodeRenderingUriService.php
+
+		-
+			message: '#^Call to an undefined method Neos\\ContentRepository\\Domain\\Projection\\Content\\TraversableNodeInterface\:\:getContextPath\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^If condition is always true\.$#'
+			identifier: if.alwaysTrue
+			count: 2
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\CustomFusionView\:\:__construct\(\) has parameter \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\CustomFusionView\:\:disableCache\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\CustomFusionView\:\:enableCache\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\CustomFusionView\:\:initializeObject\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, Neos\\Fusion\\Core\\Runtime given\.$#'
+			identifier: if.condNotBoolean
+			count: 2
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\CustomFusionView\:\:\$fusionRuntimePerSiteNode has no type specified\.$#'
+			identifier: missingType.property
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\CustomFusionView\:\:\$useCustomSiteRootFusionPatternEntryPointForBehavioralTests has no type specified\.$#'
+			identifier: missingType.property
+			count: 1
+			path: Classes/NodeRendering/Render/CustomFusionView.php
+
+		-
+			message: '#^Construct empty\(\) is not allowed\. Use more strict comparison\.$#'
+			identifier: empty.notAllowed
+			count: 1
+			path: Classes/NodeRendering/Render/DocumentRenderer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\DocumentRenderer\:\:disableCache\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Render/DocumentRenderer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\DocumentRenderer\:\:enableCache\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/NodeRendering/Render/DocumentRenderer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\DocumentRenderer\:\:renderDocumentNodeVariant\(\) has parameter \$arguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Render/DocumentRenderer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\DocumentRenderer\:\:renderDocumentView\(\) has parameter \$requestArguments with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/NodeRendering/Render/DocumentRenderer.php
+
+		-
+			message: '#^Construct empty\(\) is not allowed\. Use more strict comparison\.$#'
+			identifier: empty.notAllowed
+			count: 2
+			path: Classes/NodeRendering/Render/ExtractedExceptionDto.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\ExtractedExceptionDto\:\:__construct\(\) has parameter \$message with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/NodeRendering/Render/ExtractedExceptionDto.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\ExtractedExceptionDto\:\:__construct\(\) has parameter \$referenceCode with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/NodeRendering/Render/ExtractedExceptionDto.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\ExtractedExceptionDto\:\:__construct\(\) has parameter \$stackTrace with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/NodeRendering/Render/ExtractedExceptionDto.php
+
+		-
+			message: '#^Foreach overwrites \$node with its value variable\.$#'
+			identifier: foreach.valueOverwrite
+			count: 1
+			path: Classes/NodeRendering/Render/NodeContextCombinator.php
+
+		-
+			message: '#^Instanceof between Neos\\ContentRepository\\Domain\\Model\\NodeInterface and Neos\\ContentRepository\\Domain\\Model\\NodeInterface will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: Classes/NodeRendering/Render/NodeContextCombinator.php
+
+		-
+			message: '#^Yield can be used only with these return types\: Generator, Iterator, Traversable, iterable\.$#'
+			identifier: generator.returnType
+			count: 5
+			path: Classes/NodeRendering/Render/NodeContextCombinator.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\RenderExceptionExtractor\:\:extractRenderingException\(\) should return Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\ExtractedExceptionDto but returns null\.$#'
+			identifier: return.type
+			count: 1
+			path: Classes/NodeRendering/Render/RenderExceptionExtractor.php
+
+		-
+			message: '#^Offset ''stackTrace'' might not exist on array\{0\: non\-falsy\-string, message\: string, 1\: string, 2\?\: string, stackTrace\?\: string, 3\?\: string, 4\?\: string, referenceCode\?\: string, \.\.\.\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: Classes/NodeRendering/Render/RenderExceptionExtractor.php
+
+		-
+			message: '#^Only booleans are allowed in \|\|, int\|false given on the left side\.$#'
+			identifier: booleanOr.leftNotBoolean
+			count: 1
+			path: Classes/NodeRendering/Render/RenderExceptionExtractor.php
+
+		-
+			message: '#^Only booleans are allowed in \|\|, int\|false given on the right side\.$#'
+			identifier: booleanOr.rightNotBoolean
+			count: 1
+			path: Classes/NodeRendering/Render/RenderExceptionExtractor.php
+
+		-
+			message: '#^Call to an undefined method object\:\:startContentReleaseIfNodesWerePublishedBefore\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/Package.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 2
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\:\:__construct\(\) has parameter \$manualTransferJobIds with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\:\:fromJsonString\(\) has parameter \$metadataEncoded with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\:\:getManualTransferJobIds\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\:\:jsonSerialize\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, DateTimeInterface\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 3
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Parameter \#2 \$startTime of class Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata constructor expects DateTimeInterface\|null, DateTimeImmutable\|false\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Parameter \#3 \$endTime of class Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata constructor expects DateTimeInterface\|null, DateTimeImmutable\|false\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Parameter \#4 \$switchTime of class Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata constructor expects DateTimeInterface\|null, DateTimeImmutable\|false\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Parameter \#7 \$workspaceName of class Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata constructor expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 5
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\:\:\$manualTransferJobIds \(array\<Flowpack\\DecoupledContentStore\\Core\\Domain\\ValueObject\\PrunnerJobId\>\) does not accept array\|null\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\:\:\$workspaceName \(string\|null\) is never assigned null so it can be removed from the property type\.$#'
+			identifier: property.unusedType
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: Classes/PrepareContentRelease/Dto/ContentReleaseMetadata.php
+
+		-
+			message: '#^Cannot call method withAdditionalManualTransferJobId\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/PrepareContentRelease/Infrastructure/RedisContentReleaseService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: Classes/PrepareContentRelease/Infrastructure/RedisContentReleaseService.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, mixed given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/PrepareContentRelease/Infrastructure/RedisContentReleaseService.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: Classes/PrepareContentRelease/Infrastructure/RedisContentReleaseService.php
+
+		-
+			message: '#^Call to function in_array\(\) requires parameter \#3 to be set\.$#'
+			identifier: function.strict
+			count: 1
+			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
+
+		-
+			message: '#^Cannot call method withSwitchTime\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\ReleaseSwitch\\Infrastructure\\RedisReleaseSwitchService\:\:switchContentRelease\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, mixed given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\ReleaseSwitch\\Infrastructure\\RedisReleaseSwitchService\:\:\$configEpochSettings type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\ReleaseSwitch\\Infrastructure\\RedisReleaseSwitchService\:\:\$redisKeyPostfixesForEachReleaseConfiguration type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
+
+		-
+			message: '#^Cannot call method getStatus\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: Classes/Transfer/ContentReleaseCleaner.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\ContentReleaseCleaner\:\:removeRelease\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Transfer/ContentReleaseCleaner.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Flowpack\\DecoupledContentStore\\Core\\Domain\\ValueObject\\ContentReleaseIdentifier\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 2
+			path: Classes/Transfer/ContentReleaseCleaner.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Transfer\\ContentReleaseCleaner\:\:\$redisKeyPostfixesForEachReleaseConfiguration type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Transfer/ContentReleaseCleaner.php
+
+		-
+			message: '#^Call to method Redis\:\:hscan\(\) with incorrect case\: hScan$#'
+			identifier: method.nameCase
+			count: 1
+			path: Classes/Transfer/ContentReleaseSynchronizer.php
+
+		-
+			message: '#^Casting to string something that''s already string\.$#'
+			identifier: cast.useless
+			count: 1
+			path: Classes/Transfer/ContentReleaseSynchronizer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\ContentReleaseSynchronizer\:\:transferHashKeyIncrementally\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Transfer/ContentReleaseSynchronizer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\ContentReleaseSynchronizer\:\:transferKey\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Transfer/ContentReleaseSynchronizer.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Transfer\\ContentReleaseSynchronizer\:\:\$redisKeyPostfixesForEachReleaseConfiguration type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Transfer/ContentReleaseSynchronizer.php
+
+		-
+			message: '#^Call to function in_array\(\) requires parameter \#3 to be set\.$#'
+			identifier: function.strict
+			count: 1
+			path: Classes/Transfer/Dto/RedisKeyPostfixForEachRelease.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\Dto\\RedisKeyPostfixForEachRelease\:\:__construct\(\) has parameter \$transfer with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Transfer/Dto/RedisKeyPostfixForEachRelease.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\Dto\\RedisKeyPostfixForEachRelease\:\:fromArray\(\) has parameter \$in with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Transfer/Dto/RedisKeyPostfixForEachRelease.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Transfer\\Dto\\RedisKeyPostfixForEachRelease\:\:\$transfer type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Transfer/Dto/RedisKeyPostfixForEachRelease.php
+
+		-
+			message: '#^Call to function assert\(\) with true will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: Classes/Transfer/Dto/RedisKeyPostfixesForEachRelease.php
+
+		-
+			message: '#^Instanceof between Flowpack\\DecoupledContentStore\\Transfer\\Dto\\RedisKeyPostfixForEachRelease and Flowpack\\DecoupledContentStore\\Transfer\\Dto\\RedisKeyPostfixForEachRelease will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: Classes/Transfer/Dto/RedisKeyPostfixesForEachRelease.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\Dto\\RedisKeyPostfixesForEachRelease\:\:fromArray\(\) has parameter \$in with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Transfer/Dto/RedisKeyPostfixesForEachRelease.php
+
+		-
+			message: '#^Constant FLOW_PATH_ROOT not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: Classes/Transfer/Resource/RemoteResourceSynchronizer.php
+
+		-
+			message: '#^Constant FLOW_PATH_WEB not found\.$#'
+			identifier: constant.notFound
+			count: 1
+			path: Classes/Transfer/Resource/RemoteResourceSynchronizer.php
+
+		-
+			message: '#^Language construct isset\(\) should not be used\.$#'
+			identifier: ergebnis.noIsset
+			count: 4
+			path: Classes/Transfer/Resource/RemoteResourceSynchronizer.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\Transfer\\Resource\\RemoteResourceSynchronizer\:\:\$targets type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: Classes/Transfer/Resource/RemoteResourceSynchronizer.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\Resource\\Target\\MultisiteFileSystemSymlinkTarget\:\:injectBaseUriIntoRelevantResourcePublishingTargets\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Transfer/Resource/Target/MultisiteFileSystemSymlinkTarget.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\Resource\\Target\\MultisiteFileSystemSymlinkTarget\:\:setOverrideHttpBaseUri\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Transfer/Resource/Target/MultisiteFileSystemSymlinkTarget.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:buildElement\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:buildElement\(\) has parameter \$attrs with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:buildElement\(\) has parameter \$tag with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:getY\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:getY\(\) has parameter \$diff with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:getY\(\) has parameter \$height with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:getY\(\) has parameter \$max with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:getY\(\) has parameter \$value with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:sparkline\(\) has parameter \$fillColor with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:sparkline\(\) has parameter \$lineColor with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:sparkline\(\) has parameter \$options with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:sparkline\(\) has parameter \$svgClass with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php
+
+		-
+			message: '#^Method Flowpack\\DecoupledContentStore\\Utility\\Sparkline\:\:sparkline\(\) has parameter \$values with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: Classes/Utility/Sparkline.php

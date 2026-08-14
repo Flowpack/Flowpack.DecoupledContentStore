@@ -1,1 +1,6 @@
 node_modules
+composer.lock
+vendor
+Packages
+.phpunit.cache
+.phpunit.result.cache

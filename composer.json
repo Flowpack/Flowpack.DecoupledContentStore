@@ -9,6 +9,14 @@
     "albertofem/rsync-lib": "~1.0",
     "flowpack/prunner": "*"
   },
+  "require-dev": {
+    "phpstan/phpstan": "^2.2",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpunit/phpunit": "^10.0",
+    "phpstan/extension-installer": "^1.4",
+    "phpstan/phpstan-strict-rules": "^2.0",
+    "ergebnis/phpstan-rules": "^2.13"
+  },
   "autoload": {
     "psr-4": {
       "Flowpack\\DecoupledContentStore\\": "Classes/"
@@ -96,5 +104,11 @@
       "Neos.Seo-20170127154600",
       "Neos.Flow-20170127183102"
     ]
+  },
+  "config": {
+    "allow-plugins": {
+      "neos/composer-plugin": true,
+      "phpstan/extension-installer": true
+    }
   }
 }
