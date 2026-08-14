@@ -1,17 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto;
 
+use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Utility\NodePaths;
 use Neos\Flow\Annotations as Flow;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
 
 /**
  * @Flow\Proxy(false)
  */
 final class EnumeratedNode implements \JsonSerializable
 {
-
     /**
      * We extract the to-be-rendered dimensions and the current site from the context path. Other than that,
      * it is used NOT for rendering.
@@ -47,8 +48,13 @@ final class EnumeratedNode implements \JsonSerializable
      */
     public readonly string $rendererId;
 
-    private function __construct(string $contextPath, string $nodeIdentifier, string $nodeTypeName, array $arguments, string $rendererId = '')
-    {
+    private function __construct(
+        string $contextPath,
+        string $nodeIdentifier,
+        string $nodeTypeName,
+        array $arguments,
+        string $rendererId = ''
+    ) {
         $this->contextPath = $contextPath;
         $this->nodeIdentifier = $nodeIdentifier;
         $this->nodeTypeName = $nodeTypeName;
@@ -56,18 +62,30 @@ final class EnumeratedNode implements \JsonSerializable
         $this->rendererId = $rendererId;
     }
 
-    static public function fromNode(NodeInterface $node, array $arguments = []): self
+    public static function fromNode(NodeInterface $node, array $arguments = []): self
     {
-        return new self($node->getContextPath(), $node->getIdentifier(), $node->getNodeType()->getName(), $arguments, '');
+        return new self(
+            $node->getContextPath(),
+            $node->getIdentifier(),
+            $node->getNodeType()->getName(),
+            $arguments,
+            ''
+        );
     }
 
-    static public function fromJsonString(string $enumeratedNodeString): self
+    public static function fromJsonString(string $enumeratedNodeString): self
     {
         $tmp = json_decode($enumeratedNodeString, true);
         if (!is_array($tmp)) {
             throw new \Exception('EnumeratedNode cannot be constructed from: ' . $enumeratedNodeString);
         }
-        return new self($tmp['contextPath'], $tmp['nodeIdentifier'], $tmp['nodeTypeName'] ?? '', $tmp['arguments'], $tmp['rendererId']);
+        return new self(
+            $tmp['contextPath'],
+            $tmp['nodeIdentifier'],
+            $tmp['nodeTypeName'] ?? '',
+            $tmp['arguments'],
+            $tmp['rendererId']
+        );
     }
 
     public function jsonSerialize(): array
@@ -77,7 +95,7 @@ final class EnumeratedNode implements \JsonSerializable
             'nodeIdentifier' => $this->nodeIdentifier,
             'nodeTypeName' => $this->nodeTypeName,
             'arguments' => $this->arguments,
-            'rendererId' => $this->rendererId,
+            'rendererId' => $this->rendererId
         ];
     }
 
@@ -86,7 +104,10 @@ final class EnumeratedNode implements \JsonSerializable
         if (preg_match('#^/sites/([^/@]*)#', $this->contextPath, $matches)) {
             return $matches[1];
         } else {
-            throw new \Exception('Could not get site node name from context path "' . $this->contextPath . '"', 1495535171);
+            throw new \Exception(
+                'Could not get site node name from context path "' . $this->contextPath . '"',
+                1495535171
+            );
         }
     }
 
@@ -119,7 +140,14 @@ final class EnumeratedNode implements \JsonSerializable
 
     public function debugString(): string
     {
-        return sprintf('%s %s %s(%s) - %s', $this->nodeTypeName, $this->nodeIdentifier, $this->arguments ? http_build_query($this->arguments) . ' ' : '', $this->contextPath, $this->rendererId);
+        return sprintf(
+            '%s %s %s(%s) - %s',
+            $this->nodeTypeName,
+            $this->nodeIdentifier,
+            $this->arguments ? http_build_query($this->arguments) . ' ' : '',
+            $this->contextPath,
+            $this->rendererId
+        );
     }
 
     public function withRendererId(string $rendererId): self

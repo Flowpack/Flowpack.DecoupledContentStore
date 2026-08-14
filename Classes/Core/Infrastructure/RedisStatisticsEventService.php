@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Core\Infrastructure;
@@ -8,7 +9,7 @@ use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Exception;
 use Neos\Flow\Annotations as Flow;
 
-#[Flow\Scope("singleton")]
+#[Flow\Scope('singleton')]
 class RedisStatisticsEventService
 {
     #[Flow\Inject]
@@ -17,13 +18,20 @@ class RedisStatisticsEventService
     #[Flow\Inject]
     protected RedisKeyService $redisKeyService;
 
-    public function addEvent(ContentReleaseIdentifier $contentReleaseIdentifier, string $prefix, string $event, array $additionalPayload): void
-    {
-        $this->redisClientManager->getPrimaryRedis()->rPush($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'statisticsEvents'), json_encode([
-            'event' => $event,
-            'prefix' => $prefix,
-            'additionalPayload' => $additionalPayload,
-        ]));
+    public function addEvent(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        string $prefix,
+        string $event,
+        array $additionalPayload
+    ): void {
+        $this->redisClientManager->getPrimaryRedis()->rPush(
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'statisticsEvents'),
+            json_encode([
+                'event' => $event,
+                'prefix' => $prefix,
+                'additionalPayload' => $additionalPayload
+            ])
+        );
     }
 
     /**
@@ -32,13 +40,13 @@ class RedisStatisticsEventService
      * @param string[] $groupBy
      * @return array<>
      * @throws Exception
+     * @throws \JsonException
      */
     public function countEvents(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        array                    $where,
-        array                    $groupBy,
-    ): array
-    {
+        array $where,
+        array $groupBy
+    ): array {
         $redis = $this->redisClientManager->getPrimaryRedis();
         $key = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'statisticsEvents');
         $chunkSize = 1000;
@@ -51,9 +59,9 @@ class RedisStatisticsEventService
 
             foreach ($events as $eventJson) {
                 $event = $this->flatten(json_decode($eventJson, true));
-                if($this->shouldCount($event, $where)) {
+                if ($this->shouldCount($event, $where)) {
                     $group = $this->groupValues($event, $groupBy);
-                    $eventKey = json_encode($group);
+                    $eventKey = json_encode($group, JSON_THROW_ON_ERROR);
                     if (array_key_exists($eventKey, $countedEvents)) {
                         $countedEvents[$eventKey]['count'] += 1;
                     } else {
@@ -78,7 +86,7 @@ class RedisStatisticsEventService
         $results = [];
 
         foreach ($array as $key => $value) {
-            if (is_array($value) && ! empty($value)) {
+            if (is_array($value) && !empty($value)) {
                 foreach ($this->flatten($value) as $subKey => $subValue) {
                     $results[$key . '.' . $subKey] = $subValue;
                 }
@@ -97,7 +105,7 @@ class RedisStatisticsEventService
      */
     private function shouldCount(array $event, array $where): bool
     {
-        foreach ($where as $key=>$value) {
+        foreach ($where as $key => $value) {
             if (!array_key_exists($key, $event) || $event[$key] !== $value) {
                 return false;
             }

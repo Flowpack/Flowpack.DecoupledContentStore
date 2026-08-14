@@ -115,7 +115,6 @@ class NodeRenderer
      */
     protected $contentReleaseManager;
 
-
     /**
      * @Flow\Inject
      * @var PersistenceManagerInterface
@@ -134,25 +133,35 @@ class NodeRenderer
      */
     protected $nodeRenderingExtensionManager;
 
-    public function render(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger, RendererIdentifier $rendererIdentifier)
-    {
+    public function render(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        ContentReleaseLogger $contentReleaseLogger,
+        RendererIdentifier $rendererIdentifier
+    ) {
         $contentReleaseLogger = $contentReleaseLogger->withRenderer($rendererIdentifier);
 
         $i = 0;
         while (true) {
-            $renderStatus = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->getStatus();
+            $renderStatus = $this->redisContentReleaseService
+                ->fetchMetadataForContentRelease($contentReleaseIdentifier)
+                ->getStatus();
             if ($renderStatus->hasCompleted()) {
                 $contentReleaseLogger->info('Content release completed; so we terminate ourselves gracefully.');
                 yield ExitEvent::createWithStatusCode(0);
                 return;
             }
 
-            $enumeratedNode = $this->redisRenderingQueue->fetchAndReserveNextRenderingJob($contentReleaseIdentifier, $rendererIdentifier);
+            $enumeratedNode = $this->redisRenderingQueue->fetchAndReserveNextRenderingJob(
+                $contentReleaseIdentifier,
+                $rendererIdentifier
+            );
             if ($enumeratedNode === null) {
                 yield QueueEmptyEvent::create();
                 // the queue is currently empty, but this does not necessarily mean that rendering is finished. Maybe the NodeRenderOrchestrator is still
                 // determining what needs to be done. We just need to wait a bit and retry.
-                $contentReleaseLogger->debug('Rendering queue currently empty; we wait a bit see if there is work for us.');
+                $contentReleaseLogger->debug(
+                    'Rendering queue currently empty; we wait a bit see if there is work for us.'
+                );
                 sleep(2);
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
                 continue;
@@ -176,23 +185,36 @@ class NodeRenderer
                 // is fully deterministic). This happened 12/2022 to us.
                 $this->persistenceManager->persistAll();
             } finally {
-                $removalSuccess = $this->redisRenderingQueue->removeRenderingJobFromReservedList($contentReleaseIdentifier, $enumeratedNode, $rendererIdentifier);
+                $removalSuccess = $this->redisRenderingQueue->removeRenderingJobFromReservedList(
+                    $contentReleaseIdentifier,
+                    $enumeratedNode,
+                    $rendererIdentifier
+                );
                 if ($removalSuccess === false) {
-                    $contentReleaseLogger->warn('Node could not be removed from reserved-list, because it was claimed by some other worker in the meantime. We don not know yet how this case might happen.', [
-                        'node' => $enumeratedNode->debugString(),
-                    ]);
+                    $contentReleaseLogger->warn(
+                        'Node could not be removed from reserved-list, because it was claimed by some other worker in the meantime. We don not know yet how this case might happen.',
+                        [
+                            'node' => $enumeratedNode->debugString()
+                        ]
+                    );
                 }
             }
             yield DocumentRenderedEvent::create();
 
             $i++;
 
-            if (static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0 && $i % static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT === 0) {
+            if (
+                static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0
+                && ( $i % static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT ) === 0
+            ) {
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
             }
 
-            if ($i % static::RESTART_AFTER_RENDER_COUNT === 0) {
-                $contentReleaseLogger->info(sprintf('Restarting after %d renders.', static::RESTART_AFTER_RENDER_COUNT));
+            if (( $i % static::RESTART_AFTER_RENDER_COUNT ) === 0) {
+                $contentReleaseLogger->info(sprintf(
+                    'Restarting after %d renders.',
+                    static::RESTART_AFTER_RENDER_COUNT
+                ));
                 yield ExitEvent::createWithStatusCode(193);
                 return;
             }
@@ -223,8 +245,7 @@ class NodeRenderer
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
         int $renderingAttempt = 1
-    )
-    {
+    ) {
         $nodeWasFound = false;
         try {
             $node = $this->fetchRenderableNode($enumeratedNode);
@@ -244,34 +265,59 @@ class NodeRenderer
                     'nodeIdentifier' => $node->getIdentifier(),
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
-                    'arguments' => $enumeratedNode->getArguments(),
+                    'arguments' => $enumeratedNode->getArguments()
                 ]);
 
-                $this->nodeRenderingExtensionManager->renderDocumentNodeVariant($node, $enumeratedNode, $contentReleaseLogger);
+                $this->nodeRenderingExtensionManager->renderDocumentNodeVariant(
+                    $node,
+                    $enumeratedNode,
+                    $contentReleaseLogger
+                );
             }
+
             // NOTE: we do not abort rendering directly, when we encounter any error, but we try to render
             // all pages in the full iteration (and then, if errors exist, we stop).
             // This is to gain better visibility into all errors currently happening; and thus maybe being able to see
             // patterns among the errors.
         } catch (\Neos\Flow\Property\Exception $exception) {
-            $contentReleaseLogger->logException($exception->getPrevious(), 'Exception getting document node variant for rendering', array(
-                'node' => $enumeratedNode->debugString(),
-            ));
+            $contentReleaseLogger->logException(
+                $exception->getPrevious(),
+                'Exception getting document node variant for rendering',
+                array(
+                    'node' => $enumeratedNode->debugString()
+                )
+            );
 
-            $this->redisRenderingErrorManager->registerRenderingError($contentReleaseIdentifier, ['node' => $enumeratedNode->debugString()], $exception->getPrevious());
+            $this->redisRenderingErrorManager->registerRenderingError(
+                $contentReleaseIdentifier,
+                ['node' => $enumeratedNode->debugString()],
+                $exception->getPrevious()
+            );
         } catch (RenderingException $exception) {
-            $contentReleaseLogger->logException($exception->getPrevious(), 'Exception while rendering document node variant', array(
-                'node' => $enumeratedNode->debugString(),
-                'nodeUri' => $exception->getNodeUri()
-            ));
+            $contentReleaseLogger->logException(
+                $exception->getPrevious(),
+                'Exception while rendering document node variant',
+                array(
+                    'node' => $enumeratedNode->debugString(),
+                    'nodeUri' => $exception->getNodeUri()
+                )
+            );
 
-            $this->redisRenderingErrorManager->registerRenderingError($contentReleaseIdentifier, ['node' => $enumeratedNode->debugString(), 'nodeUri' => $exception->getNodeUri()], $exception->getPrevious());
+            $this->redisRenderingErrorManager->registerRenderingError(
+                $contentReleaseIdentifier,
+                ['node' => $enumeratedNode->debugString(), 'nodeUri' => $exception->getNodeUri()],
+                $exception->getPrevious()
+            );
         } catch (\Exception $exception) {
             $contentReleaseLogger->logException($exception, 'Exception while rendering document node variant', array(
                 'node' => $enumeratedNode->debugString()
             ));
 
-            $this->redisRenderingErrorManager->registerRenderingError($contentReleaseIdentifier, ['node' => $enumeratedNode->debugString()], $exception);
+            $this->redisRenderingErrorManager->registerRenderingError(
+                $contentReleaseIdentifier,
+                ['node' => $enumeratedNode->debugString()],
+                $exception
+            );
         }
 
         if (!$nodeWasFound) {
@@ -281,7 +327,13 @@ class NodeRenderer
             //
             // NOTE: we do not directly abort (via exit(1)) the pipeline, as we want to get a list of all missing pages (and not just the first one).
             // Thus, we simply register a rendering error and ensure the next release will start after this one.s
-            $this->redisRenderingErrorManager->registerRenderingError($contentReleaseIdentifier, ['node' => $enumeratedNode->debugString()], new \Exception('We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error'));
+            $this->redisRenderingErrorManager->registerRenderingError(
+                $contentReleaseIdentifier,
+                ['node' => $enumeratedNode->debugString()],
+                new \Exception(
+                    'We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error'
+                )
+            );
             $this->contentReleaseManager->startIncrementalContentRelease();
         }
     }
@@ -319,7 +371,7 @@ class NodeRenderer
                 $flushedEntriesCount
             ),
             [
-                'node' => $enumeratedNode->debugString(),
+                'node' => $enumeratedNode->debugString()
             ]
         );
     }

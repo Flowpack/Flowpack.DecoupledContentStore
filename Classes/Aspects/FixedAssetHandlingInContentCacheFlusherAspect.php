@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Aspects;
 
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
@@ -107,24 +109,27 @@ class FixedAssetHandlingInContentCacheFlusherAspect
         // 1. flush asset tag without workspace hash
         $assetIdentifier = $this->persistenceManager->getIdentifierByObject($asset);
 
-        $assetCacheTag = "AssetDynamicTag_" . $assetIdentifier;
+        $assetCacheTag = 'AssetDynamicTag_' . $assetIdentifier;
 
         // WHY: ContentCacheFlusher has no public api to flush tags directly
         $tagsToFlush = ObjectAccess::getProperty($contentCacheFlusher, 'tagsToFlush', true);
-        $tagsToFlush[$assetCacheTag] = sprintf('which were tagged with "%s" because asset "%s" has changed.', $assetCacheTag, $assetIdentifier);
+        $tagsToFlush[$assetCacheTag] = sprintf(
+            'which were tagged with "%s" because asset "%s" has changed.',
+            $assetCacheTag,
+            $assetIdentifier
+        );
         ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', $tagsToFlush, true);
 
         $usageReferences = $this->assetService->getUsageReferences($asset);
 
         foreach ($usageReferences as $assetUsage) {
             // get node that uses the asset
-            $context = $this->_contextFactory->create(
-                [
-                    'workspaceName' => $assetUsage->getWorkspaceName(),
-                    'dimensions' => $assetUsage->getDimensionValues(),
-                    'invisibleContentShown' => true,
-                    'removedContentShown' => true]
-            );
+            $context = $this->_contextFactory->create([
+                'workspaceName' => $assetUsage->getWorkspaceName(),
+                'dimensions' => $assetUsage->getDimensionValues(),
+                'invisibleContentShown' => true,
+                'removedContentShown' => true
+            ]);
 
             $node = $context->getNodeByIdentifier($assetUsage->getNodeIdentifier());
 
@@ -132,11 +137,15 @@ class FixedAssetHandlingInContentCacheFlusherAspect
             $workspaceHash = $this->cachingHelper->renderWorkspaceTagForContextNode($context->getWorkspaceName());
 
             // 1. flush asset with workspace hash
-            $assetCacheTagWithWorkspace = "AssetDynamicTag_" . $workspaceHash . "_" . $assetIdentifier;
+            $assetCacheTagWithWorkspace = 'AssetDynamicTag_' . $workspaceHash . '_' . $assetIdentifier;
 
             // WHY: ContentCacheFlusher has no public api to flush tags directly
             $tagsToFlush = ObjectAccess::getProperty($contentCacheFlusher, 'tagsToFlush', true);
-            $tagsToFlush[$assetCacheTagWithWorkspace] = sprintf('which were tagged with "%s" because asset "%s" has changed.', $assetCacheTagWithWorkspace, $assetIdentifier);
+            $tagsToFlush[$assetCacheTagWithWorkspace] = sprintf(
+                'which were tagged with "%s" because asset "%s" has changed.',
+                $assetCacheTagWithWorkspace,
+                $assetIdentifier
+            );
             ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', $tagsToFlush, true);
 
             // 2. flush all nodes on path to parent document node (a bit excessive, but for now it works)

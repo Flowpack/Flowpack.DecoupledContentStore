@@ -1,0 +1,21 @@
+includes:
+	- phpstan-baseline.neon
+parameters:
+    level: 8
+    paths:
+        - Classes
+    ergebnis:
+        noExtends:
+            enabled: false
+        noNullableReturnTypeDeclaration:
+            enabled: false
+        noParameterWithNullableTypeDeclaration:
+            enabled: false
+        noParameterWithNullDefaultValue:
+            enabled: false
+        noConstructorParameterWithDefaultValue:
+            enabled: false
+        final:
+            enabled: false
+        noNamedArgument:
+            enabled: false

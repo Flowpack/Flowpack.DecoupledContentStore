@@ -11,7 +11,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class RendererIdentifier
 {
-
     /**
      * @var string
      */

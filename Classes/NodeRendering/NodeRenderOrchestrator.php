@@ -50,7 +50,6 @@ use Neos\Flow\Annotations as Flow;
  */
 class NodeRenderOrchestrator
 {
-
     /**
      * @Flow\Inject
      * @var RedisEnumerationRepository
@@ -117,13 +116,19 @@ class NodeRenderOrchestrator
      * @param ContentReleaseIdentifier $contentReleaseIdentifier
      * @param ContentReleaseLogger $contentReleaseLogger
      */
-    public function renderContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier, ContentReleaseLogger $contentReleaseLogger): \Generator
-    {
+    public function renderContentRelease(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        ContentReleaseLogger $contentReleaseLogger
+    ): \Generator {
         $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         $renderStatus = $releaseMetadata->getStatus();
 
         if ($renderStatus->hasCompleted()) {
-            $contentReleaseLogger->error('Release has already completed with status ' . $renderStatus->getDisplayName() . ', so we cannot render again.');
+            $contentReleaseLogger->error(
+                'Release has already completed with status '
+                . $renderStatus->getDisplayName()
+                . ', so we cannot render again.'
+            );
             yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RELEASE_ALREADY_COMPLETED);
             return;
         }
@@ -136,8 +141,14 @@ class NodeRenderOrchestrator
         $this->redisRenderingStatisticsStore->flush($contentReleaseIdentifier);
 
         if ($this->redisEnumerationRepository->count($contentReleaseIdentifier) === 0) {
-            $contentReleaseLogger->error('Content Enumeration is empty. This is dangerous; we never want this to go live. Exiting.');
-            $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()), RedisInstanceIdentifier::primary());
+            $contentReleaseLogger->error(
+                'Content Enumeration is empty. This is dangerous; we never want this to go live. Exiting.'
+            );
+            $this->redisContentReleaseService->setContentReleaseMetadata(
+                $contentReleaseIdentifier,
+                $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()),
+                RedisInstanceIdentifier::primary()
+            );
             yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION);
             return;
         }
@@ -151,8 +162,14 @@ class NodeRenderOrchestrator
         do {
             $i++;
             if ($i > 10) {
-                $contentReleaseLogger->error('FAILED to build a complete content release after 10 rendering attempts. Exiting.');
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()), RedisInstanceIdentifier::primary());
+                $contentReleaseLogger->error(
+                    'FAILED to build a complete content release after 10 rendering attempts. Exiting.'
+                );
+                $this->redisContentReleaseService->setContentReleaseMetadata(
+                    $contentReleaseIdentifier,
+                    $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()),
+                    RedisInstanceIdentifier::primary()
+                );
                 yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RETRY_LIMIT_REACHED);
                 return;
             }
@@ -160,28 +177,40 @@ class NodeRenderOrchestrator
             $contentReleaseLogger->info('Starting iteration ' . $i);
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
 
-            $this->redisRenderingStatisticsStore->addStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create(0, 0, []));
+            $this->redisRenderingStatisticsStore->addStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create(
+                0,
+                0,
+                []
+            ));
 
             // goTroughEnumeratedNodesFillContentReleaseAndCheckWhatStillNeedsToBeDone
             $nodesScheduledForRendering = [];
             foreach ($currentEnumeration as $enumeratedNode) {
                 assert($enumeratedNode instanceof EnumeratedNode);
 
-                $renderedDocumentFromContentCache = $this->nodeRenderingExtensionManager->tryToExtractRenderingForEnumeratedNodeFromContentCache($enumeratedNode);
-                if ($renderedDocumentFromContentCache->isComplete()) {
-                    $contentReleaseLogger->debug(
-                        'Node fully rendered, adding to content release',
-                        ['url' => $renderedDocumentFromContentCache->getUrl(), 'node' => $enumeratedNode]
+                $renderedDocumentFromContentCache =
+                    $this->nodeRenderingExtensionManager->tryToExtractRenderingForEnumeratedNodeFromContentCache(
+                        $enumeratedNode
                     );
+                if ($renderedDocumentFromContentCache->isComplete()) {
+                    $contentReleaseLogger->debug('Node fully rendered, adding to content release', [
+                        'url' => $renderedDocumentFromContentCache->getUrl(),
+                        'node' => $enumeratedNode
+                    ]);
                     // NOTE: Eventually consistent (TODO describe)
                     // If wanted more fully consistent, move to bottom....
-                    $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease($contentReleaseIdentifier, $enumeratedNode, $renderedDocumentFromContentCache, $contentReleaseLogger);
-                } else {
-                    $contentReleaseLogger->debug(
-                        'Scheduling rendering for Node, as it was not found or its content is incomplete: '
-                        . $renderedDocumentFromContentCache->getIncompleteReason(),
-                        ['url' => $renderedDocumentFromContentCache->getUrl(), 'node' => $enumeratedNode]
+                    $this->nodeRenderingExtensionManager->addRenderedDocumentToContentRelease(
+                        $contentReleaseIdentifier,
+                        $enumeratedNode,
+                        $renderedDocumentFromContentCache,
+                        $contentReleaseLogger
                     );
+                } else {
+                    $contentReleaseLogger->debug('Scheduling rendering for Node, as it was not found or its content is incomplete: '
+                        . $renderedDocumentFromContentCache->getIncompleteReason(), [
+                        'url' => $renderedDocumentFromContentCache->getUrl(),
+                        'node' => $enumeratedNode
+                    ]);
                     // the rendered document was not found, or has holes. so we need to re-render.
                     $nodesScheduledForRendering[] = $enumeratedNode;
                     $this->redisRenderingQueue->appendRenderingJob($contentReleaseIdentifier, $enumeratedNode);
@@ -190,15 +219,28 @@ class NodeRenderOrchestrator
 
             if (empty($nodesScheduledForRendering)) {
                 // we have NO nodes scheduled for rendering anymore, so that means we FINISHED successfully.
-                $contentReleaseLogger->info(sprintf('Everything rendered completely in %d seconds. Finishing RenderOrchestrator',  time() - $startTime));
+                $contentReleaseLogger->info(sprintf(
+                    'Everything rendered completely in %d seconds. Finishing RenderOrchestrator',
+                    time() - $startTime
+                ));
 
                 // The release is complete now, so this is the point where we can determine its size once. Calculating
                 // it is expensive, which is why the Backend UI relies on this stored value instead of re-calculating it.
-                $contentReleaseSize = $this->redisContentReleaseSizeService->calculateReleaseSize(RedisInstanceIdentifier::primary(), $contentReleaseIdentifier);
+                $contentReleaseSize = $this->redisContentReleaseSizeService->calculateReleaseSize(
+                    RedisInstanceIdentifier::primary(),
+                    $contentReleaseIdentifier
+                );
                 $contentReleaseLogger->info(sprintf('Content release size: %.2f MB', $contentReleaseSize));
 
                 // info to all renderers that we finished, and they should terminate themselves gracefully.
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::success())->withEndTime(new \DateTimeImmutable())->withContentReleaseSize($contentReleaseSize), RedisInstanceIdentifier::primary());
+                $this->redisContentReleaseService->setContentReleaseMetadata(
+                    $contentReleaseIdentifier,
+                    $releaseMetadata
+                        ->withStatus(NodeRenderingCompletionStatus::success())
+                        ->withEndTime(new \DateTimeImmutable())
+                        ->withContentReleaseSize($contentReleaseSize),
+                    RedisInstanceIdentifier::primary()
+                );
 
                 // Exit successfully.
                 yield ExitEvent::createWithStatusCode(0);
@@ -209,8 +251,9 @@ class NodeRenderOrchestrator
             // closer to a complete content release. Retrying this until the retry limit is reached only wastes time -
             // and (because no exception happened) leaves no trace anywhere. So we register a rendering error naming
             // these nodes, which makes them visible in the Backend UI.
-            $scheduledNodes = array_map(fn(EnumeratedNode $enumeratedNode) => json_encode($enumeratedNode),
-                $nodesScheduledForRendering);
+            $scheduledNodes = array_map(fn(EnumeratedNode $enumeratedNode) => json_encode(
+                $enumeratedNode
+            ), $nodesScheduledForRendering);
             sort($scheduledNodes);
             $identicalIterationCount = $scheduledNodes === $previouslyScheduledNodes ? $identicalIterationCount + 1 : 1;
             $previouslyScheduledNodes = $scheduledNodes;
@@ -220,12 +263,10 @@ class NodeRenderOrchestrator
                     $this->redisRenderingErrorManager->registerRenderingError(
                         $contentReleaseIdentifier,
                         ['node' => $enumeratedNode->debugString()],
-                        new \Exception(
-                            sprintf(
-                                'This node was scheduled for rendering %d times in a row without ever becoming complete in the content cache. Check the render worker logs for this node - most likely no "doc--..." mapping entry is written for it.',
-                                self::MAX_ITERATIONS_WITHOUT_PROGRESS
-                            )
-                        )
+                        new \Exception(sprintf(
+                            'This node was scheduled for rendering %d times in a row without ever becoming complete in the content cache. Check the render worker logs for this node - most likely no "doc--..." mapping entry is written for it.',
+                            self::MAX_ITERATIONS_WITHOUT_PROGRESS
+                        ))
                     );
                 }
                 $this->redisContentReleaseService->setContentReleaseMetadata(
@@ -233,13 +274,11 @@ class NodeRenderOrchestrator
                     $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()),
                     RedisInstanceIdentifier::primary()
                 );
-                $contentReleaseLogger->error(
-                    sprintf(
-                        'The same %d nodes were scheduled for rendering %d iterations in a row without any progress. EXITING now.',
-                        count($nodesScheduledForRendering),
-                        self::MAX_ITERATIONS_WITHOUT_PROGRESS
-                    )
-                );
+                $contentReleaseLogger->error(sprintf(
+                    'The same %d nodes were scheduled for rendering %d iterations in a row without any progress. EXITING now.',
+                    count($nodesScheduledForRendering),
+                    self::MAX_ITERATIONS_WITHOUT_PROGRESS
+                ));
                 yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RENDERING_ERRORS);
                 return;
             }
@@ -259,12 +298,19 @@ class NodeRenderOrchestrator
             $contentReleaseLogger->info('Waiting for renderings to complete...');
             $waitTimer = 0;
 
-            while ($this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier) > 0 || $this->redisRenderingQueue->numberOfRenderingsInProgress($contentReleaseIdentifier) > 0) {
-                $this->redisRenderingStatisticsStore->replaceLastStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create($remainingJobsCount, $totalJobsCount, $renderingsPerSecondDataPoints));
+            while (
+                $this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier) > 0
+                || $this->redisRenderingQueue->numberOfRenderingsInProgress($contentReleaseIdentifier) > 0
+            ) {
+                $this->redisRenderingStatisticsStore->replaceLastStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create(
+                    $remainingJobsCount,
+                    $totalJobsCount,
+                    $renderingsPerSecondDataPoints
+                ));
 
                 sleep(1);
                 $waitTimer++;
-                if ($waitTimer % 10 === 0) {
+                if (( $waitTimer % 10 ) === 0) {
                     $previousRemainingJobs = $remainingJobsCount;
                     $remainingJobsCount = $this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier);
                     $jobsWorkedThroughOverLastTenSeconds = $previousRemainingJobs - $remainingJobsCount;
@@ -272,13 +318,13 @@ class NodeRenderOrchestrator
 
                     $contentReleaseLogger->debug('Waiting... ', [
                         'numberOfQueuedJobs' => $remainingJobsCount,
-                        'numberOfRenderingsInProgress' => $this->redisRenderingQueue->numberOfRenderingsInProgress($contentReleaseIdentifier),
+                        'numberOfRenderingsInProgress' =>
+                            $this->redisRenderingQueue->numberOfRenderingsInProgress($contentReleaseIdentifier)
                     ]);
 
                     $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
                 }
             }
-
 
             // NOTE: we do not abort rendering inside NodeRenderer when we encounter the first error, but we try to render
             // all pages in the full iteration until we stop the content release here.
@@ -288,14 +334,26 @@ class NodeRenderOrchestrator
             $renderingErrors = $this->redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier);
             $amountOfRenderingErrors = count($renderingErrors);
             if ($amountOfRenderingErrors > 0) {
-                $this->redisContentReleaseService->setContentReleaseMetadata($contentReleaseIdentifier, $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()), RedisInstanceIdentifier::primary());
-                $contentReleaseLogger->error('In this iteration, there happened ' . $amountOfRenderingErrors . ' rendering errors. EXITING now, as there is no chance of completing the content release successfully.', [$renderingErrors]);
+                $this->redisContentReleaseService->setContentReleaseMetadata(
+                    $contentReleaseIdentifier,
+                    $releaseMetadata->withStatus(NodeRenderingCompletionStatus::failed()),
+                    RedisInstanceIdentifier::primary()
+                );
+                $contentReleaseLogger->error('In this iteration, there happened '
+                . $amountOfRenderingErrors
+                . ' rendering errors. EXITING now, as there is no chance of completing the content release successfully.', [
+                    $renderingErrors
+                ]);
                 yield ExitEvent::createWithStatusCode(self::EXIT_ERRORSTATUSCODE_RENDERING_ERRORS);
                 return;
             }
 
             $remainingJobsCount = $this->redisRenderingQueue->numberOfQueuedJobs($contentReleaseIdentifier);
-            $this->redisRenderingStatisticsStore->replaceLastStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create($remainingJobsCount, $totalJobsCount, $renderingsPerSecondDataPoints));
+            $this->redisRenderingStatisticsStore->replaceLastStatisticsIteration($contentReleaseIdentifier, RenderingStatistics::create(
+                $remainingJobsCount,
+                $totalJobsCount,
+                $renderingsPerSecondDataPoints
+            ));
 
             yield RenderingIterationCompletedEvent::create();
 

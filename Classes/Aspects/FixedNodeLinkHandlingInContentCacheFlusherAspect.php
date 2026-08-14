@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Aspects;
 
 use Neos\Flow\Annotations as Flow;
@@ -7,7 +9,6 @@ use Neos\Flow\Aop\JoinPointInterface;
 use Neos\Fusion\Core\Runtime;
 use Neos\Neos\Fusion\NodeUriImplementation;
 use Neos\Utility\ObjectAccess;
-
 
 /**
  * The {@see ContentCacheFlusher::registerNodeChange()} has one (general-case) bug related to Nodes:
@@ -27,7 +28,6 @@ use Neos\Utility\ObjectAccess;
  */
 class FixedNodeLinkHandlingInContentCacheFlusherAspect
 {
-
     /**
      * @Flow\After("method(Neos\Neos\Fusion\Cache\ContentCacheFlusher->registerNodeChange())")
      */
@@ -37,7 +37,11 @@ class FixedNodeLinkHandlingInContentCacheFlusherAspect
         $tagName = 'NodeDynamicTag_' . $node->getIdentifier();
         $contentCacheFlusher = $joinPoint->getProxy();
         $tagsToFlush = ObjectAccess::getProperty($contentCacheFlusher, 'tagsToFlush', true);
-        $tagsToFlush[$tagName] = sprintf('which were tagged with "%s" because node "%s" has changed.', $tagName, $node->getIdentifier());
+        $tagsToFlush[$tagName] = sprintf(
+            'which were tagged with "%s" because node "%s" has changed.',
+            $tagName,
+            $node->getIdentifier()
+        );
         ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', $tagsToFlush, true);
     }
 }

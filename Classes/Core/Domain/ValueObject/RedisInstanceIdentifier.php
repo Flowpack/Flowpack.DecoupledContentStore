@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
 use Neos\Flow\Annotations as Flow;
@@ -9,7 +11,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class RedisInstanceIdentifier
 {
-
     // must match the default config in Settings.yaml
     private const PRIMARY = 'primary';
 

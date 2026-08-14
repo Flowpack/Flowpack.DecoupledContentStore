@@ -31,8 +31,16 @@ class ContentReleaseDetails
      */
     private array $renderingStatistics;
 
-    public function __construct(ContentReleaseIdentifier $contentReleaseIdentifier, ?Job $job, int $enumeratedDocumentNodesCount, array $renderingStatistics, int $renderingErrorCount, bool $isActive, array $manualTransferJobIds, ?float $contentReleaseSize = null)
-    {
+    public function __construct(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        ?Job $job,
+        int $enumeratedDocumentNodesCount,
+        array $renderingStatistics,
+        int $renderingErrorCount,
+        bool $isActive,
+        array $manualTransferJobIds,
+        ?float $contentReleaseSize = null
+    ) {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;
         $this->enumeratedDocumentNodesCount = $enumeratedDocumentNodesCount;
@@ -106,5 +114,4 @@ class ContentReleaseDetails
     {
         return $this->manualTransferJobs;
     }
-
 }

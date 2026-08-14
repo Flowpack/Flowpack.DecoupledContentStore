@@ -1,12 +1,13 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer\Dto;
+
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 
 class RedisKeyPostfixesForEachRelease
 {
-
     /**
      * @var RedisKeyPostfixForEachRelease[]
      */
@@ -22,7 +23,6 @@ class RedisKeyPostfixesForEachRelease
         }
         $this->redisKeyPostfixes = $redisKeyPostfixes;
     }
-
 
     public static function fromArray(array $in): self
     {

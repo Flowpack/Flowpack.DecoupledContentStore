@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer;
@@ -56,13 +57,22 @@ class ContentReleaseCleaner
      */
     protected $redisContentReleaseService;
 
-    public function removeOldReleases(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier $contentReleaseIdentifierOfUpcomingRelease, ContentReleaseLogger $contentReleaseLogger): void
-    {
-        $contentReleaseLogger->info('Removing old releases in Redis ' . $redisInstanceIdentifier->getIdentifier() . '. First, checking which releases to keep:');
+    public function removeOldReleases(
+        RedisInstanceIdentifier $redisInstanceIdentifier,
+        ContentReleaseIdentifier $contentReleaseIdentifierOfUpcomingRelease,
+        ContentReleaseLogger $contentReleaseLogger
+    ): void {
+        $contentReleaseLogger->info(
+            'Removing old releases in Redis '
+            . $redisInstanceIdentifier->getIdentifier()
+            . '. First, checking which releases to keep:'
+        );
 
         $currentRelease = $this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier);
         if (!$currentRelease) {
-            $contentReleaseLogger->error('We did not find a current release in Content Store; so to be safe, we will NOT remove anything.');
+            $contentReleaseLogger->error(
+                'We did not find a current release in Content Store; so to be safe, we will NOT remove anything.'
+            );
             return;
         }
 
@@ -70,7 +80,8 @@ class ContentReleaseCleaner
 
         $contentReleasesToKeep = $this->redisClientManager->getRetentionCount($redisInstanceIdentifier);
         if ($contentReleasesToKeep < 2) {
-            throw new \RuntimeException('contentReleaseRetentionCount must be at least 2, found: ' . $contentReleasesToKeep);
+            throw new \RuntimeException('contentReleaseRetentionCount must be at least 2, found: '
+            . $contentReleasesToKeep);
         }
 
         $healthyReleaseCounter = 0;
@@ -90,14 +101,19 @@ class ContentReleaseCleaner
                     // In case of errors, we want to keep more "good" content releases ("success" state and no errors), so that we can
                     // more easily switch back to an older release.
                     // -> We accept potential Redis out of memory errors in this case.
-                    if (($this->redisContentReleaseService->fetchMetadataForContentRelease($id)->getStatus()->getStatus() === NodeRenderingCompletionStatus::success()->getStatus() && count($this->redisRenderingErrorManager->getRenderingErrors($id)) === 0)) {
+                    if (
+                        $this->redisContentReleaseService->fetchMetadataForContentRelease(
+                            $id
+                        )->getStatus()->getStatus() === NodeRenderingCompletionStatus::success()->getStatus()
+                        && count($this->redisRenderingErrorManager->getRenderingErrors($id)) === 0
+                    ) {
                         $healthyReleaseCounter++;
                     }
                 }
 
                 // we always want to keep $currentRelease and $contentReleaseIdentifierOfUpcomingRelease; thus
                 // we need to remove 2 from $contentReleasesToKeep
-                $shouldRemoveRelease = ($healthyReleaseCounter > $contentReleasesToKeep - 2);
+                $shouldRemoveRelease = $healthyReleaseCounter > ( $contentReleasesToKeep - 2 );
 
                 if ($shouldRemoveRelease) {
                     $releasesToRemove[] = $id;
@@ -118,14 +134,18 @@ class ContentReleaseCleaner
         $contentReleaseLogger->info('Completed.');
     }
 
-
-    public function removeRelease(ContentReleaseIdentifier $contentReleaseIdentifierToRemove, RedisInstanceIdentifier $redisIdentifier, ContentReleaseLogger $contentReleaseLogger)
-    {
+    public function removeRelease(
+        ContentReleaseIdentifier $contentReleaseIdentifierToRemove,
+        RedisInstanceIdentifier $redisIdentifier,
+        ContentReleaseLogger $contentReleaseLogger
+    ) {
         $redis = $this->redisClientManager->getRedis($redisIdentifier);
 
         $currentRelease = $this->redisReleaseSwitchService->getCurrentRelease($redisIdentifier);
         if (!$currentRelease) {
-            $contentReleaseLogger->error('We did not find a current release in Content Store; so to be safe, we will NOT remove anything.');
+            $contentReleaseLogger->error(
+                'We did not find a current release in Content Store; so to be safe, we will NOT remove anything.'
+            );
             return;
         }
 
@@ -137,7 +157,10 @@ class ContentReleaseCleaner
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
 
         foreach ($redisKeyPostfixesForEachRelease->getRedisKeyPostfixes() as $redisKeyPostfix) {
-            $redisKey = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifierToRemove, $redisKeyPostfix->getRedisKeyPostfix());
+            $redisKey = $this->redisKeyService->getRedisKeyForPostfix(
+                $contentReleaseIdentifierToRemove,
+                $redisKeyPostfix->getRedisKeyPostfix()
+            );
             $contentReleaseLogger->debug('  - Removing ' . $redisKey);
             $redis->del($redisKey);
         }

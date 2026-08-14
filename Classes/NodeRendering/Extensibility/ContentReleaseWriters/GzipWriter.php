@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters;
@@ -18,7 +19,6 @@ use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWri
  */
 class GzipWriter implements ContentReleaseWriterInterface
 {
-
     /**
      * @Flow\Inject
      * @var RedisClientManager
@@ -31,15 +31,26 @@ class GzipWriter implements ContentReleaseWriterInterface
      */
     protected $redisKeyService;
 
-    public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void
-    {
+    public function processRenderedDocument(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
+        ContentReleaseLogger $logger
+    ): void {
         $compressedContent = gzencode($renderedDocumentFromContentCache->getFullContent(), 9);
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $redis->hSet($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'), $renderedDocumentFromContentCache->getUrl(), $compressedContent);
+        $redis->hSet(
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
+            $renderedDocumentFromContentCache->getUrl(),
+            $compressedContent
+        );
 
         // Published URLs, lexicographically sorted
         // we use the same score "0" for all URLs, this way, they are lexicographically sorted
         // as explained in https://redis.io/topics/data-types-intro#lexicographical-scores
-        $redis->zAdd($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'), 0, $renderedDocumentFromContentCache->getUrl());
+        $redis->zAdd(
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'),
+            0,
+            $renderedDocumentFromContentCache->getUrl()
+        );
     }
 }

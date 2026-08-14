@@ -1,22 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository;
 
 use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
-use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 
 /**
  * @Flow\Scope("singleton")
  */
 class RedisEnumerationRepository
 {
-
     /**
      * @Flow\Inject
      * @var RedisClientManager
@@ -31,15 +32,23 @@ class RedisEnumerationRepository
 
     public function clearDocumentNodesEnumeration(ContentReleaseIdentifier $releaseIdentifier)
     {
-        $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'));
+        $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix(
+            $releaseIdentifier,
+            'enumeration:documentNodes'
+        ));
     }
 
-    public function addDocumentNodesToEnumeration(ContentReleaseIdentifier $releaseIdentifier, EnumeratedNode ...$enumeration)
-    {
+    public function addDocumentNodesToEnumeration(
+        ContentReleaseIdentifier $releaseIdentifier,
+        EnumeratedNode ...$enumeration
+    ) {
         $convertedEnumeration = array_map(function (EnumeratedNode $node) {
             return json_encode($node);
         }, $enumeration);
-        $this->redisClientManager->getPrimaryRedis()->rPush($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'), ...$convertedEnumeration);
+        $this->redisClientManager->getPrimaryRedis()->rPush(
+            $this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'),
+            ...$convertedEnumeration
+        );
     }
 
     /**
@@ -47,7 +56,11 @@ class RedisEnumerationRepository
      */
     public function findAll(ContentReleaseIdentifier $releaseIdentifier): iterable
     {
-        foreach ($this->redisClientManager->getPrimaryRedis()->lRange($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'), 0, -1) as $enumeratedNodeString) {
+        foreach ($this->redisClientManager->getPrimaryRedis()->lRange(
+            $this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'),
+            0,
+            -1
+        ) as $enumeratedNodeString) {
             yield EnumeratedNode::fromJsonString($enumeratedNodeString);
         }
     }
@@ -55,21 +68,29 @@ class RedisEnumerationRepository
     public function count(ContentReleaseIdentifier $releaseIdentifier): int
     {
         $redis = $this->redisClientManager->getPrimaryRedis();
-        $res = $redis->lLen($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'));
+        $res = $redis->lLen($this->redisKeyService->getRedisKeyForPostfix(
+            $releaseIdentifier,
+            'enumeration:documentNodes'
+        ));
         if (is_int($res)) {
             return $res;
         }
         return 0;
     }
 
-    public function countMultiple(RedisInstanceIdentifier $redisInstanceIdentifier, ContentReleaseIdentifier ...$releaseIdentifiers): ContentReleaseBatchResult
-    {
+    public function countMultiple(
+        RedisInstanceIdentifier $redisInstanceIdentifier,
+        ContentReleaseIdentifier ...$releaseIdentifiers
+    ): ContentReleaseBatchResult {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == enumerated count
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
         foreach (GeneratorUtility::createArrayBatch($releaseIdentifiers, 50) as $batchedReleaseIdentifiers) {
             $redisPipeline = $redis->pipeline();
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
-                $redisPipeline->lLen($this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'));
+                $redisPipeline->lLen($this->redisKeyService->getRedisKeyForPostfix(
+                    $releaseIdentifier,
+                    'enumeration:documentNodes'
+                ));
             }
             $res = $redisPipeline->exec();
             foreach ($batchedReleaseIdentifiers as $i => $releaseIdentifier) {

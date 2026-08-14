@@ -37,7 +37,8 @@ class WorkerErrorLogAggregator
      */
     public function aggregate(Job $job): array
     {
-        $renderTasks = $job->getTaskResults()
+        $renderTasks = $job
+            ->getTaskResults()
             ->filteredByPrefix('render_')
             ->withoutTasks('render_finished', 'render_orchestrator');
 
@@ -58,8 +59,9 @@ class WorkerErrorLogAggregator
         // Real failures (non-SIGTERM) carry the actual error — show them first. Within both groups,
         // sort worker names naturally (1, 2, ..., 10 instead of 1, 10, ..., 2).
         usort($erroredTasks, static function (TaskResult $a, TaskResult $b): int {
-            $killedComparison = ($a->getExitCode() === self::EXIT_CODE_SIGTERM ? 1 : 0)
-                <=> ($b->getExitCode() === self::EXIT_CODE_SIGTERM ? 1 : 0);
+            $killedComparison =
+                ( $a->getExitCode() === self::EXIT_CODE_SIGTERM ? 1 : 0 )
+                <=> ( $b->getExitCode() === self::EXIT_CODE_SIGTERM ? 1 : 0 );
 
             return $killedComparison !== 0 ? $killedComparison : strnatcasecmp($a->getName(), $b->getName());
         });

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Infrastructure;
 
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
@@ -19,7 +21,6 @@ use Neos\Fusion\Core\Cache\ContentCache;
  */
 class RedisContentCacheReader
 {
-
     /**
      * @Flow\Inject
      * @var StringFrontend
@@ -41,8 +42,8 @@ class RedisContentCacheReader
     protected ?string $scriptSha1 = null;
     protected ?\Redis $redis = null;
 
-    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey $documentNodeCacheKey
-    ): RenderedDocumentFromContentCache {
+    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey $documentNodeCacheKey): RenderedDocumentFromContentCache
+    {
         /**
          * @see AbstractBackend::setCache()
          */
@@ -117,54 +118,54 @@ class RedisContentCacheReader
         $contentCacheMarker = ContentCache::CACHE_SEGMENT_MARKER;
 
         return <<<LUA
-            local rootIdentifier = ARGV[1]
-            local identifierPrefix = ARGV[2]
+                local rootIdentifier = ARGV[1]
+                local identifierPrefix = ARGV[2]
 
-            local function readContentCacheRecursively(identifier, depth)
-                depth = depth or 1
+                local function readContentCacheRecursively(identifier, depth)
+                    depth = depth or 1
 
-                if depth > ${maxNestLevel} then
-                    -- Return an error in this case
-                    return '', 'Maximum Nesting Level Reached'
-                end
-
-                local content = redis.call('GET', identifierPrefix .. 'Neos_Fusion_Content:entry:' .. identifier)
-                if not content then
-                    return '', identifierPrefix .. 'Neos_Fusion_Content:entry:' .. identifier .. ' not found'
-                end
-
-                local error = nil
-                content = string.gsub(content, '${contentCacheStartToken}${contentCacheMarker}([a-z0-9]+)${contentCacheEndToken}${contentCacheMarker}', function(id)
-                        local str
-                        local errMsg
-                        str, errMsg = readContentCacheRecursively(id, depth + 1)
-
-                        if errMsg then
-                            error = errMsg
-                        end
-
-                        return str
+                    if depth > ${maxNestLevel} then
+                        -- Return an error in this case
+                        return '', 'Maximum Nesting Level Reached'
                     end
-                )
 
-                if error then
-                    return nil, error
-                else
-                    return content, nil
+                    local content = redis.call('GET', identifierPrefix .. 'Neos_Fusion_Content:entry:' .. identifier)
+                    if not content then
+                        return '', identifierPrefix .. 'Neos_Fusion_Content:entry:' .. identifier .. ' not found'
+                    end
+
+                    local error = nil
+                    content = string.gsub(content, '${contentCacheStartToken}${contentCacheMarker}([a-z0-9]+)${contentCacheEndToken}${contentCacheMarker}', function(id)
+                            local str
+                            local errMsg
+                            str, errMsg = readContentCacheRecursively(id, depth + 1)
+
+                            if errMsg then
+                                error = errMsg
+                            end
+
+                            return str
+                        end
+                    )
+
+                    if error then
+                        return nil, error
+                    else
+                        return content, nil
+                    end
                 end
-            end
 
-            local content, error = readContentCacheRecursively(rootIdentifier)
-            if not error then
-                error = ''
-            end
+                local content, error = readContentCacheRecursively(rootIdentifier)
+                if not error then
+                    error = ''
+                end
 
-            if not content then
-                content = ''
-            end
+                if not content then
+                    content = ''
+                end
 
-            return {content, error}
-        LUA;
+                return {content, error}
+            LUA;
     }
 
     /**
@@ -179,7 +180,7 @@ class RedisContentCacheReader
         $packageManager = $this->objectManager->get(PackageManager::class);
         $flowPackage = $packageManager->getPackage('Neos.Flow');
         preg_match('/^(\d+\.\d+)/', $flowPackage->getInstalledVersion(), $versionMatches);
-        $flowMajorVersion = (int)($versionMatches[1] ?? '0');
+        $flowMajorVersion = (int) ( $versionMatches[1] ?? '0' );
 
         $backend = $this->contentCache->getBackend();
 
@@ -201,9 +202,9 @@ class RedisContentCacheReader
         }
 
         throw new \RuntimeException(
-            'The cache backend for "Neos_Fusion_Content" must be an OptimizedRedisCacheBackend, but is ' . get_class(
-                $backend
-            ), 1622570000
+            'The cache backend for "Neos_Fusion_Content" must be an OptimizedRedisCacheBackend, but is '
+                . get_class($backend),
+            1622570000
         );
     }
 }

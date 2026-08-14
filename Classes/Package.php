@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore;
 
 use Neos\ContentRepository\Domain\Model\Workspace;
@@ -8,7 +11,6 @@ use Neos\Flow\Package\Package as BasePackage;
 
 class Package extends BasePackage
 {
-
     /**
      * @param Bootstrap $bootstrap The current bootstrap
      * @return void
@@ -17,8 +19,12 @@ class Package extends BasePackage
     {
         $dispatcher = $bootstrap->getSignalSlotDispatcher();
 
-        $dispatcher->connect(Workspace::class, 'afterNodePublishing',
-            IncrementalContentReleaseHandler::class, 'nodePublished');
+        $dispatcher->connect(
+            Workspace::class,
+            'afterNodePublishing',
+            IncrementalContentReleaseHandler::class,
+            'nodePublished'
+        );
 
         // NASTY WORKAROUND - explanation follows.
         //
@@ -29,9 +35,16 @@ class Package extends BasePackage
         //   keeping the old behavior as before.
         //
         // In our case, we want to ONLY listen to web requests, ignoring CLI requests. Thus, we check for the type of the Controller, which is CommandControllerInterface for CLI; and ControllerInterface for web.
-        $dispatcher->connect('Neos\Flow\Mvc\Dispatcher', 'afterControllerInvocation', function($request, $response, $controller) use ($bootstrap) {
+        $dispatcher->connect('Neos\Flow\Mvc\Dispatcher', 'afterControllerInvocation', function (
+            $request,
+            $response,
+            $controller
+        ) use ($bootstrap) {
             if ($controller instanceof ControllerInterface) {
-                $bootstrap->getObjectManager()->get(IncrementalContentReleaseHandler::class)->startContentReleaseIfNodesWerePublishedBefore();
+                $bootstrap
+                    ->getObjectManager()
+                    ->get(IncrementalContentReleaseHandler::class)
+                    ->startContentReleaseIfNodesWerePublishedBefore();
             }
         });
     }

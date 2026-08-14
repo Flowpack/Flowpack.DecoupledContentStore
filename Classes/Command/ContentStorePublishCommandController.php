@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
@@ -20,5 +21,4 @@ class ContentStorePublishCommandController extends CommandController
         $this->contentReleaseManager->cancelAllRunningContentReleases();
         $this->contentReleaseManager->startFullContentRelease();
     }
-
 }

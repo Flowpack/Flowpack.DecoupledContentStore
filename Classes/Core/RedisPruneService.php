@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Core;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
@@ -46,10 +48,8 @@ class RedisPruneService
      */
     protected $redisClientManager;
 
-
     public function pruneRedisInstance(RedisInstanceIdentifier $redisInstanceIdentifier)
     {
         $this->redisClientManager->getRedis($redisInstanceIdentifier)->eval(self::PRUNE_LUA_SCRIPT, []);
     }
-
 }

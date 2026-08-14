@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Aspects;
 
-use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheValues;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\RenderExceptionExtractor;
+use Neos\Cache\Exception\InvalidDataException;
+use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Aop\JoinPointInterface;
 use Neos\Fusion\Core\Cache\CacheSegmentParser;
+use Neos\Utility\Exception\PropertyNotAccessibleException;
 use Neos\Utility\ObjectAccess;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
 
 /**
  * This aspect creates the root cache entry which maps the URL to the root cache identifier during rendering.
@@ -102,13 +104,22 @@ class CacheUrlMappingAspect
 
     /**
      * @Flow\After("method(Neos\Fusion\Core\Cache\ContentCache->processCacheSegments())")
+     * @throws Exception
+     * @throws \JsonException
+     * @throws \Neos\Cache\Exception
+     * @throws InvalidDataException
+     * @throws \Neos\Fusion\Exception
+     * @throws PropertyNotAccessibleException
      */
-    public function storeRootCacheIdentifier(JoinPointInterface $joinPoint)
+    public function storeRootCacheIdentifier(JoinPointInterface $joinPoint): void
     {
         if (!$this->isActive) {
             return;
         }
-        if (!isset($this->currentEvaluateContext['cacheIdentifierValues']['node']) || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof NodeInterface) {
+        if (
+            !isset($this->currentEvaluateContext['cacheIdentifierValues']['node'])
+            || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof NodeInterface
+        ) {
             return;
         }
 
@@ -122,7 +133,17 @@ class CacheUrlMappingAspect
         if (!$storeCacheEntries) {
             $content = $joinPoint->getMethodArgument('content');
             $extractedExceptionDto = RenderExceptionExtractor::extractRenderingException($content);
-            throw new Exception('Cache was disabled for ' . $url . ' with node ' . $node->getContextPath() . ', but no exception was handled by the publishing. This could be caused by a missing publishing aware @exceptionHandler in Fusion.' . ($extractedExceptionDto !== null ? "\nException extracted from output: {$extractedExceptionDto}" : ''), 1539156004);
+            throw new Exception(
+                'Cache was disabled for '
+                . $url
+                . ' with node '
+                . $node->getContextPath()
+                . ', but no exception was handled by the publishing. This could be caused by a missing publishing aware @exceptionHandler in Fusion.'
+                . (
+                    $extractedExceptionDto !== null ? "\nException extracted from output: {$extractedExceptionDto}" : ''
+                ),
+                1539156004
+            );
         }
 
         $content = $joinPoint->getMethodArgument('content');
@@ -141,13 +162,20 @@ class CacheUrlMappingAspect
             throw new \RuntimeException('TODO Logger not found - should never happen');
         }
         if ($this->urlIsMatchingBlacklist($url)) {
-            $logger->info(sprintf('Skipping URL %s, because it matches the blacklist %s', $url, $this->urlExcludelistRegex));
+            $logger->info(sprintf(
+                'Skipping URL %s, because it matches the blacklist %s',
+                $url,
+                $this->urlExcludelistRegex
+            ));
 
             return;
         }
 
         if ($rootIdentifier === null) {
-            throw new Exception('Could not find root cache identifier for ' . $url . ', possible rendering error?', 1491394849);
+            throw new Exception(
+                'Could not find root cache identifier for ' . $url . ', possible rendering error?',
+                1491394849
+            );
         }
 
         $logger->debug('Mapping URL ' . $url . ' to ' . $rootIdentifier . ' with tags ' . implode(', ', $rootTags));
@@ -155,11 +183,22 @@ class CacheUrlMappingAspect
         $arguments = $this->getCurrentArguments($node);
         // TODO: To make parallel rendering possible, we need to make sure that the cache key also includes the currently rendered workspace, as the node might originate from a base workspace (usually live). See `DocumentNodeCacheKey`.
         $rootKey = DocumentNodeCacheKey::fromNodeAndArguments($node, $arguments);
-        $rootCacheValues = DocumentNodeCacheValues::create($rootIdentifier, $url)
-            ->withMetadata('renderTime', (int)(microtime(true) * 1000) - $this->renderTimestamp);
+        $rootCacheValues = DocumentNodeCacheValues::create($rootIdentifier, $url)->withMetadata(
+            'renderTime',
+            (int) ( microtime(true) * 1000 ) - $this->renderTimestamp
+        );
         // allow other document metadata generators here
-        $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators($node, $arguments, $this->controllerContext, $rootCacheValues);
-        $this->contentCacheFrontend->set($rootKey->redisKeyName(), json_encode($rootCacheValues), $rootTags);
+        $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators(
+            $node,
+            $arguments,
+            $this->controllerContext,
+            $rootCacheValues
+        );
+        $this->contentCacheFrontend->set(
+            $rootKey->redisKeyName(),
+            json_encode($rootCacheValues, JSON_THROW_ON_ERROR),
+            $rootTags
+        );
         $this->mappingWasWrittenForCurrentDocument = true;
     }
 
@@ -174,7 +213,7 @@ class CacheUrlMappingAspect
         $url = $httpRequest->getUri();
         $url = $url->withQuery('');
 
-        return (string)$url;
+        return (string) $url;
     }
 
     /**
@@ -214,7 +253,7 @@ class CacheUrlMappingAspect
     {
         $this->isActive = true;
         $this->contentReleaseLogger = $contentReleaseLogger;
-        $this->renderTimestamp = (int)(microtime(true) * 1000);
+        $this->renderTimestamp = (int) ( microtime(true) * 1000 );
         $this->mappingWasWrittenForCurrentDocument = false;
     }
 
@@ -225,7 +264,9 @@ class CacheUrlMappingAspect
         // error), so we make some noise - otherwise the content release just fails with the retry limit and no hint
         // about the reason. {@see storeRootCacheIdentifier()}
         if (!$this->mappingWasWrittenForCurrentDocument && $this->contentReleaseLogger !== null) {
-            $this->contentReleaseLogger->warn('No "doc--..." mapping entry was written for this rendering, so it can never be added to the content release. Either the rendering was fully served from the content cache (then the content cache entries of this node need to be flushed before re-rendering), or its URL is excluded via nodeRendering.urlExcludelistRegex while the node is still part of the enumeration.');
+            $this->contentReleaseLogger->warn(
+                'No "doc--..." mapping entry was written for this rendering, so it can never be added to the content release. Either the rendering was fully served from the content cache (then the content cache entries of this node need to be flushed before re-rendering), or its URL is excluded via nodeRendering.urlExcludelistRegex while the node is still part of the enumeration.'
+            );
         }
 
         $this->isActive = false;

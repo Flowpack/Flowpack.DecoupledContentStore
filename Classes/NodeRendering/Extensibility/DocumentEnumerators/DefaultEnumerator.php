@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumerators;
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
@@ -15,7 +17,7 @@ class DefaultEnumerator implements DocumentEnumeratorInterface
     public function enumerateDocumentNode(NodeInterface $documentNode): iterable
     {
         return [
-            EnumeratedNode::fromNode($documentNode),
+            EnumeratedNode::fromNode($documentNode)
         ];
     }
 }

@@ -1,7 +1,8 @@
 <?php
 
-namespace Flowpack\DecoupledContentStore\NodeEnumeration;
+declare(strict_types=1);
 
+namespace Flowpack\DecoupledContentStore\NodeEnumeration;
 
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
@@ -22,6 +23,10 @@ use Neos\Neos\Domain\Model\Site;
 
 class NodeEnumerator
 {
+    /**
+     * Used when "nodeRendering.nodeTypeWhitelist" configures no node type to include.
+     */
+    private const DEFAULT_NODE_TYPE = 'Neos.Neos:Document';
 
     /**
      * @Flow\Inject
@@ -58,10 +63,9 @@ class NodeEnumerator
         ContentReleaseLogger $contentReleaseLogger,
         ContentReleaseIdentifier $releaseIdentifier
     ): void {
-        $contentReleaseLogger->info(
-            'Starting content release',
-            ['contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize()]
-        );
+        $contentReleaseLogger->info('Starting content release', [
+            'contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize()
+        ]);
 
         // set content release status to running
         $currentMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($releaseIdentifier);
@@ -73,12 +77,10 @@ class NodeEnumerator
         );
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
-        foreach (
-            GeneratorUtility::createArrayBatch(
-                $this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()),
-                100
-            ) as $enumeration
-        ) {
+        foreach (GeneratorUtility::createArrayBatch(
+            $this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()),
+            100
+        ) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.
 
@@ -100,6 +102,9 @@ class NodeEnumerator
      * "[!instanceof ...]" makes find() throw "find() needs an identifier, path or
      * instanceof filter for the first filter part" (exception 1436884196). For the same
      * reason, the positive "[instanceof ...]" filters are put first.
+     *
+     * If the whitelist configures exclusions only, the default node type is used as the
+     * positive filter - otherwise find() would run into the very same exception.
      */
     private static function buildNodeTypeFilter(array $nodeTypeWhitelist): string
     {
@@ -116,6 +121,9 @@ class NodeEnumerator
             }
             $includes[] = '[instanceof ' . $nodeType . ']';
         }
+        if ($includes === []) {
+            $includes[] = '[instanceof ' . self::DEFAULT_NODE_TYPE . ']';
+        }
         return implode('', array_merge($includes, $excludes));
     }
 
@@ -130,14 +138,10 @@ class NodeEnumerator
     ): iterable {
         $combinator = new NodeContextCombinator();
 
-        $nodeTypeFilter = self::buildNodeTypeFilter($this->nodeTypeWhitelist ?: ['Neos.Neos:Document']);
+        // an empty whitelist falls back to the default node type in buildNodeTypeFilter()
+        $nodeTypeFilter = self::buildNodeTypeFilter($this->nodeTypeWhitelist);
 
-        $queueSite = function (Site $site) use (
-            $combinator,
-            $nodeTypeFilter,
-            $contentReleaseLogger,
-            $workspaceName
-        ) {
+        $queueSite = function (Site $site) use ($combinator, $nodeTypeFilter, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain()
@@ -165,7 +169,7 @@ class NodeEnumerator
                         while ($parentNode !== $siteNode) {
                             if ($parentNode === null) {
                                 $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
-                                    'node' => $contextPath,
+                                    'node' => $contextPath
                                 ]);
                                 // Continue with the next document
                                 continue 2;
@@ -176,26 +180,26 @@ class NodeEnumerator
 
                     if ($nodeToEnumerate->isHidden()) {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it is hidden', [
-                            'node' => $contextPath,
+                            'node' => $contextPath
                         ]);
                     } else {
                         $contentReleaseLogger->debug('Registering node for publishing', [
                             'node' => $contextPath
                         ]);
 
-                        foreach (
-                            $this->nodeRenderingExtensionManager->enumerateDocumentNode(
-                                $nodeToEnumerate
-                            ) as $enumeratedNode
-                        ) {
+                        foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode(
+                            $nodeToEnumerate
+                        ) as $enumeratedNode) {
                             yield $enumeratedNode;
                         }
                     }
                 }
             }
-            $contentReleaseLogger->debug(
-                sprintf('Finished enumerating site %s in %dms', $site->getName(), (microtime(true) - $startTime) * 1000)
-            );
+            $contentReleaseLogger->debug(sprintf(
+                'Finished enumerating site %s in %dms',
+                $site->getName(),
+                ( microtime(true) - $startTime ) * 1000
+            ));
         };
 
         if ($site === null) {
@@ -226,5 +230,4 @@ class NodeEnumerator
         ContentReleaseLogger $contentReleaseLogger
     ) {
     }
-
 }

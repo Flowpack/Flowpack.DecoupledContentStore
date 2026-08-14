@@ -35,8 +35,8 @@ class RenderingErrorExtractor
         $paragraphs = preg_split('/\n\s*\n/', $log) ?: [];
         $hits = [];
         foreach ($paragraphs as $index => $paragraph) {
-            $hasError = (bool)preg_match('/(?:^|] )ERROR /m', $paragraph);
-            $hasTrace = (bool)preg_match('/^#\d+ /m', $paragraph);
+            $hasError = (bool) preg_match('/(?:^|] )ERROR /m', $paragraph);
+            $hasTrace = (bool) preg_match('/^#\d+ /m', $paragraph);
             if (!$hasError && !$hasTrace) {
                 continue;
             }

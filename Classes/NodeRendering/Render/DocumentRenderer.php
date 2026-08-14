@@ -1,31 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
 use Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect;
-use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderingUriService;
 use Flowpack\DecoupledContentStore\Transfer\Resource\Target\MultisiteFileSystemSymlinkTarget;
-use GuzzleHttp\Psr7\ServerRequest;
+use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Configuration\ConfigurationManager;
-use Neos\Flow\Http\BaseUriProvider;
-use Neos\Flow\Http\Helper\RequestInformationHelper;
 use Neos\Flow\Http\Helper\ResponseInformationHelper;
-use Neos\Flow\Http\ServerRequestAttributes;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Mvc\ActionResponse;
-use Neos\Flow\Mvc\Controller\Arguments;
-use Neos\Flow\Mvc\Controller\ControllerContext;
-use Neos\Flow\Mvc\Routing\Dto\RouteParameters;
-use Neos\Flow\Mvc\Routing\UriBuilder;
-use Neos\Neos\Domain\Model\Site;
-use Neos\Utility\ObjectAccess;
 use Neos\Flow\ResourceManagement\ResourceManager;
-use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Neos\Domain\Service\ContentContext;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -84,8 +74,11 @@ class DocumentRenderer
      * @return string the rendered document (not needed inside this package, but might be useful for others who want to trigger the rendering)
      * @throws Exception\RenderingException
      */
-    public function renderDocumentNodeVariant(NodeInterface $node, array $arguments, ContentReleaseLogger $contentReleaseLogger): string
-    {
+    public function renderDocumentNodeVariant(
+        NodeInterface $node,
+        array $arguments,
+        ContentReleaseLogger $contentReleaseLogger
+    ): string {
         $this->cacheUrlMappingAspect->beforeDocumentRendering($contentReleaseLogger);
         $nodeUri = $this->nodeRenderingUriService->buildNodeUri($node, $arguments);
 
@@ -93,12 +86,17 @@ class DocumentRenderer
             $arguments['node'] = $node->getContextPath();
             return $this->renderDocumentView($node, $nodeUri, $arguments, $contentReleaseLogger);
         } catch (\Exception $exception) {
-            throw new Exception\RenderingException('Error rendering document view', $node, $nodeUri, 1491378709, $exception);
+            throw new Exception\RenderingException(
+                'Error rendering document view',
+                $node,
+                $nodeUri,
+                1491378709,
+                $exception
+            );
         } finally {
             $this->cacheUrlMappingAspect->afterDocumentRendering();
         }
     }
-
 
     /**
      * Render the view of a document node
@@ -112,8 +110,12 @@ class DocumentRenderer
      * @return string the rendered output
      * @throws Exception\InvalidSiteConfigurationException
      */
-    protected function renderDocumentView(NodeInterface $node, $uri, array $requestArguments, ContentReleaseLogger $contentReleaseLogger): string
-    {
+    protected function renderDocumentView(
+        NodeInterface $node,
+        $uri,
+        array $requestArguments,
+        ContentReleaseLogger $contentReleaseLogger
+    ): string {
         $this->isRendering = true;
 
         try {
@@ -121,23 +123,31 @@ class DocumentRenderer
             $contentContext = $node->getContext();
             $site = $contentContext->getCurrentSite();
             $domain = $site->getFirstActiveDomain();
-            $baseUri = (string)$domain;
+            $baseUri = (string) $domain;
             if ($baseUri === '') {
                 throw new Exception\InvalidSiteConfigurationException(
-                    'Cannot render content without active domain for site "' . $site->getName() . '"', 1467289645
+                    'Cannot render content without active domain for site "' . $site->getName() . '"',
+                    1467289645
                 );
             }
 
             $contentReleaseLogger->info('Rendering document for URI ' . $uri, ['baseUri' => $baseUri]);
 
-            $controllerContext = $this->nodeRenderingUriService->buildControllerContextAndSetBaseUri($uri, $node, $requestArguments);
+            $controllerContext = $this->nodeRenderingUriService->buildControllerContextAndSetBaseUri(
+                $uri,
+                $node,
+                $requestArguments
+            );
             /** @var ActionRequest $request */
             $request = $controllerContext->getRequest();
             $request->setArguments($requestArguments);
 
             $resourceBaseUri = $this->useRelativeResourceUris ? '' : $baseUri;
 
-            MultisiteFileSystemSymlinkTarget::injectBaseUriIntoRelevantResourcePublishingTargets($resourceBaseUri, $this->resourceManager);
+            MultisiteFileSystemSymlinkTarget::injectBaseUriIntoRelevantResourcePublishingTargets(
+                $resourceBaseUri,
+                $this->resourceManager
+            );
 
             $this->fusionView->setFusionPath('documentRendering');
             $this->fusionView->setControllerContext($controllerContext);
@@ -146,7 +156,10 @@ class DocumentRenderer
             $output = $this->fusionView->render();
             if ($this->addHttpMessage) {
                 if ($output instanceof ResponseInterface) {
-                    $output = implode("\r\n", ResponseInformationHelper::prepareHeaders($output)) . "\r\n" . $output->getBody()->getContents();
+                    $output =
+                        implode("\r\n", ResponseInformationHelper::prepareHeaders($output))
+                        . "\r\n"
+                        . $output->getBody()->getContents();
                 } else {
                     $output = self::wrapInHttpMessage($output, $controllerContext->getResponse());
                 }
@@ -173,12 +186,12 @@ class DocumentRenderer
         $headerLines = [];
         foreach ($response->buildHttpResponse()->getHeaders() as $name => $values) {
             foreach ($values as $value) {
-                $headerLines[] = $name . ": " . $value;
+                $headerLines[] = $name . ': ' . $value;
             }
         }
 
         // Finally, we build the HTTP response.
-        return "HTTP/1.1" . (empty($headerLines) ? "\r\n" : implode("\r\n", $headerLines)) . "\r\n" . $output;
+        return 'HTTP/1.1' . ( empty($headerLines) ? "\r\n" : implode("\r\n", $headerLines) ) . "\r\n" . $output;
     }
 
     /**

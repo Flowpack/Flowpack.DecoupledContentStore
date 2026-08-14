@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
 use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
@@ -37,7 +39,7 @@ class CustomFusionView extends FusionView
      */
     private $contentCacheEnabled = true;
 
-    static public $useCustomSiteRootFusionPatternEntryPointForBehavioralTests = false;
+    public static $useCustomSiteRootFusionPatternEntryPointForBehavioralTests = false;
 
     public function __construct(array $options = [])
     {
@@ -134,7 +136,10 @@ class CustomFusionView extends FusionView
 
                 // ... but we need to watch out, as the FusionRuntime also gets $this->controllerContext passed in,
                 // !!*WHICH CHANGES FOR EVERY DOCUMENT*!!
-                $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath] = new Runtime($fusionObjectTree, $this->controllerContext);
+                $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath] = new Runtime(
+                    $fusionObjectTree,
+                    $this->controllerContext
+                );
             }
             $this->fusionRuntime = $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath];
 
@@ -151,7 +156,10 @@ class CustomFusionView extends FusionView
 
             // technically, we do NOT need to replace the RuntimeContentCache (it works as well without the next line)
             // but I felt this would be an additional safeguard against problems with the cache (e.g. content leaking through dimensions or pages)
-            $this->runtimeContentCacheAccessor->setValue($this->fusionRuntime, new RuntimeContentCache($this->fusionRuntime));
+            $this->runtimeContentCacheAccessor->setValue(
+                $this->fusionRuntime,
+                new RuntimeContentCache($this->fusionRuntime)
+            );
 
             // after replacing the RuntimeContentCache, we again need to enable the content cache explicitly.
             // Otherwise, we do not get any contents into the content store.

@@ -7,11 +7,11 @@ namespace Flowpack\DecoupledContentStore;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
-use Neos\ContentRepository\Domain\Model\Workspace;
-use Flowpack\Prunner\ValueObject\JobId;
-use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
+use Flowpack\Prunner\ValueObject\JobId;
 use Flowpack\Prunner\ValueObject\PipelineName;
+use Neos\ContentRepository\Domain\Model\Workspace;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Security\Context;
 
 /**
@@ -19,7 +19,6 @@ use Neos\Flow\Security\Context;
  */
 class ContentReleaseManager
 {
-
     /**
      * @Flow\Inject
      * @var PrunnerApiService
@@ -47,36 +46,49 @@ class ContentReleaseManager
     const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
     const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
 
-    public function startIncrementalContentRelease(string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
-    {
+    public function startIncrementalContentRelease(
+        ?string $currentContentReleaseId = null,
+        ?Workspace $workspace = null,
+        array $additionalVariables = []
+    ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
 
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
-            'contentReleaseId' => $contentReleaseId,
-            'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
-            'validate' => true,
-            'flushContentCache' => false,
-            'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
-            'accountId' => $this->getAccountId(),
-        ]));
+        $this->prunnerApiService->schedulePipeline(
+            PipelineName::create('do_content_release'),
+            array_merge($additionalVariables, [
+                'contentReleaseId' => $contentReleaseId,
+                'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
+                'validate' => true,
+                'flushContentCache' => false,
+                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'accountId' => $this->getAccountId()
+            ])
+        );
 
         return $contentReleaseId;
     }
 
     // the validate parameter can be used to intentionally skip the validation step for this release
-    public function startFullContentRelease(bool $validate = true, string $currentContentReleaseId = null, Workspace $workspace = null, array $additionalVariables = []): ContentReleaseIdentifier
-    {
+    public function startFullContentRelease(
+        bool $validate = true,
+        ?string $currentContentReleaseId = null,
+        ?Workspace $workspace = null,
+        array $additionalVariables = []
+    ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
-        $this->prunnerApiService->schedulePipeline(PipelineName::create('do_content_release'), array_merge($additionalVariables, [
-            'contentReleaseId' => $contentReleaseId,
-            'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
-            'validate' => $validate,
-            'flushContentCache' => true,
-            'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
-            'accountId' => $this->getAccountId(),
-        ]));
+        $this->prunnerApiService->schedulePipeline(
+            PipelineName::create('do_content_release'),
+            array_merge($additionalVariables, [
+                'contentReleaseId' => $contentReleaseId,
+                'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
+                'validate' => $validate,
+                'flushContentCache' => true,
+                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'accountId' => $this->getAccountId()
+            ])
+        );
 
         return $contentReleaseId;
     }

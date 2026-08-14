@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumerators;
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
@@ -24,6 +26,7 @@ class LimitEnumerator implements DocumentEnumeratorInterface
         $this->uriPathSegmentFilter = $options['uriPathSegmentFilter'] ?? null;
         $this->nodePathSegmentFilter = $options['nodePathSegmentFilter'] ?? null;
     }
+
     public function enumerateDocumentNode(NodeInterface $documentNode): iterable
     {
         if (
@@ -49,7 +52,7 @@ class LimitEnumerator implements DocumentEnumeratorInterface
         }
 
         return [
-            EnumeratedNode::fromNode($documentNode),
+            EnumeratedNode::fromNode($documentNode)
         ];
     }
 }

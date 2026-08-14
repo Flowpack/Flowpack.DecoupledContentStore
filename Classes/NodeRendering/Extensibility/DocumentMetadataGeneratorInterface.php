@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility;
@@ -18,5 +19,10 @@ interface DocumentMetadataGeneratorInterface
      *
      * usually you call return $cacheValues->withMetadata('key', $value) inside this method. Be sure to return the modified cache values passed in.
      */
-    public function generateMetadata(NodeInterface $node, array $arguments, ControllerContext $controllerContext, DocumentNodeCacheValues $cacheValues): DocumentNodeCacheValues;
+    public function generateMetadata(
+        NodeInterface $node,
+        array $arguments,
+        ControllerContext $controllerContext,
+        DocumentNodeCacheValues $cacheValues
+    ): DocumentNodeCacheValues;
 }

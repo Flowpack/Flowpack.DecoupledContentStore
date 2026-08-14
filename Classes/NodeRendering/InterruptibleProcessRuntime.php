@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
@@ -108,7 +109,7 @@ final class InterruptibleProcessRuntime
                 // stop iterating the iterator in all cases
                 return $this->handleExitEvent($currentEvent);
             }
-            $shortName = (new \ReflectionClass($currentEvent))->getShortName();
+            $shortName = new \ReflectionClass($currentEvent)->getShortName();
             foreach ($eventClassNames as $eventClassName) {
                 if ($eventClassName === $shortName || is_a($currentEvent, $eventClassName)) {
                     // stop here, can be restarted lateron. We still need to continue to the next event here.
@@ -123,12 +124,11 @@ final class InterruptibleProcessRuntime
         return null;
     }
 
-    protected function handleExitEvent(ExitEvent $event): InterruptibleProcessRuntimeEventInterface
+    private function handleExitEvent(ExitEvent $event): InterruptibleProcessRuntimeEventInterface
     {
         if ($this->inTestingMode === true) {
             return $event;
         }
         exit($event->getStatusCode());
     }
-
 }

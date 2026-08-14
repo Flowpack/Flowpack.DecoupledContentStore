@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
@@ -34,16 +35,19 @@ class ContentReleaseEventsCommandController extends CommandController
      * @param string $groupBy group the events by this value into separately counted groups
      * @return void
      */
-    public function countStatisticsEventCommand(string $contentReleaseIdentifier, string $where = '', string $groupBy = ''): void
-    {
+    public function countStatisticsEventCommand(
+        string $contentReleaseIdentifier,
+        string $where = '',
+        string $groupBy = ''
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         // split every string in $where by the first '=' and use the left part as key and the right part as value
         $where = $where ? array_column(array_map(fn($s) => explode('=', $s, 2), explode(',', $where)), 1, 0) : [];
         $groupBy = $groupBy ? explode(',', $groupBy) : [];
 
         $this->output("Filters: \n");
-        if($where) {
-            foreach ($where as $key=>$value) {
+        if ($where) {
+            foreach ($where as $key => $value) {
                 $this->output("  $key = \"$value\"\n");
             }
         } else {

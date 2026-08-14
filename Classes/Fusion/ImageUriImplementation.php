@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Fusion;
+
 use Flowpack\DecoupledContentStore\Aspects\FixedAssetHandlingInContentCacheFlusherAspect;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-
 
 /**
  * Register rendered assets as dynamic cache tag.
@@ -13,7 +15,6 @@ use Neos\Flow\Persistence\PersistenceManagerInterface;
  */
 class ImageUriImplementation extends \Neos\Neos\Fusion\ImageUriImplementation
 {
-
     /**
      * @Flow\Inject
      * @var PersistenceManagerInterface

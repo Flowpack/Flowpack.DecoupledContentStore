@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility;
@@ -22,5 +23,9 @@ interface ContentReleaseWriterInterface
      * @param RenderedDocumentFromContentCache $renderedDocumentFromContentCache
      * @param ContentReleaseLogger $logger
      */
-    public function processRenderedDocument(ContentReleaseIdentifier $contentReleaseIdentifier, RenderedDocumentFromContentCache $renderedDocumentFromContentCache, ContentReleaseLogger $logger): void;
+    public function processRenderedDocument(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
+        ContentReleaseLogger $logger
+    ): void;
 }

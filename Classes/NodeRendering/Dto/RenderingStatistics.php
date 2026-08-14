@@ -12,7 +12,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class RenderingStatistics implements \JsonSerializable
 {
-
     /**
      * @var int
      */
@@ -62,9 +61,6 @@ final class RenderingStatistics implements \JsonSerializable
         return new self($tmp['remainingJobs'], $tmp['totalJobs'], $tmp['renderingsPerSecond']);
     }
 
-    /**
-     * @return int
-     */
     public function getRemainingJobs(): int
     {
         return $this->remainingJobs;
@@ -75,31 +71,22 @@ final class RenderingStatistics implements \JsonSerializable
         return $this->totalJobs - $this->remainingJobs;
     }
 
-    /**
-     * @return int
-     */
     public function getTotalJobs(): int
     {
         return $this->totalJobs;
     }
 
-    /**
-     * @return array
-     */
     public function getRenderingsPerSecond(): array
     {
         return $this->renderingsPerSecond;
     }
 
-    /**
-     * @return string
-     */
     public function getSvgSparkline(): string
     {
         return $this->svgSparkline;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return [
             'remainingJobs' => $this->remainingJobs,
@@ -108,6 +95,4 @@ final class RenderingStatistics implements \JsonSerializable
             'svgSparkline' => $this->svgSparkline
         ];
     }
-
-
 }

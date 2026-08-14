@@ -11,7 +11,6 @@ use Neos\Flow\Annotations as Flow;
  */
 final class NodeRenderingCompletionStatus implements \JsonSerializable
 {
-
     private const SCHEDULED = 'scheduled';
     private const RUNNING = 'running';
     private const SUCCESS = 'success';
@@ -75,9 +74,6 @@ final class NodeRenderingCompletionStatus implements \JsonSerializable
         return $this->status === self::RUNNING;
     }
 
-    /**
-     * @return string
-     */
     public function getStatus(): string
     {
         return $this->status;
@@ -93,9 +89,8 @@ final class NodeRenderingCompletionStatus implements \JsonSerializable
         return $this->isSuccessful() || $this->isFailed();
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): string
     {
         return $this->status;
     }
-
 }

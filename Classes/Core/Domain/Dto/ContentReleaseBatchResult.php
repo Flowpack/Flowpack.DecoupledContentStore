@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowpack\DecoupledContentStore\Core\Domain\Dto;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -28,7 +29,6 @@ final class ContentReleaseBatchResult
 
     public function getResultForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier)
     {
-        return $this->results[(string)$contentReleaseIdentifier] ?? null;
+        return $this->results[(string) $contentReleaseIdentifier] ?? null;
     }
-
 }
