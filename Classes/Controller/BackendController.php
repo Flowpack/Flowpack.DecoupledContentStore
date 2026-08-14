@@ -7,6 +7,7 @@ namespace Flowpack\DecoupledContentStore\Controller;
 use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
 use Flowpack\DecoupledContentStore\BackendUi\WorkerErrorLogAggregator;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
+use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
@@ -85,6 +86,9 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
      */
     protected $redisPruneService;
 
+    #[Flow\Inject]
+    protected AutomaticReleaseSwitchService $automaticReleaseSwitchService;
+
     /**
      * @Flow\InjectConfiguration("redisContentStores")
      * @var array
@@ -121,6 +125,7 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
             $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch
         );
         $this->view->assign('showToggleConfigEpochButton', $showToggleConfigEpochButton);
+        $this->view->assign('automaticReleasePauseState', $this->automaticReleaseSwitchService->getPauseState());
     }
 
     public function detailsAction(
@@ -246,6 +251,40 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->contentReleaseManager->cancelAllRunningContentReleases();
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
+    }
+
+    public function pauseAutomaticReleasesAction(?string $contentStore = null): ?string
+    {
+        if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
+            $this->response->setStatusCode(405);
+            return 'Method not allowed';
+        }
+
+        $this->automaticReleaseSwitchService->pause();
+        $this->addFlashMessage(
+            'Automatic content releases are paused. Editor publishes will not go live until you resume them.'
+        );
+
+        $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
+
+        return null;
+    }
+
+    public function resumeAutomaticReleasesAction(?string $contentStore = null): ?string
+    {
+        if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
+            $this->response->setStatusCode(405);
+            return 'Method not allowed';
+        }
+
+        $this->automaticReleaseSwitchService->resume();
+        $this->addFlashMessage(
+            'Automatic content releases are enabled again. Changes published while they were paused go live with the next release.'
+        );
+
+        $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
+
+        return null;
     }
 
     public function toggleConfigEpochAction(string $redisInstanceIdentifier)

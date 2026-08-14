@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore;
 
+use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
@@ -12,7 +13,9 @@ use Flowpack\Prunner\ValueObject\JobId;
 use Flowpack\Prunner\ValueObject\PipelineName;
 use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Log\Utility\LogEnvironment;
 use Neos\Flow\Security\Context;
+use Psr\Log\LoggerInterface;
 
 /**
  * @Flow\Scope("singleton")
@@ -43,15 +46,35 @@ class ContentReleaseManager
      */
     protected $securityContext;
 
+    #[Flow\Inject]
+    protected AutomaticReleaseSwitchService $automaticReleaseSwitchService;
+
+    #[Flow\Inject]
+    protected LoggerInterface $logger;
+
     const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
     const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
 
+    /**
+     * All automatic release triggers (workspace publish, asset change, re-release after a rendering error) run through
+     * this method, so it is the single place where the pause switch takes effect.
+     *
+     * While automatic releases are paused, the returned identifier belongs to a release which was never scheduled.
+     * No caller uses the return value today; the signature is kept so existing callers do not have to change.
+     */
     public function startIncrementalContentRelease(
         ?string $currentContentReleaseId = null,
         ?Workspace $workspace = null,
         array $additionalVariables = []
     ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
+
+        if ($this->automaticReleaseSwitchService->isPaused()) {
+            $this->automaticReleaseSwitchService->countSuppressedRelease();
+            $this->logger->info(sprintf('Automatic content releases are paused, so content release %s was not scheduled.', $contentReleaseId->getIdentifier()), LogEnvironment::fromMethodName(__METHOD__));
+
+            return $contentReleaseId;
+        }
 
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
@@ -71,6 +94,8 @@ class ContentReleaseManager
     }
 
     // the validate parameter can be used to intentionally skip the validation step for this release
+    //
+    // This is the explicitly requested release ("Publish All"), so it is deliberately not affected by the pause switch.
     public function startFullContentRelease(
         bool $validate = true,
         ?string $currentContentReleaseId = null,

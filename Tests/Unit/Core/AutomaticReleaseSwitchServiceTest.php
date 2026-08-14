@@ -1,0 +1,112 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Flowpack\DecoupledContentStore\Tests\Unit\Core;
+
+use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Neos\Flow\Security\Context;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
+
+/**
+ * Tests the switch which suppresses automatically triggered content releases.
+ *
+ * The state lives in a single Redis hash, so the interesting behaviour is which field decides that the switch is
+ * set, and that pausing twice does not wipe what the first pause recorded.
+ */
+final class AutomaticReleaseSwitchServiceTest extends TestCase
+{
+    private const REDIS_KEY = 'contentStore:automaticReleasesPaused';
+
+    public function testTheSwitchIsSetOnlyIfThePausedAtFieldExists(): void
+    {
+        // countSuppressedRelease() re-creates the key with nothing but its counter if it races a resume, so the
+        // existence of the key itself says nothing
+        $redis = $this->buildRedis();
+        $redis->method('hExists')->with(self::REDIS_KEY, 'pausedAt')->willReturn(false);
+
+        self::assertFalse($this->buildService($redis)->isPaused());
+    }
+
+    public function testPausingWhileAlreadyPausedKeepsTheOriginalState(): void
+    {
+        // otherwise the second pause would reset both the timestamp and the count of suppressed releases
+        $redis = $this->buildRedis();
+        $redis->method('hExists')->willReturn(true);
+        $redis->expects(self::never())->method('hMSet');
+
+        $this->buildService($redis)->pause();
+    }
+
+    public function testPausingRecordsTheTimestampAndAnEmptyCounter(): void
+    {
+        $redis = $this->buildRedis();
+        $redis->method('hExists')->willReturn(false);
+        $redis->expects(self::once())->method('hMSet')->with(
+            self::REDIS_KEY,
+            self::callback(static function (array $hash): bool {
+                return $hash['accountId'] === ''
+                    && $hash['suppressedReleaseCount'] === 0
+                    && \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $hash['pausedAt']) !== false;
+            })
+        );
+
+        $this->buildService($redis)->pause();
+    }
+
+    public function testThereIsNoPauseStateWhileTheSwitchIsNotSet(): void
+    {
+        $redis = $this->buildRedis();
+        $redis->method('hGetAll')->willReturn([]);
+
+        self::assertNull($this->buildService($redis)->getPauseState());
+    }
+
+    public function testThePauseStateIsReadFromTheHash(): void
+    {
+        $redis = $this->buildRedis();
+        $redis->method('hGetAll')->willReturn([
+            'pausedAt' => '2026-08-13T09:15:00+02:00',
+            'accountId' => 'admin',
+            'suppressedReleaseCount' => '4',
+        ]);
+
+        $pauseState = $this->buildService($redis)->getPauseState();
+
+        self::assertNotNull($pauseState);
+        self::assertSame('admin', $pauseState->getAccountId());
+        self::assertSame(4, $pauseState->getSuppressedReleaseCount());
+    }
+
+    /**
+     * @return \Redis&MockObject
+     */
+    private function buildRedis(): \Redis
+    {
+        return $this->createMock(\Redis::class);
+    }
+
+    private function buildService(\Redis $redis): AutomaticReleaseSwitchService
+    {
+        $redisClientManager = $this->createMock(RedisClientManager::class);
+        $redisClientManager->method('getPrimaryRedis')->willReturn($redis);
+
+        $securityContext = $this->createMock(Context::class);
+        $securityContext->method('isInitialized')->willReturn(false);
+
+        $service = new AutomaticReleaseSwitchService();
+        self::injectDependency($service, 'redisClientManager', $redisClientManager);
+        self::injectDependency($service, 'securityContext', $securityContext);
+
+        return $service;
+    }
+
+    private static function injectDependency(object $target, string $propertyName, object $dependency): void
+    {
+        // the class uses Flow property injection, which is not available outside a Flow bootstrap
+        (new ReflectionProperty($target, $propertyName))->setValue($target, $dependency);
+    }
+}

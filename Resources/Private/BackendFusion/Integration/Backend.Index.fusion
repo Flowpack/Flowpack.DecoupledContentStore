@@ -8,6 +8,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     // - toggleFromConfigEpoch: string, e.g. "2"
     // - toggleToConfigEpoch: string, e.g. "1"
     // - showToggleConfigEpochButton: boolean
+    // - automaticReleasePauseState: AutomaticReleasePauseState object, or NULL if automatic releases are not paused
 
     renderer = Neos.Fusion:Component {
         _renderedTableBody = Neos.Fusion:Loop {
@@ -64,6 +65,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                 </form>
                 <div class="neos-content neos-container-fluid">
                     <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
+                    <Flowpack.DecoupledContentStore:AutomaticReleasesPausedBanner />
                     <legend>Content Store Releases</legend>
                     <div class="neos-row-fluid">
                         <table class="neos-table cs-releases-table">
@@ -102,12 +104,62 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     }
 }
 
+// Rendered whenever automatic releases are paused, for everybody who can see the module - the pause stops all editor
+// publishes from going live, so it must not be visible only to those allowed to lift it.
+prototype(Flowpack.DecoupledContentStore:AutomaticReleasesPausedBanner) < prototype(Neos.Fusion:Component) {
+    pauseState = ${automaticReleasePauseState}
+
+    renderer = afx`
+        <div
+            @if.isPaused={props.pauseState}
+            style="margin-bottom: 2rem; padding: 1rem 1.5rem; background-color: #ff460d; color: #fff; border-radius: 2px;"
+        >
+            <div style="font-size: 1.4em; font-weight: bold;">Automatic content releases are paused</div>
+            <div style="margin-top: .5rem;">
+                Nothing editors publish goes live until an administrator resumes them.
+                Paused on {Date.format(props.pauseState.pausedAt, 'd.m.Y H:i:s')}
+                <span @if.hasAccount={props.pauseState.accountId}>by {props.pauseState.accountId}</span>,
+                {props.pauseState.suppressedReleaseCount} release(s) suppressed since then.
+            </div>
+        </div>
+    `
+}
+
 prototype(Flowpack.DecoupledContentStore:ContentStoreActions) < prototype(Neos.Fusion:Join) {
     @process.wrap = afx`
         <div style="margin-top: 5rem; display: flex; gap: 1rem;">
             {value}
         </div>
     `
+
+    toggleAutomaticReleases = Neos.Fusion:Component {
+        @if.hasAccess = ${Security.hasAccess('Flowpack.DecoupledContentStore:ReleaseControl')}
+
+        isPaused = ${automaticReleasePauseState ? true : false}
+
+        _pauseUri = Neos.Fusion:UriBuilder {
+            action = 'pauseAutomaticReleases'
+            arguments = Neos.Fusion:DataStructure {
+                contentStore = ${contentStore}
+            }
+        }
+
+        _resumeUri = Neos.Fusion:UriBuilder {
+            action = 'resumeAutomaticReleases'
+            arguments = Neos.Fusion:DataStructure {
+                contentStore = ${contentStore}
+            }
+        }
+
+        renderer = afx`
+            <button @if.isNotPaused={!props.isPaused} form="postHelper" formaction={props._pauseUri} type="submit" class="neos-button neos-button-warning">
+                Pause automatic releases
+            </button>
+            <button @if.isPaused={props.isPaused} form="postHelper" formaction={props._resumeUri} type="submit" class="neos-button neos-button-primary">
+                Resume automatic releases
+            </button>
+        `
+    }
 
     publishAllWithoutValidation = Neos.Fusion:Component {
         _publishAllWithoutValidationUri = Neos.Fusion:UriBuilder {
