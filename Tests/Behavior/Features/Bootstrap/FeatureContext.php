@@ -8,12 +8,15 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Exception as DecoupledContentStoreException;
+use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
+use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\IncrementalContentReleaseHandler;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -30,6 +33,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures\StubPrunnerApiService;
 use Neos\Behat\Tests\Behat\FlowContextTrait;
+use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
@@ -219,6 +223,65 @@ class FeatureContext implements Context
         } finally {
             echo $bufferedOutput->fetch();
         }
+    }
+
+    /**
+     * @When I enumerate the node at path :path for content release :contentReleaseIdentifier
+     */
+    public function iEnumerateTheNodeAtPathForContentRelease($path, $contentReleaseIdentifier)
+    {
+        $this->enumerateGivenNodes($this->nodeIdentifierForPath($path), $contentReleaseIdentifier);
+    }
+
+    /**
+     * @Then enumerating the node :nodeIdentifiers for content release :contentReleaseIdentifier is refused
+     */
+    public function enumeratingTheNodeIsRefused($nodeIdentifiers, $contentReleaseIdentifier)
+    {
+        try {
+            $this->enumerateGivenNodes($nodeIdentifiers, $contentReleaseIdentifier);
+        } catch (DecoupledContentStoreException $exception) {
+            return;
+        }
+
+        Assert::fail('Enumerating ' . $nodeIdentifiers . ' should have been refused.');
+    }
+
+    private function enumerateGivenNodes($nodeIdentifiers, $contentReleaseIdentifier): void
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $quickPublishNodeEnumerator = $this->getObjectManager()->get(QuickPublishNodeEnumerator::class);
+        $bufferedOutput = new BufferedOutput();
+        $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
+
+        try {
+            $quickPublishNodeEnumerator->enumerateGivenNodesAndStoreInRedis(
+                NodeIdentifiers::fromCommaSeparatedString($nodeIdentifiers),
+                $contentReleaseLogger,
+                $contentReleaseIdentifier
+            );
+        } finally {
+            echo $bufferedOutput->fetch();
+        }
+    }
+
+    /**
+     * The fixtures do not spell out node identifiers, and a quick release is asked for exactly those.
+     */
+    private function nodeIdentifierForPath(string $path): string
+    {
+        $combinator = $this->getObjectManager()->get(NodeContextCombinator::class);
+
+        foreach ($combinator->sites() as $site) {
+            foreach ($combinator->siteNodeInContexts($site, 'live') as $siteNode) {
+                $node = $siteNode->getContext()->getNode($path);
+                if ($node instanceof NodeInterface) {
+                    return $node->getIdentifier();
+                }
+            }
+        }
+
+        Assert::fail('Could not find a node at path ' . $path);
     }
 
     /**

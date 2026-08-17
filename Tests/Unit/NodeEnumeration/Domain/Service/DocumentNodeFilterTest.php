@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Flowpack\DecoupledContentStore\Tests\Unit\NodeEnumeration;
+namespace Flowpack\DecoupledContentStore\Tests\Unit\NodeEnumeration\Domain\Service;
 
-use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\DocumentNodeFilter;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -15,14 +15,14 @@ use PHPUnit\Framework\TestCase;
  *       - 'Neos.Neos:Document'
  *       - '!My.Package:Bar'
  */
-class NodeEnumeratorTest extends TestCase
+class DocumentNodeFilterTest extends TestCase
 {
     /**
      * @param array<int, string> $nodeTypeWhitelist the setting as it arrives from the YAML configuration
      */
     private static function buildNodeTypeFilter(array $nodeTypeWhitelist): string
     {
-        $method = new \ReflectionMethod(NodeEnumerator::class, 'buildNodeTypeFilter');
+        $method = new \ReflectionMethod(DocumentNodeFilter::class, 'buildNodeTypeFilter');
         return $method->invoke(null, $nodeTypeWhitelist);
     }
 

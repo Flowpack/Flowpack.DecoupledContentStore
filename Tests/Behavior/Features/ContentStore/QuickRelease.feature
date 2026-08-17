@@ -47,6 +47,15 @@ Feature: Quick Release
     # the enumeration says what a release renders, so a quick release brings its own instead of inheriting one
     And the enumeration for content release "6" contains 0 nodes
 
+    # and that enumeration holds nothing but the nodes the quick release was asked to publish
+    When I enumerate the node at path "/sites/test" for content release "6"
+    Then the enumeration for content release "6" contains 1 node
+
+  Scenario: A node which cannot be found is not published
+    # a quick release which renders nothing would publish the release it was copied from, and look successful
+    When I create a content release "5"
+    Then enumerating the node "3239baee-3e7f-785c-0853-f4302ef32570" for content release "5" is refused
+
   Scenario: A release which has not finished is not copied forward
     # everything the copy does not overwrite is published as if it had been rendered, so an unfinished release
     # must not be built upon

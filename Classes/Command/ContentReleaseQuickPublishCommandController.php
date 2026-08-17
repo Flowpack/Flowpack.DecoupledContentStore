@@ -8,7 +8,9 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Exception;
+use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
+use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
@@ -19,6 +21,9 @@ final class ContentReleaseQuickPublishCommandController extends CommandControlle
 {
     #[Flow\Inject]
     protected RedisReleaseCopyService $redisReleaseCopyService;
+
+    #[Flow\Inject]
+    protected QuickPublishNodeEnumerator $quickPublishNodeEnumerator;
 
     /**
      * Take the content of a finished content release over into a new one, within the same redis instance.
@@ -46,6 +51,30 @@ final class ContentReleaseQuickPublishCommandController extends CommandControlle
             );
         } catch (Exception $exception) {
             // the pipeline shows the task log, so an uncaught exception would bury the reason under a stack trace
+            $logger->error($exception->getMessage());
+            $this->quit(1);
+        }
+    }
+
+    /**
+     * Enumerate the given document nodes for rendering. Everything else in the release comes from the release it
+     * was copied from.
+     *
+     * @param string $contentReleaseIdentifier the release being built
+     * @param string $nodeIdentifiers the node identifiers to publish, separated by commas
+     */
+    public function enumerateGivenNodesCommand(string $contentReleaseIdentifier, string $nodeIdentifiers): void
+    {
+        $releaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $releaseIdentifier);
+
+        try {
+            $this->quickPublishNodeEnumerator->enumerateGivenNodesAndStoreInRedis(
+                NodeIdentifiers::fromCommaSeparatedString($nodeIdentifiers),
+                $logger,
+                $releaseIdentifier
+            );
+        } catch (Exception $exception) {
             $logger->error($exception->getMessage());
             $this->quit(1);
         }
