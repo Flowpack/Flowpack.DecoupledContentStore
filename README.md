@@ -53,13 +53,17 @@ delivery layer part in another software (e.g. a shop system) as an extension.
 - Allows rsyncing persistent assets around (should you need it)
 - Backend module with overview of _content releases_ (current release, switching
   releases, manual publish)
+- Pausing the automatic releases, so nothing goes live while a change is being prepared
+- *Quick content releases*: publish single documents into a copy of the release which is live, instead of
+  re-rendering everything
 
 This project is using the go-package [prunner](https://github.com/Flowpack/prunner) and [its Flow Package wrapper](https://github.com/Flowpack/Flowpack.Prunner)
 as the basis for orchestrating and executing a content release.
 
 ## Requirements
 
-- Redis
+- Redis — 6.2 or newer if you want to use [Quick Content Releases](#quick-content-releases), which copy a release
+  with the server-side `COPY` command. Everything else works with older versions.
 - Prunner
 
 Start up prunner via the following command:
@@ -317,6 +321,163 @@ by the newer rendering task.
 in the wait-list waiting to be rendered.** Additionally, we can be sure that scheduled content releases will be
 eventually executed, because that's prunner's job.
 
+## Quick Content Releases
+
+Rendering dominates the runtime of a content release: on a big site, a release which changes a single page still
+re-renders every other page to produce a release which is identical to the previous one everywhere else.
+
+A *quick content release* is the shortcut for that case. It copies the content release which is currently live,
+re-renders only the documents you name into that copy, and publishes the result. From the enumeration onwards it is
+the ordinary pipeline, so validation, transfer and switching behave exactly as they always do — the release which
+goes live is a complete, ordinary content release, not a patch.
+
+It is deliberately manual and explicit. Nothing starts a quick release automatically, and the backend offers it only
+while automatic releases are paused, because that is the situation it exists for: something has to go live now, and
+waiting for a full release is not an option.
+
+The reasoning behind the design — the measurement it is based on, why the copy is configured per key, and which
+limitations follow from copying a release forward — is written up in
+[Documentation/Concepts/QuickContentReleases.md](Documentation/Concepts/QuickContentReleases.md).
+
+### Requirements
+
+- **Redis 6.2 or newer** on the primary content store. The copy is the server-side `COPY` command, so nothing travels
+  over the wire. The command checks the server version before it copies anything and aborts with a message naming the
+  required version, rather than failing cryptically on an older server.
+- **The `do_quick_content_release` pipeline** from `pipelines_template.yml` in your own `pipelines.yml`.
+- **`copyOnQuickRelease: true` on every custom release key** you write (see below). This is the part which is easy to
+  miss, and getting it wrong is not subtle: a key which is `isRequired` and is neither copied nor written by the
+  quick pipeline makes the switch abort.
+
+### Registering your own keys for the copy
+
+Which keys a quick release carries over is configuration, not a hardcoded list. Extend the registration described
+under [Writing Custom Data to the Content Release](#writing-custom-data-to-the-content-release):
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    redisKeyPostfixesForEachRelease:
+      foo:
+        transfer: true
+        # true for content which a quick release does not rebuild, and which therefore has to come along from the
+        # release being copied. Defaults to false.
+        copyOnQuickRelease: true
+```
+
+The default is `false`, which is the safe direction: a key which should have been copied shows up as missing content,
+while a key which should not have been copied describes a *different* release and is much harder to notice. The
+package's own content keys (`data`, `meta:urls`, `renderedDocuments`, `renderedMetadata`) are `true`; its enumeration,
+job queue and statistics keys are `false`, because the quick pipeline writes those itself.
+
+Set it to `true` for anything your pipeline exports in a task the quick pipeline does not run — brand data, redirect
+exports, reusable snippets and the like. Those then go live exactly as they were in the copied release.
+
+### Pausing the automatic releases
+
+The Content Store module has a *Pause automatic releases* button. While the pause is on:
+
+- every automatic trigger (workspace publish, asset change, re-render after a rendering error) is suppressed and
+  counted, so the module can show how much is waiting;
+- *Publish All* still works — it is an explicit request, and the pause exists to let you prepare a release by hand;
+- editors see a warning in the Neos content module telling them their changes are not going live yet, because a pause
+  stops everybody's publishes, not just yours.
+
+Resuming only lifts the switch. It does not start a release, so the suppressed changes go live with the next release
+that is triggered — start one yourself if you do not want to wait for the next editor publish.
+
+Pause, resume and quick publish sit behind the `Flowpack.DecoupledContentStore:ReleaseControl` privilege target,
+which the package grants to `Neos.Neos:Administrator`. It is separate from the module privilege, so an installation
+which lets editors watch the module can still restrict who may stop everybody's publishes from going live. The
+read-only status the content-module warning uses is outside the target, so editors can see the banner.
+
+### Publishing single documents
+
+With automatic releases paused, the module offers *Quick publish pages*. Paste the node identifiers of the documents
+to publish, one per line. The confirmation page then shows one row per dimension variant with its title, path,
+dimensions, node type and a link into the Neos backend, and flags every row which will **not** be published — a page
+which is hidden, orphaned, of a node type outside `nodeRendering.nodeTypeWhitelist`, or an identifier which resolves
+nowhere at all. Check those before you continue: a page you meant to fix would otherwise silently stay as it is.
+
+The identifiers are checked against the identifier format before they are used anywhere. They end up inside a shell
+command in the pipeline, so anything else is refused outright.
+
+Two situations are refused with an explanation instead of a release:
+
+- **No release is live.** There is nothing to copy, so run a full release instead.
+- **Another quick release is still running or queued.** Its copy source is resolved when it is scheduled, so a second
+  one queued behind the first would build on the release the first is about to replace — and drop that change without
+  a word.
+
+### What a quick release cannot do
+
+These follow from copying the previous release forward. They are not gaps to be closed later.
+
+- **Only the named pages change.** Anything on *other* pages which embeds them — navigation titles, teasers, sitemap
+  entries, search indexes, and whatever your own export tasks produce — stays as it was until the next normal release.
+- **Adding or removing pages is out of scope.** A deleted page still sits in the copied `meta:urls` and
+  `renderedDocuments`. Quick publish is for fixing pages which already exist.
+- **The release being copied has to still exist**, so it must not have been pruned by
+  `contentReleaseRetentionCount`.
+- **Pausing means editor changes stop going live.** The banner and the counter are the whole mitigation, which is why
+  resuming is a deliberate manual step.
+- **Concurrency.** The quick pipeline takes the same concurrent build lock as any other release, so it terminates an
+  in-flight full release, and a full release started afterwards terminates it. Correct, but pressing *Publish All*
+  during a quick release throws the quick release away.
+
+### Scoping your own validators
+
+Validation is what is left of the runtime once rendering is gone, and after a copy-forward almost all of it is wasted:
+every document except the handful just re-rendered is byte-for-byte what the previous release was already validated
+on.
+
+`Flowpack\DecoupledContentStore\QuickPublish\ContentReleaseScope` is the hook for that. A validator which knows
+nothing about quick releases keeps working unchanged; one which opts in asks for the scope and narrows its read:
+
+```php
+$changedUrls = $this->contentReleaseScope->getChangedUrls($contentReleaseIdentifier);
+if ($changedUrls === null) {
+    // an ordinary release: validate everything, as before
+} else {
+    // a quick release: only these URLs were rendered, everything else was validated in the release we copied
+}
+```
+
+`NULL` means "this release was rendered as a whole" — a validator which reads it as "no URLs to check" would wave
+everything through, so treat the two cases explicitly. The typical win is turning an `hGetAll` over the whole
+document hash into an `hMGet` for the changed URLs.
+
+The package's own `contentReleaseValidation:validate` already does this, and it had to: it compares the enumeration
+of the new release against the live one and aborts below 70%, while a quick release deliberately enumerates a handful
+of documents instead of all of them. For a quick release it compares the number of published URLs instead, which
+after a copy-forward equals the previous release.
+
+### The commands
+
+Both are pipeline steps and are not meant to be called by hand, but they are useful to know when reading a failed
+job log:
+
+```bash
+# copy every key registered with copyOnQuickRelease from one release to another, within one content store
+./flow contentReleaseQuickPublish:copyReleaseWithin primary <sourceReleaseId> <targetReleaseId>
+
+# write the enumeration of a quick release: these documents, and nothing else
+./flow contentReleaseQuickPublish:enumerateGivenNodes <contentReleaseId> --nodeIdentifiers <uuid,uuid>
+```
+
+The copy refuses a source release whose status is not `success` or which is missing a required key, because
+switching a release live by hand is possible and "currently live" alone does not guarantee a clean release. The
+enumeration refuses an identifier which resolves nowhere, and refuses to end up empty — a quick release which renders
+nothing would publish the release it copied and look like a successful publish while the change is nowhere.
+
+To start one from your own code:
+
+```php
+$this->contentReleaseManager->startQuickContentRelease(
+    NodeIdentifiers::fromCommaSeparatedString('<uuid>,<uuid>')
+);
+```
+
 ## Extensibility
 
 ### Custom `pipelines.yml`
@@ -389,6 +550,9 @@ Flowpack:
 
 This is needed so that the system knows which keys should be synchronized between the different content stores,
 and what data to delete if a release is removed.
+
+If you use [Quick Content Releases](#quick-content-releases), decide here whether the key travels into one — see
+[Registering your own keys for the copy](#registering-your-own-keys-for-the-copy).
 
 ### Rendering additional nodes with arguments (e.g. pagination or filters)
 
