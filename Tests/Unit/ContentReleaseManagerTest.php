@@ -85,12 +85,18 @@ class ContentReleaseManagerTest extends UnitTestCase
         // pausing the automatic release is what quick releases exist for, so the pause must not block them
         $this->currentContentReleaseId = '5';
         $this->automaticReleaseSwitchService->method('isPaused')->willReturn(true);
-        $this->prunnerApiService->expects(self::once())->method('schedulePipeline')->with(
-            self::equalTo(PipelineName::create('do_quick_content_release')),
-            self::callback(static fn(array $variables): bool =>
-                $variables['currentContentReleaseId'] === '5'
-                && $variables['quickPublishNodeIdentifiers'] === self::NODE_IDENTIFIER)
-        );
+        $this->prunnerApiService
+            ->expects(self::once())
+            ->method('schedulePipeline')
+            ->with(
+                self::equalTo(PipelineName::create('do_quick_content_release')),
+                self::callback(
+                    static fn(array $variables): bool => (
+                        $variables['currentContentReleaseId'] === '5'
+                        && $variables['quickPublishNodeIdentifiers'] === self::NODE_IDENTIFIER
+                    )
+                )
+            );
 
         $this->buildContentReleaseManager()->startQuickContentRelease($this->nodeIdentifiers());
     }
@@ -112,7 +118,8 @@ class ContentReleaseManagerTest extends UnitTestCase
     {
         // the second one copies the release the first is about to replace, so it would undo the first change
         $this->currentContentReleaseId = '5';
-        $this->prunnerApiService->method('loadPipelinesAndJobs')
+        $this->prunnerApiService
+            ->method('loadPipelinesAndJobs')
             ->willReturn($this->jobsResponse('do_quick_content_release', $started));
         $this->prunnerApiService->expects(self::never())->method('schedulePipeline');
 
@@ -131,7 +138,8 @@ class ContentReleaseManagerTest extends UnitTestCase
     public function testARunningQuickReleaseIsCancelledAlongWithTheOtherContentReleases(): void
     {
         // it ends up being switched live just like a full release does, so "cancel" has to reach it
-        $this->prunnerApiService->method('loadPipelinesAndJobs')
+        $this->prunnerApiService
+            ->method('loadPipelinesAndJobs')
             ->willReturn($this->jobsResponse('do_quick_content_release', true));
         $this->prunnerApiService->expects(self::once())->method('cancelJob');
 
@@ -157,9 +165,9 @@ class ContentReleaseManagerTest extends UnitTestCase
                     'errored' => false,
                     'created' => '2026-08-17T10:00:00+02:00',
                     'start' => $started ? '2026-08-17T10:00:01+02:00' : null,
-                    'user' => 'test',
-                ],
-            ],
+                    'user' => 'test'
+                ]
+            ]
         ]);
     }
 

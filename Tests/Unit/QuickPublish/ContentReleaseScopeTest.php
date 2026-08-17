@@ -32,10 +32,13 @@ final class ContentReleaseScopeTest extends UnitTestCase
     public function testAQuickReleaseIsScopedToTheUrlsItRendered(): void
     {
         $redis = $this->createMock(\Redis::class);
-        $redis->method('sMembers')->with(self::CHANGED_URLS_KEY)->willReturn([
-            'http://test.de/de',
-            'http://test.de/de/nested',
-        ]);
+        $redis
+            ->method('sMembers')
+            ->with(self::CHANGED_URLS_KEY)
+            ->willReturn([
+                'http://test.de/de',
+                'http://test.de/de/nested'
+            ]);
 
         self::assertSame(
             ['http://test.de/de', 'http://test.de/de/nested'],
@@ -46,16 +49,15 @@ final class ContentReleaseScopeTest extends UnitTestCase
     public function testTheScopeIsStoredWithTheReleaseItBelongsTo(): void
     {
         $redis = $this->createMock(\Redis::class);
-        $redis->expects(self::once())->method('sAdd')->with(
-            self::CHANGED_URLS_KEY,
+        $redis
+            ->expects(self::once())
+            ->method('sAdd')
+            ->with(self::CHANGED_URLS_KEY, 'http://test.de/de', 'http://test.de/de/nested');
+
+        $this->buildContentReleaseScope($redis)->setChangedUrls($this->contentReleaseIdentifier(), [
             'http://test.de/de',
             'http://test.de/de/nested'
-        );
-
-        $this->buildContentReleaseScope($redis)->setChangedUrls(
-            $this->contentReleaseIdentifier(),
-            ['http://test.de/de', 'http://test.de/de/nested']
-        );
+        ]);
     }
 
     public function testAnEmptyScopeIsNotStored(): void
@@ -98,15 +100,15 @@ final class ContentReleaseScopeTest extends UnitTestCase
                 'transfer' => true,
                 'transferMode' => 'dump',
                 'isRequired' => true,
-                'copyOnQuickRelease' => true,
+                'copyOnQuickRelease' => true
             ],
             'quickPublishChangedUrls' => [
                 'redisKeyPostfix' => 'quickPublish:changedUrls',
                 'transfer' => false,
                 'transferMode' => 'dump',
                 'isRequired' => false,
-                'copyOnQuickRelease' => false,
-            ],
+                'copyOnQuickRelease' => false
+            ]
         ]);
 
         $contentReleaseScope = new ContentReleaseScope();

@@ -47,8 +47,8 @@ final class AutomaticReleasePauseState
 
         return new self(
             new DateTimeImmutable($redisHash['pausedAt']),
-            ($redisHash['accountId'] ?? '') !== '' ? $redisHash['accountId'] : null,
-            (int)($redisHash['suppressedReleaseCount'] ?? 0)
+            ( $redisHash['accountId'] ?? '' ) !== '' ? $redisHash['accountId'] : null,
+            (int) ( $redisHash['suppressedReleaseCount'] ?? 0 )
         );
     }
 

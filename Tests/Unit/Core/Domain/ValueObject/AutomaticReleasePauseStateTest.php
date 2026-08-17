@@ -18,7 +18,7 @@ final class AutomaticReleasePauseStateTest extends UnitTestCase
         $pauseState = AutomaticReleasePauseState::fromRedisHash([
             'pausedAt' => '2026-08-13T09:15:00+02:00',
             'accountId' => 'admin',
-            'suppressedReleaseCount' => '7',
+            'suppressedReleaseCount' => '7'
         ]);
 
         self::assertSame('2026-08-13T09:15:00+02:00', $pauseState->getPausedAt()->format(\DateTimeInterface::ATOM));
@@ -32,7 +32,7 @@ final class AutomaticReleasePauseStateTest extends UnitTestCase
         $pauseState = AutomaticReleasePauseState::fromRedisHash([
             'pausedAt' => '2026-08-13T09:15:00+02:00',
             'accountId' => '',
-            'suppressedReleaseCount' => '0',
+            'suppressedReleaseCount' => '0'
         ]);
 
         self::assertNull($pauseState->getAccountId());
@@ -41,7 +41,7 @@ final class AutomaticReleasePauseStateTest extends UnitTestCase
     public function testTheCounterDefaultsToZero(): void
     {
         $pauseState = AutomaticReleasePauseState::fromRedisHash([
-            'pausedAt' => '2026-08-13T09:15:00+02:00',
+            'pausedAt' => '2026-08-13T09:15:00+02:00'
         ]);
 
         self::assertSame(0, $pauseState->getSuppressedReleaseCount());

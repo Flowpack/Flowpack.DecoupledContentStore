@@ -69,12 +69,10 @@ final class QuickPublishPreviewService
 
     private function backendUri(NodeInterface $node, ControllerContext $controllerContext): string
     {
-        return $controllerContext->getUriBuilder()->reset()->uriFor(
-            'index',
-            ['node' => $node->getContextPath()],
-            'Backend',
-            'Neos.Neos.Ui'
-        );
+        return $controllerContext
+            ->getUriBuilder()
+            ->reset()
+            ->uriFor('index', ['node' => $node->getContextPath()], 'Backend', 'Neos.Neos.Ui');
     }
 
     private static function describeDimensions(NodeInterface $node): string

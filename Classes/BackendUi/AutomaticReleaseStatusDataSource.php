@@ -53,17 +53,17 @@ final class AutomaticReleaseStatusDataSource extends AbstractDataSource
 
         return [
             'paused' => true,
-            'message' => (string)$this->translator->translateById(
+            'message' => (string) $this->translator->translateById(
                 'automaticReleases.paused.contentModuleWarning',
                 [
                     $this->backendDateFormatter->format($pauseState->getPausedAt()),
-                    $pauseState->getSuppressedReleaseCount(),
+                    $pauseState->getSuppressedReleaseCount()
                 ],
                 null,
                 null,
                 'Main',
                 'Flowpack.DecoupledContentStore'
-            ),
+            )
         ];
     }
 }

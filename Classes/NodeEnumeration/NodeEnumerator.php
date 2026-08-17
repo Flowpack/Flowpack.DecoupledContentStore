@@ -122,10 +122,9 @@ class NodeEnumerator
 
                     $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate, $siteNode);
                     if ($skipReason !== null) {
-                        $contentReleaseLogger->debug(
-                            'Skipping node from publishing, because it is ' . $skipReason,
-                            ['node' => $contextPath]
-                        );
+                        $contentReleaseLogger->debug('Skipping node from publishing, because it is ' . $skipReason, [
+                            'node' => $contextPath
+                        ]);
                         continue;
                     }
 

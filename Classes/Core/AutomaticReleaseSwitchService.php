@@ -34,7 +34,7 @@ class AutomaticReleaseSwitchService
     {
         // the "pausedAt" field, not the key itself: countSuppressedRelease() can re-create the key with only its
         // counter field if a resume happens in between.
-        return (bool)$this->redisClientManager->getPrimaryRedis()->hExists(self::REDIS_KEY, 'pausedAt');
+        return (bool) $this->redisClientManager->getPrimaryRedis()->hExists(self::REDIS_KEY, 'pausedAt');
     }
 
     public function getPauseState(): ?AutomaticReleasePauseState
@@ -54,9 +54,9 @@ class AutomaticReleaseSwitchService
         }
 
         $this->redisClientManager->getPrimaryRedis()->hMset(self::REDIS_KEY, [
-            'pausedAt' => (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+            'pausedAt' => new DateTimeImmutable()->format(DateTimeInterface::ATOM),
             'accountId' => $this->getAccountId() ?? '',
-            'suppressedReleaseCount' => 0,
+            'suppressedReleaseCount' => 0
         ]);
     }
 

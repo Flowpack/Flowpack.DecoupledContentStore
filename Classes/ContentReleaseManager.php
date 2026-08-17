@@ -76,7 +76,13 @@ class ContentReleaseManager
 
         if ($this->automaticReleaseSwitchService->isPaused()) {
             $this->automaticReleaseSwitchService->countSuppressedRelease();
-            $this->logger->info(sprintf('Automatic content releases are paused, so content release %s was not scheduled.', $contentReleaseId->getIdentifier()), LogEnvironment::fromMethodName(__METHOD__));
+            $this->logger->info(
+                sprintf(
+                    'Automatic content releases are paused, so content release %s was not scheduled.',
+                    $contentReleaseId->getIdentifier()
+                ),
+                LogEnvironment::fromMethodName(__METHOD__)
+            );
 
             return $contentReleaseId;
         }
@@ -150,7 +156,9 @@ class ContentReleaseManager
 
         // a quick release copies the release which is live when it is scheduled, so a second one queued behind the
         // first would build on the release the first is about to replace - and drop that first change without a word
-        $quickReleaseJobs = $this->prunnerApiService->loadPipelinesAndJobs()->getJobs()
+        $quickReleaseJobs = $this->prunnerApiService
+            ->loadPipelinesAndJobs()
+            ->getJobs()
             ->forPipeline(PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME));
         if ($quickReleaseJobs->running()->getArray() !== [] || $quickReleaseJobs->waiting()->getArray() !== []) {
             throw new QuickContentReleaseNotPossibleException(
@@ -165,7 +173,7 @@ class ContentReleaseManager
             array_merge($additionalVariables, [
                 'contentReleaseId' => $contentReleaseId,
                 'currentContentReleaseId' => $currentContentReleaseId,
-                'quickPublishNodeIdentifiers' => (string)$nodeIdentifiers,
+                'quickPublishNodeIdentifiers' => (string) $nodeIdentifiers,
                 'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
                 'accountId' => $this->getAccountId()
             ])

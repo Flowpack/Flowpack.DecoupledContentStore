@@ -37,9 +37,12 @@ final class ContentReleaseScope
      */
     public function getChangedUrls(ContentReleaseIdentifier $contentReleaseIdentifier): ?array
     {
-        $changedUrls = $this->redisClientManager->getPrimaryRedis()->sMembers(
-            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, self::CHANGED_URLS_POSTFIX)
-        );
+        $changedUrls = $this->redisClientManager
+            ->getPrimaryRedis()
+            ->sMembers($this->redisKeyService->getRedisKeyForPostfix(
+                $contentReleaseIdentifier,
+                self::CHANGED_URLS_POSTFIX
+            ));
 
         // a quick release which changed nothing is never published, so an empty set means there is no scope
         if (!is_array($changedUrls) || $changedUrls === []) {
@@ -72,8 +75,8 @@ final class ContentReleaseScope
      */
     public function countPublishedUrls(ContentReleaseIdentifier $contentReleaseIdentifier): int
     {
-        return (int) $this->redisClientManager->getPrimaryRedis()->zCard(
-            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, self::URLS_POSTFIX)
-        );
+        return (int) $this->redisClientManager
+            ->getPrimaryRedis()
+            ->zCard($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, self::URLS_POSTFIX));
     }
 }

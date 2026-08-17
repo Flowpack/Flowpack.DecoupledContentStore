@@ -353,7 +353,7 @@ class BackendController extends ActionController
         $previewRows = $this->quickPublishPreviewService->preview($identifiers, $this->controllerContext);
 
         $this->view->assign('contentStore', $contentStore);
-        $this->view->assign('nodeIdentifiers', (string)$identifiers);
+        $this->view->assign('nodeIdentifiers', (string) $identifiers);
         $this->view->assign('previewRows', $previewRows);
         $this->view->assign('publishedRowCount', $this->quickPublishPreviewService->countPublishedRows($previewRows));
 
@@ -368,9 +368,9 @@ class BackendController extends ActionController
         }
 
         try {
-            $contentReleaseIdentifier = $this->contentReleaseManager->startQuickContentRelease(
-                NodeIdentifiers::fromUserInput($nodeIdentifiers)
-            );
+            $contentReleaseIdentifier = $this->contentReleaseManager->startQuickContentRelease(NodeIdentifiers::fromUserInput(
+                $nodeIdentifiers
+            ));
         } catch (Exception $exception) {
             // both the identifier check and the manager phrase their messages for the person reading this page
             $this->addFlashMessage($exception->getMessage(), '', Message::SEVERITY_ERROR);
@@ -382,10 +382,7 @@ class BackendController extends ActionController
             return null;
         }
 
-        $this->addFlashMessage($this->translateById(
-            'quickPublish.scheduled.flashMessage',
-            [$contentReleaseIdentifier->getIdentifier()]
-        ));
+        $this->addFlashMessage($this->translateById('quickPublish.scheduled.flashMessage', [$contentReleaseIdentifier->getIdentifier()]));
         $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
 
         return null;
@@ -396,7 +393,7 @@ class BackendController extends ActionController
      */
     private function translateById(string $labelId, array $arguments = []): string
     {
-        return (string)$this->translator->translateById(
+        return (string) $this->translator->translateById(
             $labelId,
             $arguments,
             null,

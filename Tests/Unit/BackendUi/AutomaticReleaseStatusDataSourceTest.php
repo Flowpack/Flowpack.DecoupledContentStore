@@ -38,31 +38,37 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
         $pauseState = AutomaticReleasePauseState::fromRedisHash([
             'pausedAt' => '2026-08-13T09:15:00+02:00',
             'accountId' => 'admin',
-            'suppressedReleaseCount' => '4',
+            'suppressedReleaseCount' => '4'
         ]);
 
-        self::assertSame([
-            'paused' => true,
-            'message' => 'translated: automaticReleases.paused.contentModuleWarning',
-        ], $this->buildDataSource($pauseState)->getData());
+        self::assertSame(
+            [
+                'paused' => true,
+                'message' => 'translated: automaticReleases.paused.contentModuleWarning'
+            ],
+            $this->buildDataSource($pauseState)->getData()
+        );
     }
 
     public function testTheTimestampAndTheWaitingCountAreHandedToTheTranslation(): void
     {
         $pauseState = AutomaticReleasePauseState::fromRedisHash([
             'pausedAt' => '2026-08-13T09:15:00+02:00',
-            'suppressedReleaseCount' => '4',
+            'suppressedReleaseCount' => '4'
         ]);
 
         $translator = $this->createMock(Translator::class);
-        $translator->expects(self::once())->method('translateById')->with(
-            'automaticReleases.paused.contentModuleWarning',
-            ['formatted date', 4],
-            null,
-            null,
-            'Main',
-            'Flowpack.DecoupledContentStore'
-        );
+        $translator
+            ->expects(self::once())
+            ->method('translateById')
+            ->with(
+                'automaticReleases.paused.contentModuleWarning',
+                ['formatted date', 4],
+                null,
+                null,
+                'Main',
+                'Flowpack.DecoupledContentStore'
+            );
 
         $this->buildDataSource($pauseState, $translator)->getData();
     }
@@ -76,9 +82,9 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
 
         if ($translator === null) {
             $translator = $this->createMock(Translator::class);
-            $translator->method('translateById')->willReturnCallback(
-                static fn(string $labelId): string => 'translated: ' . $labelId
-            );
+            $translator
+                ->method('translateById')
+                ->willReturnCallback(static fn(string $labelId): string => 'translated: ' . $labelId);
         }
 
         $backendDateFormatter = $this->createMock(BackendDateFormatter::class);

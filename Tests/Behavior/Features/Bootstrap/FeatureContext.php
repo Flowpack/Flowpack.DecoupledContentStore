@@ -204,9 +204,12 @@ class FeatureContext implements Context
         $validationCommandController->validateCommand($contentReleaseIdentifier);
 
         $redisRenderingErrorManager = $this->getObjectManager()->get(RedisRenderingErrorManager::class);
-        Assert::assertCount(0, $redisRenderingErrorManager->getRenderingErrors(
-            ContentReleaseIdentifier::fromString($contentReleaseIdentifier)
-        ));
+        Assert::assertCount(
+            0,
+            $redisRenderingErrorManager->getRenderingErrors(ContentReleaseIdentifier::fromString(
+                $contentReleaseIdentifier
+            ))
+        );
     }
 
     /**

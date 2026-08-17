@@ -30,7 +30,7 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
     private const SOURCE_KEYS = [
         'contentStore:5:data',
         'contentStore:5:meta:urls',
-        'contentStore:5:renderingJobQueue',
+        'contentStore:5:renderingJobQueue'
     ];
 
     /**
@@ -43,10 +43,13 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
         $this->copyRelease($this->buildRedis(), $this->buildRedisContentReleaseService());
 
         // renderingJobQueue exists on the source, but describes the build of that release rather than its content
-        self::assertSame([
-            ['contentStore:5:data', 'contentStore:6:data'],
-            ['contentStore:5:meta:urls', 'contentStore:6:meta:urls'],
-        ], $this->copiedKeys);
+        self::assertSame(
+            [
+                ['contentStore:5:data',      'contentStore:6:data'],
+                ['contentStore:5:meta:urls', 'contentStore:6:meta:urls']
+            ],
+            $this->copiedKeys
+        );
     }
 
     public function testAKeyWhichDoesNotExistOnTheSourceIsSkipped(): void
@@ -150,13 +153,15 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
     {
         $redis = $this->createMock(\Redis::class);
         $redis->method('info')->willReturn(['redis_version' => $redisVersion]);
-        $redis->method('exists')->willReturnCallback(
-            static fn(string $key): int => in_array($key, $existingKeys, true) ? 1 : 0
-        );
-        $redis->method('copy')->willReturnCallback(function (string $sourceKey, string $targetKey): bool {
-            $this->copiedKeys[] = [$sourceKey, $targetKey];
-            return true;
-        });
+        $redis->method('exists')->willReturnCallback(static fn(string $key): int => in_array($key, $existingKeys, true)
+            ? 1
+            : 0);
+        $redis
+            ->method('copy')
+            ->willReturnCallback(function (string $sourceKey, string $targetKey): bool {
+                $this->copiedKeys[] = [$sourceKey, $targetKey];
+                return true;
+            });
 
         return $redis;
     }
@@ -167,8 +172,10 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
     private function buildRedisContentReleaseService(
         ?NodeRenderingCompletionStatus $status = null
     ): RedisContentReleaseService {
-        $metadata = ContentReleaseMetadata::create(PrunnerJobId::fromString('job'), new \DateTimeImmutable())
-            ->withStatus($status ?? NodeRenderingCompletionStatus::success());
+        $metadata = ContentReleaseMetadata::create(
+            PrunnerJobId::fromString('job'),
+            new \DateTimeImmutable()
+        )->withStatus($status ?? NodeRenderingCompletionStatus::success());
 
         $redisContentReleaseService = $this->createMock(RedisContentReleaseService::class);
         $redisContentReleaseService->method('fetchMetadataForContentRelease')->willReturn($metadata);
@@ -187,21 +194,21 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
                 'transfer' => true,
                 'transferMode' => 'hash_incremental',
                 'isRequired' => true,
-                'copyOnQuickRelease' => true,
+                'copyOnQuickRelease' => true
             ],
             'metaUrls' => [
                 'redisKeyPostfix' => 'meta:urls',
                 'transfer' => true,
                 'transferMode' => 'dump',
                 'isRequired' => true,
-                'copyOnQuickRelease' => true,
+                'copyOnQuickRelease' => true
             ],
             'renderingJobQueue' => [
                 'redisKeyPostfix' => 'renderingJobQueue',
                 'transfer' => false,
                 'transferMode' => 'dump',
                 'isRequired' => false,
-                'copyOnQuickRelease' => false,
+                'copyOnQuickRelease' => false
             ],
             'enumerationDocumentNodes' => [
                 'redisKeyPostfix' => 'enumeration:documentNodes',

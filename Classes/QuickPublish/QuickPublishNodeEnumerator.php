@@ -82,7 +82,8 @@ final class QuickPublishNodeEnumerator
                 sprintf(
                     'Content release %s does not exist, so its nodes cannot be enumerated.',
                     $releaseIdentifier->getIdentifier()
-                ), 1786958512
+                ),
+                1786958512
             );
         }
 
@@ -108,18 +109,17 @@ final class QuickPublishNodeEnumerator
                 sprintf(
                     'None of the given nodes can be published (%s), so content release %s would only repeat the release '
                     . 'it was built on.',
-                    (string)$nodeIdentifiers,
+                    (string) $nodeIdentifiers,
                     $releaseIdentifier->getIdentifier()
-                ), 1786958513
+                ),
+                1786958513
             );
         }
 
-        foreach (
-            GeneratorUtility::createArrayBatch(
-                array_map(static fn(array $nodeToRender): EnumeratedNode => $nodeToRender[1], $nodesToRender),
-                100
-            ) as $enumeration
-        ) {
+        foreach (GeneratorUtility::createArrayBatch(
+            array_map(static fn(array $nodeToRender): EnumeratedNode => $nodeToRender[1], $nodesToRender),
+            100
+        ) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
         }
@@ -183,18 +183,17 @@ final class QuickPublishNodeEnumerator
                 $skipReason = $this->documentNodeFilter->skipReasonForNamedNode($nodeToEnumerate, $siteNode);
                 if ($skipReason !== null) {
                     // warn rather than debug: somebody asked for this node by hand and will not see it change
-                    $contentReleaseLogger->warn(
-                        'Skipping node from publishing, because it is ' . $skipReason,
-                        ['node' => $contextPath]
-                    );
+                    $contentReleaseLogger->warn('Skipping node from publishing, because it is ' . $skipReason, [
+                        'node' => $contextPath
+                    ]);
                     continue;
                 }
 
                 $contentReleaseLogger->info('Registering node for publishing', ['node' => $contextPath]);
 
-                foreach (
-                    $this->nodeRenderingExtensionManager->enumerateDocumentNode($nodeToEnumerate) as $enumeratedNode
-                ) {
+                foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode(
+                    $nodeToEnumerate
+                ) as $enumeratedNode) {
                     $nodesToRender[] = [$nodeToEnumerate, $enumeratedNode];
                 }
             }
@@ -204,7 +203,8 @@ final class QuickPublishNodeEnumerator
                     sprintf(
                         'Could not find node %s in any site and dimension, so it cannot be published.',
                         $nodeIdentifier
-                    ), 1786958514
+                    ),
+                    1786958514
                 );
             }
         }
@@ -227,12 +227,10 @@ final class QuickPublishNodeEnumerator
             $flushedEntriesCount += $this->contentCache->flushByTag($tag);
         }
 
-        $contentReleaseLogger->info(
-            sprintf(
-                'Flushed %d content cache entries for node %s before re-rendering it',
-                $flushedEntriesCount,
-                $nodeIdentifier
-            )
-        );
+        $contentReleaseLogger->info(sprintf(
+            'Flushed %d content cache entries for node %s before re-rendering it',
+            $flushedEntriesCount,
+            $nodeIdentifier
+        ));
     }
 }

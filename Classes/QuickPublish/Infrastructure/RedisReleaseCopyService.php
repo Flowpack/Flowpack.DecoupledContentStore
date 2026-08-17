@@ -60,7 +60,8 @@ final class RedisReleaseCopyService
                 sprintf(
                     'Cannot copy content release %s onto itself.',
                     $sourceContentReleaseIdentifier->getIdentifier()
-                ), 1786953585
+                ),
+                1786953585
             );
         }
 
@@ -68,18 +69,14 @@ final class RedisReleaseCopyService
         $this->assertServerSupportsCopy($redis);
         $this->assertSourceReleaseCanBeBuiltUpon($redis, $redisInstanceIdentifier, $sourceContentReleaseIdentifier);
 
-        $contentReleaseLogger->info(
-            sprintf(
-                'Copying content release %s to %s within redis %s',
-                $sourceContentReleaseIdentifier->getIdentifier(),
-                $targetContentReleaseIdentifier->getIdentifier(),
-                $redisInstanceIdentifier->getIdentifier()
-            )
-        );
+        $contentReleaseLogger->info(sprintf(
+            'Copying content release %s to %s within redis %s',
+            $sourceContentReleaseIdentifier->getIdentifier(),
+            $targetContentReleaseIdentifier->getIdentifier(),
+            $redisInstanceIdentifier->getIdentifier()
+        ));
 
-        $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray(
-            $this->redisKeyPostfixesForEachReleaseConfiguration
-        );
+        $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
         $startTime = microtime(true);
         $copiedKeyCount = 0;
 
@@ -100,7 +97,9 @@ final class RedisReleaseCopyService
 
             if ($redis->exists($targetKey)) {
                 $contentReleaseLogger->warn(
-                    'COPY: ' . $targetKey . ' already exists and is replaced - '
+                    'COPY: '
+                    . $targetKey
+                    . ' already exists and is replaced - '
                     . 'the release was copied into after something already wrote to it.'
                 );
             }
@@ -114,23 +113,19 @@ final class RedisReleaseCopyService
             }
             $copiedKeyCount++;
 
-            $contentReleaseLogger->info(
-                sprintf(
-                    'COPY: Copied key %s (time: %2.3f)',
-                    $targetKey,
-                    microtime(true) - $keyStartTime
-                )
-            );
+            $contentReleaseLogger->info(sprintf(
+                'COPY: Copied key %s (time: %2.3f)',
+                $targetKey,
+                microtime(true) - $keyStartTime
+            ));
         }
 
-        $contentReleaseLogger->info(
-            sprintf(
-                'COPY: Copied %d keys from content release %s (total time: %2.3f)',
-                $copiedKeyCount,
-                $sourceContentReleaseIdentifier->getIdentifier(),
-                microtime(true) - $startTime
-            )
-        );
+        $contentReleaseLogger->info(sprintf(
+            'COPY: Copied %d keys from content release %s (total time: %2.3f)',
+            $copiedKeyCount,
+            $sourceContentReleaseIdentifier->getIdentifier(),
+            microtime(true) - $startTime
+        ));
     }
 
     /**
@@ -140,7 +135,7 @@ final class RedisReleaseCopyService
     {
         $serverInfo = $redis->info('server');
         $redisVersion = is_array($serverInfo) && array_key_exists('redis_version', $serverInfo)
-            ? (string)$serverInfo['redis_version']
+            ? (string) $serverInfo['redis_version']
             : '';
 
         if ($redisVersion === '' || version_compare($redisVersion, self::MINIMUM_REDIS_VERSION, '<')) {
@@ -150,7 +145,8 @@ final class RedisReleaseCopyService
                     . 'This server reports version "%s".',
                     self::MINIMUM_REDIS_VERSION,
                     $redisVersion
-                ), 1786953587
+                ),
+                1786953587
             );
         }
     }
@@ -179,7 +175,8 @@ final class RedisReleaseCopyService
                     . 'instead.',
                     $sourceContentReleaseIdentifier->getIdentifier(),
                     $redisInstanceIdentifier->getIdentifier()
-                ), 1786953588
+                ),
+                1786953588
             );
         }
 
@@ -190,13 +187,12 @@ final class RedisReleaseCopyService
                     . 'content release instead.',
                     $sourceContentReleaseIdentifier->getIdentifier(),
                     $metadata->getStatus()->getStatus()
-                ), 1786953589
+                ),
+                1786953589
             );
         }
 
-        $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray(
-            $this->redisKeyPostfixesForEachReleaseConfiguration
-        );
+        $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
 
         // only the inherited keys have to exist - the rest is built by the quick release itself. isRequired alone is
         // not enough of a filter: the other places reading it check it per transfer target, so a key an installation
@@ -217,7 +213,8 @@ final class RedisReleaseCopyService
                         . 'content release instead.',
                         $requiredKey,
                         $sourceContentReleaseIdentifier->getIdentifier()
-                    ), 1786953590
+                    ),
+                    1786953590
                 );
             }
         }

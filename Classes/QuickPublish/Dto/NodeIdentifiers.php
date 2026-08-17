@@ -70,10 +70,7 @@ final class NodeIdentifiers implements \IteratorAggregate, \JsonSerializable
                 continue;
             }
             if (preg_match(self::IDENTIFIER_PATTERN, $identifier) !== 1) {
-                throw new Exception(
-                    sprintf('"%s" is not a node identifier.', $identifier),
-                    1786958510
-                );
+                throw new Exception(sprintf('"%s" is not a node identifier.', $identifier), 1786958510);
             }
             // an identifier given twice would be rendered twice
             if (!in_array($identifier, $identifiers, true)) {

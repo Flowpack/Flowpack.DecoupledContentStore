@@ -44,14 +44,16 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     {
         $redis = $this->buildRedis();
         $redis->method('hExists')->willReturn(false);
-        $redis->expects(self::once())->method('hMSet')->with(
-            self::REDIS_KEY,
-            self::callback(static function (array $hash): bool {
-                return $hash['accountId'] === ''
+        $redis
+            ->expects(self::once())
+            ->method('hMSet')
+            ->with(self::REDIS_KEY, self::callback(static function (array $hash): bool {
+                return (
+                    $hash['accountId'] === ''
                     && $hash['suppressedReleaseCount'] === 0
-                    && \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $hash['pausedAt']) !== false;
-            })
-        );
+                    && \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $hash['pausedAt']) !== false
+                );
+            }));
 
         $this->buildService($redis)->pause();
     }
@@ -67,11 +69,13 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     public function testThePauseStateIsReadFromTheHash(): void
     {
         $redis = $this->buildRedis();
-        $redis->method('hGetAll')->willReturn([
-            'pausedAt' => '2026-08-13T09:15:00+02:00',
-            'accountId' => 'admin',
-            'suppressedReleaseCount' => '4',
-        ]);
+        $redis
+            ->method('hGetAll')
+            ->willReturn([
+                'pausedAt' => '2026-08-13T09:15:00+02:00',
+                'accountId' => 'admin',
+                'suppressedReleaseCount' => '4'
+            ]);
 
         $pauseState = $this->buildService($redis)->getPauseState();
 
