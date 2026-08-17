@@ -20,15 +20,22 @@ final class RedisKeyPostfixForEachRelease
     protected array $transfer;
     protected string $transferMode;
     protected bool $isRequired;
+    protected bool $copyOnQuickRelease;
 
     /**
      * @param string $redisKeyPostfix
      * @param bool|array $transfer
      * @param string $transferMode
      * @param bool $isRequired
+     * @param bool $copyOnQuickRelease
      */
-    private function __construct(string $redisKeyPostfix, $transfer, string $transferMode, bool $isRequired)
-    {
+    private function __construct(
+        string $redisKeyPostfix,
+        $transfer,
+        string $transferMode,
+        bool $isRequired,
+        bool $copyOnQuickRelease
+    ) {
         if (!in_array($transferMode, [self::TRANSFER_MODE_HASH_INCREMENTAL, self::TRANSFER_MODE_DUMP])) {
             throw new \RuntimeException('TransferMode ' . $transferMode . ' not supported.');
         }
@@ -44,11 +51,21 @@ final class RedisKeyPostfixForEachRelease
         $this->redisKeyPostfix = $redisKeyPostfix;
         $this->transferMode = $transferMode;
         $this->isRequired = $isRequired;
+        $this->copyOnQuickRelease = $copyOnQuickRelease;
     }
 
     public static function fromArray(array $in): self
     {
-        return new self($in['redisKeyPostfix'], $in['transfer'], $in['transferMode'], $in['isRequired']);
+        return new self(
+            $in['redisKeyPostfix'],
+            $in['transfer'],
+            $in['transferMode'],
+            $in['isRequired'],
+            // keys registered before quick releases existed do not carry the flag, and not copying them is the safe
+            // default: a key which should have been copied shows up as missing content, a key which should not have
+            // been copied describes a different release
+            $in['copyOnQuickRelease'] ?? false
+        );
     }
 
     /**
@@ -68,6 +85,11 @@ final class RedisKeyPostfixForEachRelease
     public function isRequired(): bool
     {
         return $this->isRequired;
+    }
+
+    public function shouldCopyOnQuickRelease(): bool
+    {
+        return $this->copyOnQuickRelease;
     }
 
     public function getRedisKeyPostfix(): string

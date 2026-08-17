@@ -18,4 +18,6 @@ Flowpack:
         redisKeyPostfix: 'renderedMetadata'
         transfer: true
         transferMode: 'hash_incremental'
-        isRequired: true
+        # the key is written by documentMetadataGenerators, and the test setup registers none - so nothing that
+        # requires every registered key to exist could ever pass here
+        isRequired: false

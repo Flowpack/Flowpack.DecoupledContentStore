@@ -6,6 +6,9 @@ use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Exception as DecoupledContentStoreException;
+use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
@@ -171,6 +174,51 @@ class FeatureContext implements Context
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
         $nodeEnumerator->enumerateAndStoreInRedis(null, $contentReleaseLogger, $contentReleaseIdentifier);
         echo $bufferedOutput->fetch();
+    }
+
+    /**
+     * @When I copy the content release :sourceContentReleaseIdentifier to the content release :targetContentReleaseIdentifier
+     */
+    public function iCopyTheContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier)
+    {
+        $this->copyContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier);
+    }
+
+    /**
+     * @Then copying the content release :sourceContentReleaseIdentifier to the content release :targetContentReleaseIdentifier is refused
+     */
+    public function copyingTheContentReleaseIsRefused($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier)
+    {
+        try {
+            $this->copyContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier);
+        } catch (DecoupledContentStoreException $exception) {
+            return;
+        }
+
+        Assert::fail('Copying content release ' . $sourceContentReleaseIdentifier . ' should have been refused.');
+    }
+
+    private function copyContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier): void
+    {
+        $sourceContentReleaseIdentifier = ContentReleaseIdentifier::fromString($sourceContentReleaseIdentifier);
+        $targetContentReleaseIdentifier = ContentReleaseIdentifier::fromString($targetContentReleaseIdentifier);
+        $redisReleaseCopyService = $this->getObjectManager()->get(RedisReleaseCopyService::class);
+        $bufferedOutput = new BufferedOutput();
+        $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput(
+            $bufferedOutput,
+            $targetContentReleaseIdentifier
+        );
+
+        try {
+            $redisReleaseCopyService->copyReleaseWithin(
+                RedisInstanceIdentifier::primary(),
+                $sourceContentReleaseIdentifier,
+                $targetContentReleaseIdentifier,
+                $contentReleaseLogger
+            );
+        } finally {
+            echo $bufferedOutput->fetch();
+        }
     }
 
     /**

@@ -7,9 +7,8 @@ namespace Flowpack\DecoupledContentStore\Tests\Unit\Core;
 use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Neos\Flow\Security\Context;
+use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 
 /**
  * Tests the switch which suppresses automatically triggered content releases.
@@ -17,7 +16,7 @@ use ReflectionProperty;
  * The state lives in a single Redis hash, so the interesting behaviour is which field decides that the switch is
  * set, and that pausing twice does not wipe what the first pause recorded.
  */
-final class AutomaticReleaseSwitchServiceTest extends TestCase
+final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
 {
     private const REDIS_KEY = 'contentStore:automaticReleasesPaused';
 
@@ -98,15 +97,9 @@ final class AutomaticReleaseSwitchServiceTest extends TestCase
         $securityContext->method('isInitialized')->willReturn(false);
 
         $service = new AutomaticReleaseSwitchService();
-        self::injectDependency($service, 'redisClientManager', $redisClientManager);
-        self::injectDependency($service, 'securityContext', $securityContext);
+        $this->inject($service, 'redisClientManager', $redisClientManager);
+        $this->inject($service, 'securityContext', $securityContext);
 
         return $service;
-    }
-
-    private static function injectDependency(object $target, string $propertyName, object $dependency): void
-    {
-        // the class uses Flow property injection, which is not available outside a Flow bootstrap
-        (new ReflectionProperty($target, $propertyName))->setValue($target, $dependency);
     }
 }

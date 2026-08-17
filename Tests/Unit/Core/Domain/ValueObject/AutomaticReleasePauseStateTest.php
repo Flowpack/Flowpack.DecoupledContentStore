@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Tests\Unit\Core\Domain\ValueObject;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\AutomaticReleasePauseState;
-use PHPUnit\Framework\TestCase;
+use Neos\Flow\Tests\UnitTestCase;
 
 /**
  * Tests the mapping of the "contentStore:automaticReleasesPaused" Redis hash onto the pause state shown in the
  * backend module. Everything arrives as a string, and only "pausedAt" is guaranteed to be there.
  */
-final class AutomaticReleasePauseStateTest extends TestCase
+final class AutomaticReleasePauseStateTest extends UnitTestCase
 {
     public function testAllFieldsAreReadFromTheHash(): void
     {

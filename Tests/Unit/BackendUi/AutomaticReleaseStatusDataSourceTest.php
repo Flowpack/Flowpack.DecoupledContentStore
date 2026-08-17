@@ -9,8 +9,7 @@ use Flowpack\DecoupledContentStore\BackendUi\BackendDateFormatter;
 use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\AutomaticReleasePauseState;
 use Neos\Flow\I18n\Translator;
-use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
+use Neos\Flow\Tests\UnitTestCase;
 
 /**
  * Tests the payload the content module warning is painted from.
@@ -18,7 +17,7 @@ use ReflectionProperty;
  * Both the identifier and the field names are a contract with
  * Resources/Public/ContentModule/AutomaticReleaseWarning.js, which has no way of noticing that they changed.
  */
-final class AutomaticReleaseStatusDataSourceTest extends TestCase
+final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
 {
     public function testTheIdentifierIsTheOneTheContentModuleScriptRequests(): void
     {
@@ -86,16 +85,10 @@ final class AutomaticReleaseStatusDataSourceTest extends TestCase
         $backendDateFormatter->method('format')->willReturn('formatted date');
 
         $dataSource = new AutomaticReleaseStatusDataSource();
-        // the class uses Flow property injection, which is not available outside a Flow bootstrap
-        self::injectDependency($dataSource, 'automaticReleaseSwitchService', $automaticReleaseSwitchService);
-        self::injectDependency($dataSource, 'translator', $translator);
-        self::injectDependency($dataSource, 'backendDateFormatter', $backendDateFormatter);
+        $this->inject($dataSource, 'automaticReleaseSwitchService', $automaticReleaseSwitchService);
+        $this->inject($dataSource, 'translator', $translator);
+        $this->inject($dataSource, 'backendDateFormatter', $backendDateFormatter);
 
         return $dataSource;
-    }
-
-    private static function injectDependency(object $target, string $propertyName, object $dependency): void
-    {
-        (new ReflectionProperty($target, $propertyName))->setValue($target, $dependency);
     }
 }

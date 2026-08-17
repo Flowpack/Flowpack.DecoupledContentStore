@@ -10,10 +10,9 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\JobId;
 use Neos\Flow\Security\Context;
+use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use ReflectionProperty;
 
 /**
  * Tests the effect of the pause switch on scheduling.
@@ -22,7 +21,7 @@ use ReflectionProperty;
  * startIncrementalContentRelease(), so that method is the only gate. "Publish All" is an explicit request and must
  * stay unaffected - otherwise the pause could not be used to prepare a release by hand.
  */
-class ContentReleaseManagerTest extends TestCase
+class ContentReleaseManagerTest extends UnitTestCase
 {
     private PrunnerApiService&MockObject $prunnerApiService;
 
@@ -81,22 +80,12 @@ class ContentReleaseManagerTest extends TestCase
         $securityContext->method('isInitialized')->willReturn(false);
 
         $contentReleaseManager = new ContentReleaseManager();
-        self::injectDependency($contentReleaseManager, 'prunnerApiService', $this->prunnerApiService);
-        self::injectDependency(
-            $contentReleaseManager,
-            'automaticReleaseSwitchService',
-            $this->automaticReleaseSwitchService
-        );
-        self::injectDependency($contentReleaseManager, 'redisClientManager', $redisClientManager);
-        self::injectDependency($contentReleaseManager, 'securityContext', $securityContext);
-        self::injectDependency($contentReleaseManager, 'logger', new NullLogger());
+        $this->inject($contentReleaseManager, 'prunnerApiService', $this->prunnerApiService);
+        $this->inject($contentReleaseManager, 'automaticReleaseSwitchService', $this->automaticReleaseSwitchService);
+        $this->inject($contentReleaseManager, 'redisClientManager', $redisClientManager);
+        $this->inject($contentReleaseManager, 'securityContext', $securityContext);
+        $this->inject($contentReleaseManager, 'logger', new NullLogger());
 
         return $contentReleaseManager;
-    }
-
-    private static function injectDependency(object $target, string $propertyName, object $dependency): void
-    {
-        // the class uses Flow property injection, which is not available outside a Flow bootstrap
-        (new ReflectionProperty($target, $propertyName))->setValue($target, $dependency);
     }
 }
