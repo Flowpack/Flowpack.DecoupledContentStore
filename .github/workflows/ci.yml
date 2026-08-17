@@ -28,7 +28,7 @@ jobs:
         uses: php-actions/phpunit@v4
         with:
           php_version: ${{ matrix.php_version }}
-          php_extensions: xdebug
+          php_extensions: xdebug redis
           bootstrap: vendor/autoload.php
           configuration: phpunit.xml
           coverage_text: true

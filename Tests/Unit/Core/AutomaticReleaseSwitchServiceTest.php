@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Tests\Unit\Core;
 
+use DateTimeImmutable;
+use DateTimeInterface;
 use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Neos\Flow\Security\Context;
 use Neos\Flow\Tests\UnitTestCase;
-use PHPUnit\Framework\MockObject\MockObject;
+use Redis;
 
 /**
  * Tests the switch which suppresses automatically triggered content releases.
@@ -24,7 +26,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     {
         // countSuppressedRelease() re-creates the key with nothing but its counter if it races a resume, so the
         // existence of the key itself says nothing
-        $redis = $this->buildRedis();
+        $redis = $this->createMock(Redis::class);
         $redis->method('hExists')->with(self::REDIS_KEY, 'pausedAt')->willReturn(false);
 
         self::assertFalse($this->buildService($redis)->isPaused());
@@ -33,7 +35,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     public function testPausingWhileAlreadyPausedKeepsTheOriginalState(): void
     {
         // otherwise the second pause would reset both the timestamp and the count of suppressed releases
-        $redis = $this->buildRedis();
+        $redis = $this->createMock(Redis::class);
         $redis->method('hExists')->willReturn(true);
         $redis->expects(self::never())->method('hMSet');
 
@@ -42,7 +44,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
 
     public function testPausingRecordsTheTimestampAndAnEmptyCounter(): void
     {
-        $redis = $this->buildRedis();
+        $redis = $this->createMock(Redis::class);
         $redis->method('hExists')->willReturn(false);
         $redis
             ->expects(self::once())
@@ -51,7 +53,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
                 return (
                     $hash['accountId'] === ''
                     && $hash['suppressedReleaseCount'] === 0
-                    && \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $hash['pausedAt']) !== false
+                    && DateTimeImmutable::createFromFormat(DateTimeInterface::ATOM, $hash['pausedAt']) !== false
                 );
             }));
 
@@ -60,7 +62,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
 
     public function testThereIsNoPauseStateWhileTheSwitchIsNotSet(): void
     {
-        $redis = $this->buildRedis();
+        $redis = $this->createMock(Redis::class);
         $redis->method('hGetAll')->willReturn([]);
 
         self::assertNull($this->buildService($redis)->getPauseState());
@@ -68,7 +70,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
 
     public function testThePauseStateIsReadFromTheHash(): void
     {
-        $redis = $this->buildRedis();
+        $redis = $this->createMock(Redis::class);
         $redis
             ->method('hGetAll')
             ->willReturn([
@@ -84,15 +86,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
         self::assertSame(4, $pauseState->getSuppressedReleaseCount());
     }
 
-    /**
-     * @return \Redis&MockObject
-     */
-    private function buildRedis(): \Redis
-    {
-        return $this->createMock(\Redis::class);
-    }
-
-    private function buildService(\Redis $redis): AutomaticReleaseSwitchService
+    private function buildService(Redis $redis): AutomaticReleaseSwitchService
     {
         $redisClientManager = $this->createMock(RedisClientManager::class);
         $redisClientManager->method('getPrimaryRedis')->willReturn($redis);

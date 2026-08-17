@@ -24,7 +24,8 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Flowpack\\DecoupledContentStore\\Tests\\": "Tests/"
+      "Flowpack\\DecoupledContentStore\\Tests\\": "Tests/",
+      "Neos\\Flow\\Tests\\": "Packages/Framework/Neos.Flow/Tests/"
     }
   },
   "extra": {

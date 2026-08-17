@@ -13,7 +13,7 @@
 			</trans-unit>
 			<trans-unit id="automaticReleases.paused.flashMessage" xml:space="preserve" approved="yes">
 				<source>Automatic content releases are paused. Editor publishes will not go live until you resume them.</source>
-				<target state="final">Automatische Content-Releases sind pausiert. Veröffentlichungen der Redakteure gehen erst live, wenn Sie die Releases wieder fortsetzen.</target>
+                <target state="final">Automatische Content-Releases sind pausiert. Veröffentlichungen der Redakteure gehen erst live, wenn Releases wieder fortgesetzt werden.</target>
 			</trans-unit>
 			<trans-unit id="automaticReleases.resumed.flashMessage" xml:space="preserve" approved="yes">
 				<source>Automatic content releases are enabled again. Changes published while they were paused go live with the next release.</source>
@@ -40,7 +40,7 @@
 			<!-- Shown to editors in the content module. {0}: date and time, {1}: number of suppressed releases -->
 			<trans-unit id="automaticReleases.paused.contentModuleWarning" xml:space="preserve" approved="yes">
 				<source>Automatic content releases have been paused on {0}, so your changes do not go live yet. {1} release(s) are waiting. An administrator has to resume them in the Content Store module.</source>
-				<target state="final">Automatische Content-Releases wurden am {0} pausiert, Ihre Änderungen gehen daher noch nicht live. {1} Release(s) warten. Ein Administrator muss sie im Modul „Content Store“ wieder fortsetzen.</target>
+                <target state="final">Automatische Content-Releases wurden am {0} pausiert, Änderungen gehen daher noch nicht live. {1} Release(s) warten. Ein Administrator muss sie im Modul „Content Store“ wieder fortsetzen.</target>
 			</trans-unit>
             <!-- Publishing single documents into a copy of the release which is live -->
             <trans-unit id="quickPublish.button" xml:space="preserve" approved="yes">
@@ -69,7 +69,7 @@
 			</trans-unit>
             <trans-unit id="quickPublish.preview.description" xml:space="preserve" approved="yes">
 				<source>One row per dimension. Rows marked in red are not published - check them before you continue, because a page you meant to fix would stay as it is.</source>
-                <target state="final">Eine Zeile pro Dimension. Rot markierte Zeilen werden nicht veröffentlicht – prüfen Sie diese, bevor Sie fortfahren, denn eine Seite, die Sie korrigieren wollten, bliebe unverändert.</target>
+                <target state="final">Eine Zeile pro Dimension. Rot markierte Zeilen werden nicht veröffentlicht – diese bitte prüfen, denn diese werden nicht neu gerendert.</target>
 			</trans-unit>
             <!-- {0}: number of pages which would be published -->
             <trans-unit id="quickPublish.preview.submit" xml:space="preserve" approved="yes">

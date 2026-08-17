@@ -79,6 +79,9 @@ class NodeContextCombinator
     public function nodeVariantsWithSiteNode(string $nodeIdentifier, string $workspaceName = 'live'): \Generator
     {
         foreach ($this->sites() as $site) {
+            // a flag rather than a plain return after the inner loop: a site which does not contain the node
+            // yields nothing and has to fall through to the next site, and returning from inside the inner loop
+            // would cut off the node's remaining dimension variants
             $nodeFound = false;
 
             // hidden nodes are shown here regardless of "recurseHiddenContent": somebody named this node by its

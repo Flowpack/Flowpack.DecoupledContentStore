@@ -54,7 +54,7 @@ class AutomaticReleaseSwitchService
         }
 
         $this->redisClientManager->getPrimaryRedis()->hMset(self::REDIS_KEY, [
-            'pausedAt' => new DateTimeImmutable()->format(DateTimeInterface::ATOM),
+            'pausedAt' => (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
             'accountId' => $this->getAccountId() ?? '',
             'suppressedReleaseCount' => 0
         ]);
