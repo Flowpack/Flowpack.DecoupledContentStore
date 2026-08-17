@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Controller;
 
+use Flowpack\DecoupledContentStore\BackendUi\BackendDateFormatter;
 use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
 use Flowpack\DecoupledContentStore\BackendUi\WorkerErrorLogAggregator;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
@@ -21,11 +22,16 @@ use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\I18n\Translator;
+use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Fusion\View\FusionView;
+use Neos\Neos\Controller\BackendUserTranslationTrait;
 use Symfony\Component\Console\Output\BufferedOutput;
 
-class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
+class BackendController extends ActionController
 {
+    use BackendUserTranslationTrait;
+
     /**
      * @Flow\Inject
      * @var PrunnerApiService
@@ -89,6 +95,12 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
     #[Flow\Inject]
     protected AutomaticReleaseSwitchService $automaticReleaseSwitchService;
 
+    #[Flow\Inject]
+    protected Translator $translator;
+
+    #[Flow\Inject]
+    protected BackendDateFormatter $backendDateFormatter;
+
     /**
      * @Flow\InjectConfiguration("redisContentStores")
      * @var array
@@ -125,7 +137,14 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
             $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch
         );
         $this->view->assign('showToggleConfigEpochButton', $showToggleConfigEpochButton);
-        $this->view->assign('automaticReleasePauseState', $this->automaticReleaseSwitchService->getPauseState());
+        $automaticReleasePauseState = $this->automaticReleaseSwitchService->getPauseState();
+        $this->view->assign('automaticReleasePauseState', $automaticReleasePauseState);
+        $this->view->assign(
+            'automaticReleasePausedAt',
+            $automaticReleasePauseState !== null
+                ? $this->backendDateFormatter->format($automaticReleasePauseState->getPausedAt())
+                : null
+        );
     }
 
     public function detailsAction(
@@ -261,9 +280,7 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         }
 
         $this->automaticReleaseSwitchService->pause();
-        $this->addFlashMessage(
-            'Automatic content releases are paused. Editor publishes will not go live until you resume them.'
-        );
+        $this->addFlashMessage($this->translateById('automaticReleases.paused.flashMessage'));
 
         $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
 
@@ -278,9 +295,7 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         }
 
         $this->automaticReleaseSwitchService->resume();
-        $this->addFlashMessage(
-            'Automatic content releases are enabled again. Changes published while they were paused go live with the next release.'
-        );
+        $this->addFlashMessage($this->translateById('automaticReleases.resumed.flashMessage'));
 
         $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
 
@@ -293,5 +308,17 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->contentReleaseManager->toggleConfigEpoch($redisInstanceIdentifier);
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
+    }
+
+    private function translateById(string $labelId): string
+    {
+        return (string)$this->translator->translateById(
+            $labelId,
+            [],
+            null,
+            null,
+            'Main',
+            'Flowpack.DecoupledContentStore'
+        );
     }
 }

@@ -1,0 +1,26 @@
+/*
+ * The warning painted by AutomaticReleaseWarning.js.
+ *
+ * It is the first element in the document flow, above everything Neos renders, so it can never cover a control.
+ */
+#flowpack-decoupledcontentstore-release-warning {
+    padding: 12px 24px;
+    background-color: #ff460d;
+    color: #fff;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 1.4;
+    text-align: center;
+}
+
+/*
+ * The Neos chrome is positioned fixed and therefore ignores the document flow - without this it would start at the
+ * top of the viewport, behind the warning. Any transform makes the application container the containing block for
+ * those fixed children, so they lay themselves out inside the remaining height instead of the whole viewport.
+ */
+html.flowpack-decoupledcontentstore-release-warning-visible #appContainer {
+    position: relative;
+    height: calc(100vh - var(--flowpack-decoupledcontentstore-release-warning-height, 0px));
+    transform: translate(0);
+}

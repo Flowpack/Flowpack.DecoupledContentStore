@@ -196,6 +196,21 @@ Neos:
             icon: 'fas fa-exchange-alt'
             mainStylesheet: 'Lite'
 
+    Ui:
+      resources:
+        # Warns editors that publishing does not reach the live site while automatic releases are paused. Both files
+        # are served as they are, so registering them here needs no build step.
+        javascript:
+          'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':
+            resource: 'resource://Flowpack.DecoupledContentStore/Public/ContentModule/AutomaticReleaseWarning.js'
+            # Before the UI host and without "defer", because the host reads the inlined _NEOS_UI_* globals once and
+            # deletes them - the script has to capture the route table before that happens.
+            position: 'before Neos.Neos.UI:Host'
+        stylesheets:
+          'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':
+            resource: 'resource://Flowpack.DecoupledContentStore/Public/ContentModule/AutomaticReleaseWarning.css'
+            position: 'end'
+
   Flow:
     resource:
       targets:

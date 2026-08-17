@@ -1,4 +1,4 @@
-/* ../../../../../../../../private/var/folders/fd/vt4bk4351l97704fxm4zmmyr0000gn/T/tmp-47815-zvlMZoCh5PYD/Flowpack.DecoupledContentStore/Resources/Private/Js/1778224314767-styles.css */
+/* ../../../../../../../../private/var/folders/fd/vt4bk4351l97704fxm4zmmyr0000gn/T/tmp-30026-6RnCASmiDb7G/Flowpack.DecoupledContentStore/Resources/Private/Js/1786952756520-styles.css */
 #app *,
 #app ::before,
 #app ::after {
@@ -10,6 +10,9 @@
 #app ::before,
 #app ::after {
   --tw-content: "";
+}
+#app .visible {
+  visibility: visible;
 }
 #app .absolute {
   position: absolute;
@@ -154,11 +157,6 @@
 }
 #app .overflow-x-scroll {
   overflow-x: scroll;
-}
-#app .truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 #app .whitespace-pre {
   white-space: pre;

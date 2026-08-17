@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file original="" product-name="Flowpack.DecoupledContentStore" source-language="en" datatype="plaintext">
+		<body>
+			<!-- The switch which suppresses automatically triggered content releases -->
+			<trans-unit id="automaticReleases.pause" xml:space="preserve">
+				<source>Pause automatic releases</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.resume" xml:space="preserve">
+				<source>Resume automatic releases</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.paused.flashMessage" xml:space="preserve">
+				<source>Automatic content releases are paused. Editor publishes will not go live until you resume them.</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.resumed.flashMessage" xml:space="preserve">
+				<source>Automatic content releases are enabled again. Changes published while they were paused go live with the next release.</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.paused.title" xml:space="preserve">
+				<source>Automatic content releases are paused</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.paused.description" xml:space="preserve">
+				<source>Nothing editors publish goes live until an administrator resumes the releases.</source>
+			</trans-unit>
+			<!-- {0}: date and time, {1}: account, {2}: number of suppressed releases -->
+			<trans-unit id="automaticReleases.paused.details" xml:space="preserve">
+				<source>Paused on {0} by {1}, {2} release(s) suppressed since then.</source>
+			</trans-unit>
+			<!-- {0}: date and time, {1}: number of suppressed releases -->
+			<trans-unit id="automaticReleases.paused.detailsWithoutAccount" xml:space="preserve">
+				<source>Paused on {0}, {1} release(s) suppressed since then.</source>
+			</trans-unit>
+			<!-- Shown to editors in the content module. {0}: date and time, {1}: number of suppressed releases -->
+			<trans-unit id="automaticReleases.paused.contentModuleWarning" xml:space="preserve">
+				<source>Automatic content releases have been paused on {0}, so your changes do not go live yet. {1} release(s) are waiting. An administrator has to resume them in the Content Store module.</source>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>
