@@ -2,6 +2,7 @@
 
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
+use Flowpack\DecoupledContentStore\Command\ContentReleaseValidationCommandController;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
@@ -178,6 +179,34 @@ class FeatureContext implements Context
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
         $nodeEnumerator->enumerateAndStoreInRedis(null, $contentReleaseLogger, $contentReleaseIdentifier);
         echo $bufferedOutput->fetch();
+    }
+
+    /**
+     * Sets what the pipeline reads as the currently live release, without going through a switch - which validates
+     * a lot more than this is about.
+     *
+     * @Given the currently live content release is :contentReleaseIdentifier
+     */
+    public function theCurrentlyLiveContentReleaseIs($contentReleaseIdentifier)
+    {
+        $redisClientManager = $this->getObjectManager()->get(RedisClientManager::class);
+        $redisClientManager->getPrimaryRedis()->set('contentStore:current', $contentReleaseIdentifier);
+    }
+
+    /**
+     * @Then validating content release :contentReleaseIdentifier succeeds
+     */
+    public function validatingContentReleaseSucceeds($contentReleaseIdentifier)
+    {
+        // the command ends the process when it considers the release invalid, so getting past this line is half of
+        // the assertion - the other half is that it did not mark the release as broken on the way
+        $validationCommandController = $this->getObjectManager()->get(ContentReleaseValidationCommandController::class);
+        $validationCommandController->validateCommand($contentReleaseIdentifier);
+
+        $redisRenderingErrorManager = $this->getObjectManager()->get(RedisRenderingErrorManager::class);
+        Assert::assertCount(0, $redisRenderingErrorManager->getRenderingErrors(
+            ContentReleaseIdentifier::fromString($contentReleaseIdentifier)
+        ));
     }
 
     /**

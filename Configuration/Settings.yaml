@@ -141,6 +141,14 @@ Flowpack:
         transferMode: 'dump'
         isRequired: true
         copyOnQuickRelease: true
+      quickPublishChangedUrls:
+        redisKeyPostfix: 'quickPublish:changedUrls'
+        transfer: false
+        transferMode: 'dump'
+        isRequired: false
+        # the key exists for a quick release only, and says which URLs it re-rendered - validators use it to check
+        # those instead of the whole release. It describes this release, so it is not copied and not transferred.
+        copyOnQuickRelease: false
       renderedDocuments:
         redisKeyPostfix: 'renderedDocuments'
         transfer: true

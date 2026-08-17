@@ -17,6 +17,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\DocumentNodeFi
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
+use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderingUriService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
@@ -56,6 +57,12 @@ final class QuickPublishNodeEnumerator
     #[Flow\Inject]
     protected CachingHelper $cachingHelper;
 
+    #[Flow\Inject]
+    protected NodeRenderingUriService $nodeRenderingUriService;
+
+    #[Flow\Inject]
+    protected ContentReleaseScope $contentReleaseScope;
+
     /**
      * @throws Exception if a given node cannot be published, or nothing is left to render
      */
@@ -88,25 +95,15 @@ final class QuickPublishNodeEnumerator
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
 
-        $enumeratedNodeCount = 0;
-        foreach (
-            GeneratorUtility::createArrayBatch(
-                $this->enumerateGivenNodes(
-                    $nodeIdentifiers,
-                    $contentReleaseLogger,
-                    $newMetadata->getWorkspaceName() ?? 'live'
-                ),
-                100
-            ) as $enumeration
-        ) {
-            $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
-            $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
-            $enumeratedNodeCount += count($enumeration);
-        }
+        $nodesToRender = $this->enumerateGivenNodes(
+            $nodeIdentifiers,
+            $contentReleaseLogger,
+            $newMetadata->getWorkspaceName() ?? 'live'
+        );
 
         // a quick release which renders nothing publishes exactly the release it was copied from - which looks like
         // a successful publish to everybody watching, while the change the editor asked for is nowhere
-        if ($enumeratedNodeCount === 0) {
+        if ($nodesToRender === []) {
             throw new Exception(
                 sprintf(
                     'None of the given nodes can be published (%s), so content release %s would only repeat the release '
@@ -117,18 +114,59 @@ final class QuickPublishNodeEnumerator
             );
         }
 
-        $contentReleaseLogger->info(sprintf('Enumerated %d node variants for rendering', $enumeratedNodeCount));
+        foreach (
+            GeneratorUtility::createArrayBatch(
+                array_map(static fn(array $nodeToRender): EnumeratedNode => $nodeToRender[1], $nodesToRender),
+                100
+            ) as $enumeration
+        ) {
+            $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
+            $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
+        }
+
+        $this->writeChangedUrls($nodesToRender, $releaseIdentifier, $contentReleaseLogger);
+
+        $contentReleaseLogger->info(sprintf('Enumerated %d node variants for rendering', count($nodesToRender)));
     }
 
     /**
-     * @return iterable<EnumeratedNode>
+     * The URLs of everything this release renders, for the validators which check a quick release instead of the
+     * whole content store.
+     *
+     * They are built here rather than while enumerating, because {@see NodeRenderingUriService::buildNodeUri()}
+     * marks the security context as initialized as a side effect, which would change what the node lookups of the
+     * remaining identifiers are allowed to see.
+     *
+     * @param array<int, array{0: NodeInterface, 1: EnumeratedNode}> $nodesToRender
+     */
+    private function writeChangedUrls(
+        array $nodesToRender,
+        ContentReleaseIdentifier $releaseIdentifier,
+        ContentReleaseLogger $contentReleaseLogger
+    ): void {
+        $changedUrls = [];
+        foreach ($nodesToRender as [$node, $enumeratedNode]) {
+            $changedUrls[] = $this->nodeRenderingUriService->buildNodeUri($node, $enumeratedNode->getArguments());
+        }
+
+        $this->contentReleaseScope->setChangedUrls($releaseIdentifier, $changedUrls);
+
+        $contentReleaseLogger->info('Content release is scoped to the URLs it renders', [
+            'changedUrls' => $changedUrls
+        ]);
+    }
+
+    /**
+     * @return array<int, array{0: NodeInterface, 1: EnumeratedNode}>
      * @throws Exception
      */
     private function enumerateGivenNodes(
         NodeIdentifiers $nodeIdentifiers,
         ContentReleaseLogger $contentReleaseLogger,
         string $workspaceName
-    ): iterable {
+    ): array {
+        $nodesToRender = [];
+
         foreach ($nodeIdentifiers as $nodeIdentifier) {
             $contentCacheFlushed = false;
 
@@ -156,7 +194,11 @@ final class QuickPublishNodeEnumerator
 
                 $contentReleaseLogger->info('Registering node for publishing', ['node' => $contextPath]);
 
-                yield from $this->nodeRenderingExtensionManager->enumerateDocumentNode($nodeToEnumerate);
+                foreach (
+                    $this->nodeRenderingExtensionManager->enumerateDocumentNode($nodeToEnumerate) as $enumeratedNode
+                ) {
+                    $nodesToRender[] = [$nodeToEnumerate, $enumeratedNode];
+                }
             }
 
             if (!$contentCacheFlushed) {
@@ -168,6 +210,8 @@ final class QuickPublishNodeEnumerator
                 );
             }
         }
+
+        return $nodesToRender;
     }
 
     /**
