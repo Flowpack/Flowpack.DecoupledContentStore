@@ -181,6 +181,23 @@ prototype(Flowpack.DecoupledContentStore:ContentStoreActions) < prototype(Neos.F
         `
     }
 
+    // a quick release publishes into a copy of the release which is live, so it only makes sense while the automatic
+    // ones are paused - otherwise the next automatic release renders everything anyway
+    quickPublish = Neos.Fusion:Component {
+        @if.isPaused = ${automaticReleasePauseState}
+        @if.hasAccess = ${Security.hasAccess('Flowpack.DecoupledContentStore:ReleaseControl')}
+
+        renderer = afx`
+            <Neos.Fusion:Link.Action
+                href.action="quickPublishForm"
+                href.arguments={{contentStore: contentStore}}
+                class="neos-button neos-button-primary"
+            >
+                <Flowpack.DecoupledContentStore:Translate id="quickPublish.button" />
+            </Neos.Fusion:Link.Action>
+        `
+    }
+
     publishAllWithoutValidation = Neos.Fusion:Component {
         _publishAllWithoutValidationUri = Neos.Fusion:UriBuilder {
             action = 'publishAllWithoutValidation'

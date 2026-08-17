@@ -95,6 +95,22 @@ final class DocumentNodeFilter
         return null;
     }
 
+    /**
+     * Why a node somebody named by identifier must not go into a content release, or NULL if it may.
+     *
+     * The node type is part of the answer here, unlike in {@see skipReason()}: a node which was named by hand did
+     * not come out of the FlowQuery filter, so nothing else checked it.
+     */
+    public function skipReasonForNamedNode(NodeInterface $node, NodeInterface $siteNode): ?string
+    {
+        $skipReason = $this->skipReason($node, $siteNode);
+        if ($skipReason !== null) {
+            return $skipReason;
+        }
+
+        return $this->matchesNodeTypeWhitelist($node) ? null : 'not of a node type which is published';
+    }
+
     private static function isOrphaned(NodeInterface $node, NodeInterface $siteNode): bool
     {
         $parentNode = self::getParentNodeOrNull($node);

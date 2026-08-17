@@ -85,6 +85,31 @@ final class NodeIdentifiersTest extends UnitTestCase
         NodeIdentifiers::fromCommaSeparatedString('  ,  ');
     }
 
+    public function testTheBackendFormAcceptsOneIdentifierPerLine(): void
+    {
+        $nodeIdentifiers = NodeIdentifiers::fromUserInput(
+            "  " . self::IDENTIFIER . "\r\n\n" . self::OTHER_IDENTIFIER . "  \n"
+        );
+
+        self::assertSame([self::IDENTIFIER, self::OTHER_IDENTIFIER], $nodeIdentifiers->jsonSerialize());
+    }
+
+    public function testTheBackendFormAlsoAcceptsSeparatorsSomebodyPastedIn(): void
+    {
+        // an identifier list copied out of a log or a spreadsheet arrives with commas or semicolons
+        $nodeIdentifiers = NodeIdentifiers::fromUserInput(self::IDENTIFIER . '; ' . self::OTHER_IDENTIFIER . ',');
+
+        self::assertSame([self::IDENTIFIER, self::OTHER_IDENTIFIER], $nodeIdentifiers->jsonSerialize());
+    }
+
+    public function testTheBackendFormRefusesAnythingWhichIsNotAnIdentifier(): void
+    {
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(1786958510);
+
+        NodeIdentifiers::fromUserInput("/sites/test/products\n" . self::IDENTIFIER);
+    }
+
     public function testTheListIsHandedToThePipelineAsItWasRead(): void
     {
         // the pipeline passes it on as a prunner variable

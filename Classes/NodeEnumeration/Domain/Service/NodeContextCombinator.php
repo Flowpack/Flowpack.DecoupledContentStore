@@ -67,6 +67,40 @@ class NodeContextCombinator
     }
 
     /**
+     * Iterate over the node with the given identifier in every dimension it exists in, together with the site node
+     * it belongs to.
+     *
+     * Unlike {@see nodeInContexts()} this searches every site and hands out the site node as well, which callers
+     * need for the orphan check. It also does not report "not found" per site: a node is part of one site, so all
+     * the others not having it is the normal case rather than an error.
+     *
+     * @return \Generator<array{0: NodeInterface, 1: NodeInterface}> the site node and the node, in that order
+     */
+    public function nodeVariantsWithSiteNode(string $nodeIdentifier, string $workspaceName = 'live'): \Generator
+    {
+        foreach ($this->sites() as $site) {
+            $nodeFound = false;
+
+            // hidden nodes are shown here regardless of "recurseHiddenContent": somebody named this node by its
+            // identifier, and "it is hidden" is the answer they need - a context which filters it away could only
+            // report that it does not exist
+            foreach ($this->siteNodeInContexts($site, $workspaceName, true) as $siteNode) {
+                $node = $siteNode->getContext()->getNodeByIdentifier($nodeIdentifier);
+                if ($node instanceof NodeInterface) {
+                    $nodeFound = true;
+                    yield [$siteNode, $node];
+                }
+            }
+
+            if ($nodeFound) {
+                // getNodeByIdentifier() looks the node up in the whole content repository rather than inside the
+                // site, so every further site would hand out the very same variants again
+                return;
+            }
+        }
+    }
+
+    /**
      * Iterate over all sites
      *
      * @return \Generator<Site>
@@ -83,10 +117,14 @@ class NodeContextCombinator
     /**
      * Iterate over the site node in all available presets (if it exists)
      *
+     * @param bool|null $invisibleContentShown NULL follows the "nodeRendering.recurseHiddenContent" setting
      * @return \Generator<NodeInterface>
      */
-    public function siteNodeInContexts(Site $site, string $workspaceName = 'live'): \Generator
-    {
+    public function siteNodeInContexts(
+        Site $site,
+        string $workspaceName = 'live',
+        ?bool $invisibleContentShown = null
+    ): \Generator {
         $allowedContextCombinations = $this->contentDimensionCombinator->getAllAllowedCombinations();
 
         foreach ($allowedContextCombinations as $dimensionContextCombination) {
@@ -95,7 +133,7 @@ class NodeContextCombinator
                 'workspaceName' => $workspaceName,
                 'dimensions' => $dimensionContextCombination,
                 'targetDimensions' => [],
-                'invisibleContentShown' => $this->recurseHiddenContent
+                'invisibleContentShown' => $invisibleContentShown ?? $this->recurseHiddenContent
             ));
 
             $siteNode = $contentContext->getNode('/sites/' . $site->getNodeName());

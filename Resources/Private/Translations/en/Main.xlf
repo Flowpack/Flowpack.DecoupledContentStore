@@ -33,6 +33,42 @@
 			<trans-unit id="automaticReleases.paused.contentModuleWarning" xml:space="preserve">
 				<source>Automatic content releases have been paused on {0}, so your changes do not go live yet. {1} release(s) are waiting. An administrator has to resume them in the Content Store module.</source>
 			</trans-unit>
+            <!-- Publishing single documents into a copy of the release which is live -->
+            <trans-unit id="quickPublish.button" xml:space="preserve">
+				<source>Quick publish pages</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.title" xml:space="preserve">
+				<source>Quick publish pages</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.description" xml:space="preserve">
+				<source>A quick release takes the content release which is live now, re-renders the pages you name here into a copy of it and publishes that. Everything else goes live exactly as it is now: pages which embed the ones you publish keep their old teasers, titles and navigation entries until the next full release.</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.label" xml:space="preserve">
+				<source>Node identifiers, one per line or comma separated list:</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.submit" xml:space="preserve">
+				<source>Show what would be published</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.title" xml:space="preserve">
+				<source>These pages would be published</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.description" xml:space="preserve">
+				<source>One row per dimension. Rows marked in red are not published - check them before you continue, because a page you meant to fix would stay as it is.</source>
+			</trans-unit>
+            <!-- {0}: number of pages which would be published -->
+            <trans-unit id="quickPublish.preview.submit" xml:space="preserve">
+				<source>Publish {0} page(s) now</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.change" xml:space="preserve">
+				<source>Change the list</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.nothingToPublish" xml:space="preserve">
+				<source>None of these pages can be published, so there is nothing a quick release would change.</source>
+			</trans-unit>
+            <!-- {0}: the content release identifier -->
+            <trans-unit id="quickPublish.scheduled.flashMessage" xml:space="preserve">
+				<source>Content release {0} was started and publishes the pages you named.</source>
+			</trans-unit>
 		</body>
 	</file>
 </xliff>

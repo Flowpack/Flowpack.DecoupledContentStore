@@ -170,7 +170,8 @@ final class QuickPublishNodeEnumerator
         foreach ($nodeIdentifiers as $nodeIdentifier) {
             $contentCacheFlushed = false;
 
-            foreach ($this->nodeVariants($nodeIdentifier, $workspaceName) as [$siteNode, $nodeToEnumerate]) {
+            $variants = $this->nodeContextCombinator->nodeVariantsWithSiteNode($nodeIdentifier, $workspaceName);
+            foreach ($variants as [$siteNode, $nodeToEnumerate]) {
                 if (!$contentCacheFlushed) {
                     // the tags carry the node identifier and the workspace, so one flush covers every dimension
                     $this->flushContentCacheForNode($nodeToEnumerate, $nodeIdentifier, $contentReleaseLogger);
@@ -179,10 +180,7 @@ final class QuickPublishNodeEnumerator
 
                 $contextPath = $nodeToEnumerate->getContextPath();
 
-                $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate, $siteNode);
-                if ($skipReason === null && !$this->documentNodeFilter->matchesNodeTypeWhitelist($nodeToEnumerate)) {
-                    $skipReason = 'not of a node type which is published';
-                }
+                $skipReason = $this->documentNodeFilter->skipReasonForNamedNode($nodeToEnumerate, $siteNode);
                 if ($skipReason !== null) {
                     // warn rather than debug: somebody asked for this node by hand and will not see it change
                     $contentReleaseLogger->warn(
@@ -212,36 +210,6 @@ final class QuickPublishNodeEnumerator
         }
 
         return $nodesToRender;
-    }
-
-    /**
-     * The node in every dimension it exists in, together with the site node it belongs to.
-     *
-     * {@see NodeContextCombinator::nodeInContexts()} hands out the same variants, but not the site node the orphan
-     * check needs - and it reports "not found" per site, while a node not being part of a site is the normal case
-     * for all but one of them.
-     *
-     * @return \Generator<array{0: NodeInterface, 1: NodeInterface}>
-     */
-    private function nodeVariants(string $nodeIdentifier, string $workspaceName): \Generator
-    {
-        foreach ($this->nodeContextCombinator->sites() as $site) {
-            $nodeFound = false;
-
-            foreach ($this->nodeContextCombinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
-                $node = $siteNode->getContext()->getNodeByIdentifier($nodeIdentifier);
-                if ($node instanceof NodeInterface) {
-                    $nodeFound = true;
-                    yield [$siteNode, $node];
-                }
-            }
-
-            if ($nodeFound) {
-                // getNodeByIdentifier() looks the node up in the whole content repository rather than inside the
-                // site, so every further site would hand out the very same variants again
-                return;
-            }
-        }
     }
 
     /**

@@ -35,13 +35,36 @@ final class NodeIdentifiers implements \IteratorAggregate, \JsonSerializable
     }
 
     /**
+     * The form the pipeline passes them in.
+     *
      * @throws Exception if the list is empty or holds anything which is not a node identifier
      */
     public static function fromCommaSeparatedString(string $nodeIdentifiers): self
     {
+        return self::fromTokens(explode(',', $nodeIdentifiers));
+    }
+
+    /**
+     * What somebody pasted into the backend form - one identifier per line, or separated by commas, or both.
+     *
+     * @throws Exception if the list is empty or holds anything which is not a node identifier
+     */
+    public static function fromUserInput(string $nodeIdentifiers): self
+    {
+        $tokens = preg_split('/[\s,;]+/', $nodeIdentifiers);
+
+        return self::fromTokens($tokens === false ? [] : $tokens);
+    }
+
+    /**
+     * @param array<int, string> $tokens
+     * @throws Exception if the list is empty or holds anything which is not a node identifier
+     */
+    private static function fromTokens(array $tokens): self
+    {
         $identifiers = [];
 
-        foreach (explode(',', $nodeIdentifiers) as $identifier) {
+        foreach ($tokens as $identifier) {
             $identifier = trim($identifier);
             if ($identifier === '') {
                 continue;
