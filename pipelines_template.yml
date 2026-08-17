@@ -61,23 +61,26 @@ pipelines:
       ################################################################################
       # 2) RENDERING
       ################################################################################
-      render_orchestrator:
+      # the tasks anchored here (&name) are reused by do_quick_content_release below through a YAML alias (*name),
+      # so the two pipelines cannot drift apart. Editing one of them changes both - which is the intention; a task
+      # which has to differ is written out again down there instead.
+      render_orchestrator: &render_orchestrator
         script:
           - ./flow nodeRendering:orchestrateRendering {{ .contentReleaseId }}
         depends_on: [enumerate_finished]
-      render_1:
+      render_1: &render_1
         script:
           - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w1
         depends_on: [enumerate_finished]
-      render_2:
+      render_2: &render_2
         script:
           - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w2
         depends_on: [enumerate_finished]
-      render_3:
+      render_3: &render_3
         script:
           - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w3
         depends_on: [enumerate_finished]
-      render_4:
+      render_4: &render_4
         script:
           - Packages/Application/Flowpack.DecoupledContentStore/Scripts/renderWorker.sh {{ .contentReleaseId }} w4
         depends_on: [enumerate_finished]
@@ -141,7 +144,7 @@ pipelines:
       # 3) the task name must be included in validate_finished.depends_on
 
       # marker task to depend on all validation jobs; as separation between validation and transfer stages
-      validate_finished:
+      validate_finished: &validate_finished
         script:
           - ./flow contentReleaseValidation:ensureNoValidationErrorsExist {{ .contentReleaseId }}
         depends_on:
@@ -151,7 +154,7 @@ pipelines:
       # 4) TRANSFER
       ################################################################################
       # By default, the transfer phase is empty. ("Minimal Setup" in the README)
-      transfer_content:
+      transfer_content: &transfer_content
         script:
           # in case you want to use additional content stores, you need to enable the command
           # below (see "Copy Content Releases to a different Redis instance" in README)
@@ -162,7 +165,7 @@ pipelines:
           # - ./flow contentReleaseTransfer:transferToContentStore target_live {{ .contentReleaseId }}
         depends_on: [validate_finished]
 
-      transfer_resources:
+      transfer_resources: &transfer_resources
         script:
           # in case you need to manually sync assets using rsync, you need to enable the command
           # below (see "Manually Sync Assets to the Delivery Layer via RSync" in README)
@@ -177,7 +180,7 @@ pipelines:
       # 3) the task name must be included in transfer_finished.depends_on
 
       # task to depend on all transfer jobs; as separation between transfer and switch stages
-      transfer_finished:
+      transfer_finished: &transfer_finished
         script:
           - ./flow contentReleaseTransfer:removeOldReleases primary {{ .contentReleaseId }}
         depends_on:
@@ -187,7 +190,7 @@ pipelines:
       ################################################################################
       # 5) SWITCH
       ################################################################################
-      switch_primary:
+      switch_primary: &switch_primary
         script:
           - ./flow contentReleaseSwitch:switchActiveContentRelease primary {{ .contentReleaseId }}
           # in case you need want to switch the active content release in another content store,
@@ -197,10 +200,117 @@ pipelines:
         depends_on:
           - transfer_finished
 
-      switch_finished:
+      switch_finished: &switch_finished
         script: [""]
         depends_on:
           - switch_primary
+
+  # A quick content release publishes a handful of named document nodes without rendering everything else: it copies
+  # the release which is currently live and re-renders only the given nodes into that copy. Everything after the
+  # enumeration is the pipeline above, unchanged.
+  #
+  # ARG: contentReleaseId, currentContentReleaseId, quickPublishNodeIdentifiers, workspaceName, accountId
+  # the currentContentReleaseId is the release being copied here, so unlike in do_content_release it is required
+  do_quick_content_release:
+
+    # crucial settings for incremental rendering to work
+    concurrency: 1
+
+    # deliberately NOT `queue_strategy: replace` - a quick release publishes exactly the nodes somebody asked for, so
+    # a queued one must not be thrown away by the next one. ContentReleaseManager::startQuickContentRelease() refuses
+    # to schedule a second one while the first is still on its way, because its copy source is resolved when it is
+    # scheduled and would be the release the first one is about to replace.
+
+    # see the note on do_content_release above
+    retention_count: 10
+
+    tasks:
+      ################################################################################
+      # 0) PREPARE
+      ################################################################################
+      # there is no flushContentCacheIfRequired here: this pipeline renders a few documents into a copy of a finished
+      # release, and contentReleaseQuickPublish:enumerateGivenNodes flushes the content cache for exactly those.
+      prepare_content_release:
+        script:
+          - ./flow contentReleasePrepare:createContentRelease {{ .contentReleaseId }} {{ .__jobID }} --workspaceName {{ .workspaceName }} --accountId {{ .accountId }}
+          - ./flow contentReleasePrepare:ensureAllOtherInProgressContentReleasesWillBeTerminated {{ .contentReleaseId }}
+
+      prepare_copy_previous_release:
+        script:
+          - ./flow contentReleaseQuickPublish:copyReleaseWithin primary {{ .currentContentReleaseId }} {{ .contentReleaseId }}
+        depends_on: [prepare_content_release]
+
+      # marker task to depend on all preparation jobs; as separation between preparation and enumeration stages
+      prepare_finished:
+        script: [""]
+        depends_on:
+          - prepare_copy_previous_release
+
+      ################################################################################
+      # 1) ENUMERATION
+      ################################################################################
+      enumerate_nodes:
+        script:
+          - ./flow contentReleaseQuickPublish:enumerateGivenNodes {{ .contentReleaseId }} {{ .quickPublishNodeIdentifiers }}
+        depends_on: [prepare_finished]
+
+      # Extension Point: see do_content_release above. Note that anything enumerated here is *added* to a copy of the
+      # previous release, so an enumeration which produces nothing leaves the copy as it is.
+
+      # marker task to depend on all enumeration jobs; as separation between enumeration and rendering stages
+      enumerate_finished:
+        script: [""]
+        depends_on:
+          - enumerate_nodes
+
+      ################################################################################
+      # 2) RENDERING
+      ################################################################################
+      # fewer workers than do_content_release: a quick release enumerates a handful of documents, so further workers
+      # would only add Flow bootstraps to the pipeline. `*name` is a YAML alias of the task anchored as `&name` in
+      # do_content_release above - depends_on names a task, and is resolved inside this pipeline
+      render_orchestrator: *render_orchestrator
+      render_1: *render_1
+      render_2: *render_2
+      render_3: *render_3
+      render_4: *render_4
+
+      # marker task to depend on all rendering jobs; as separation between rendering and validation stages
+      render_finished:
+        script: [""]
+        depends_on:
+          - render_orchestrator
+          - render_1
+          - render_2
+          - render_3
+          - render_4
+
+      ################################################################################
+      # 3) VALIDATION
+      ################################################################################
+      # unconditional, unlike in do_content_release: validation of a quick release is scoped to the URLs it rendered
+      # (see Flowpack\DecoupledContentStore\QuickPublish\ContentReleaseScope), so there is nothing to save by skipping it
+      validate_content:
+        script:
+          - ./flow contentReleaseValidation:validate {{ .contentReleaseId }}
+        depends_on: [render_finished]
+
+      validate_finished: *validate_finished
+
+      ################################################################################
+      # 4) TRANSFER
+      ################################################################################
+      # identical to do_content_release: the release is complete after the copy, so it is transferred as a whole -
+      # which also means the content stores you comment in up there are transferred to from here as well
+      transfer_content: *transfer_content
+      transfer_resources: *transfer_resources
+      transfer_finished: *transfer_finished
+
+      ################################################################################
+      # 5) SWITCH
+      ################################################################################
+      switch_primary: *switch_primary
+      switch_finished: *switch_finished
 
   # this subset of the pipeline above is running when a release is manually transfered and switched live
   # from the primary content store to any other content store

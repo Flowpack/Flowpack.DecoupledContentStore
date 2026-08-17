@@ -8,6 +8,9 @@ use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\Exception\QuickContentReleaseNotPossibleException;
+use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
+use Flowpack\Prunner\Dto\Job;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\JobId;
 use Flowpack\Prunner\ValueObject\PipelineName;
@@ -54,6 +57,8 @@ class ContentReleaseManager
 
     const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
     const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
+    const CONTENT_RELEASE_PIPELINE_NAME = 'do_content_release';
+    const QUICK_CONTENT_RELEASE_PIPELINE_NAME = 'do_quick_content_release';
 
     /**
      * All automatic release triggers (workspace publish, asset change, re-release after a rendering error) run through
@@ -79,7 +84,7 @@ class ContentReleaseManager
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
         $this->prunnerApiService->schedulePipeline(
-            PipelineName::create('do_content_release'),
+            PipelineName::create(self::CONTENT_RELEASE_PIPELINE_NAME),
             array_merge($additionalVariables, [
                 'contentReleaseId' => $contentReleaseId,
                 'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
@@ -104,7 +109,7 @@ class ContentReleaseManager
     ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
         $this->prunnerApiService->schedulePipeline(
-            PipelineName::create('do_content_release'),
+            PipelineName::create(self::CONTENT_RELEASE_PIPELINE_NAME),
             array_merge($additionalVariables, [
                 'contentReleaseId' => $contentReleaseId,
                 'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
@@ -118,11 +123,60 @@ class ContentReleaseManager
         return $contentReleaseId;
     }
 
+    /**
+     * Publish the given document nodes into a copy of the release which is currently live, instead of rendering
+     * every document again.
+     *
+     * This is an explicitly requested release, so like "Publish All" it is deliberately not affected by the pause
+     * switch - a paused automatic release is in fact the situation this exists for.
+     *
+     * @param array<string, mixed> $additionalVariables additional prunner variables, e.g. for added pipeline tasks
+     * @throws QuickContentReleaseNotPossibleException if there is no release to build upon, or another quick release
+     *                                                 is still on its way
+     */
+    public function startQuickContentRelease(
+        NodeIdentifiers $nodeIdentifiers,
+        ?Workspace $workspace = null,
+        array $additionalVariables = []
+    ): ContentReleaseIdentifier {
+        $currentContentReleaseId = $this->resolveCurrentContentReleaseId(null);
+        if ($currentContentReleaseId === self::NO_PREVIOUS_RELEASE) {
+            throw new QuickContentReleaseNotPossibleException(
+                'There is no content release live at the moment, so there is nothing to publish the given nodes into. '
+                . 'Run a full content release instead.',
+                1786963710
+            );
+        }
+
+        // a quick release copies the release which is live when it is scheduled, so a second one queued behind the
+        // first would build on the release the first is about to replace - and drop that first change without a word
+        $quickReleaseJobs = $this->prunnerApiService->loadPipelinesAndJobs()->getJobs()
+            ->forPipeline(PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME));
+        if ($quickReleaseJobs->running()->getArray() !== [] || $quickReleaseJobs->waiting()->getArray() !== []) {
+            throw new QuickContentReleaseNotPossibleException(
+                'Another quick content release is still on its way. Wait for it to go live, then publish these nodes.',
+                1786963711
+            );
+        }
+
+        $contentReleaseId = ContentReleaseIdentifier::create();
+        $this->prunnerApiService->schedulePipeline(
+            PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME),
+            array_merge($additionalVariables, [
+                'contentReleaseId' => $contentReleaseId,
+                'currentContentReleaseId' => $currentContentReleaseId,
+                'quickPublishNodeIdentifiers' => (string)$nodeIdentifiers,
+                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'accountId' => $this->getAccountId()
+            ])
+        );
+
+        return $contentReleaseId;
+    }
+
     public function cancelAllRunningContentReleases(): void
     {
-        $result = $this->prunnerApiService->loadPipelinesAndJobs();
-        $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
-        foreach ($runningJobs as $job) {
+        foreach ($this->runningContentReleaseJobs() as $job) {
             $this->prunnerApiService->cancelJob($job);
         }
     }
@@ -132,14 +186,27 @@ class ContentReleaseManager
      */
     public function cancelRunningContentRelease(JobId $jobId): void
     {
-        $result = $this->prunnerApiService->loadPipelinesAndJobs();
-        $runningJobs = $result->getJobs()->forPipeline(PipelineName::create('do_content_release'))->running();
-        foreach ($runningJobs as $job) {
+        foreach ($this->runningContentReleaseJobs() as $job) {
             if ($job->getId() === $jobId) {
                 $this->prunnerApiService->cancelJob($job);
                 break;
             }
         }
+    }
+
+    /**
+     * Both pipelines build a release which ends up being switched live, so both are cancelled.
+     *
+     * @return Job[]
+     */
+    private function runningContentReleaseJobs(): array
+    {
+        $jobs = $this->prunnerApiService->loadPipelinesAndJobs()->getJobs();
+
+        return array_merge(
+            $jobs->forPipeline(PipelineName::create(self::CONTENT_RELEASE_PIPELINE_NAME))->running()->getArray(),
+            $jobs->forPipeline(PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME))->running()->getArray()
+        );
     }
 
     public function toggleConfigEpoch(RedisInstanceIdentifier $redisInstanceIdentifier): void
