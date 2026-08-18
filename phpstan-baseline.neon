@@ -1411,24 +1411,6 @@ parameters:
 			path: Classes/NodeRendering/Render/ExtractedExceptionDto.php
 
 		-
-			message: '#^Foreach overwrites \$node with its value variable\.$#'
-			identifier: foreach.valueOverwrite
-			count: 1
-			path: Classes/NodeRendering/Render/NodeContextCombinator.php
-
-		-
-			message: '#^Instanceof between Neos\\ContentRepository\\Domain\\Model\\NodeInterface and Neos\\ContentRepository\\Domain\\Model\\NodeInterface will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: Classes/NodeRendering/Render/NodeContextCombinator.php
-
-		-
-			message: '#^Yield can be used only with these return types\: Generator, Iterator, Traversable, iterable\.$#'
-			identifier: generator.returnType
-			count: 5
-			path: Classes/NodeRendering/Render/NodeContextCombinator.php
-
-		-
 			message: '#^Method Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\RenderExceptionExtractor\:\:extractRenderingException\(\) should return Flowpack\\DecoupledContentStore\\NodeRendering\\Render\\ExtractedExceptionDto but returns null\.$#'
 			identifier: return.type
 			count: 1
