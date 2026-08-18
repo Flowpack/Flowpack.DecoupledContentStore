@@ -94,7 +94,7 @@ class NodeRenderingExtensionManager
 
     protected function rendererFor(EnumeratedNode $enumeratedNode): DocumentRendererInterface
     {
-        if (!isset($this->documentEnumerators)) {
+        if (!isset($this->documentRenderers)) {
             $this->documentRenderers = self::instantiateExtensions(
                 $this->configuredDocumentRenderers,
                 DocumentRendererInterface::class,
