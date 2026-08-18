@@ -115,12 +115,6 @@ parameters:
 			path: Classes/Aspects/FixedAssetHandlingInContentCacheFlusherAspect.php
 
 		-
-			message: '#^Method Flowpack\\DecoupledContentStore\\Aspects\\FixedNodeLinkHandlingInContentCacheFlusherAspect\:\:registerNodeChange\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: Classes/Aspects/FixedNodeLinkHandlingInContentCacheFlusherAspect.php
-
-		-
 			message: '#^Method Flowpack\\DecoupledContentStore\\BackendUi\\BackendUiDataService\:\:loadBackendOverviewData\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -1029,7 +1023,13 @@ parameters:
 		-
 			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:\$documentEnumerators \(array\<Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentEnumeratorInterface\>\) in isset\(\) is not nullable\.$#'
 			identifier: isset.property
-			count: 2
+			count: 1
+			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
+
+		-
+			message: '#^Property Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\NodeRenderingExtensionManager\:\:\$documentRenderers \(array\<Flowpack\\DecoupledContentStore\\NodeRendering\\Extensibility\\DocumentRendererInterface\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
 			path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php
 
 		-
