@@ -615,6 +615,11 @@ class NodeListsEnumerator
 The actual logic will depend on your use of the node. Having the actual filtering logic implemented in PHP is
 beneficial, because it allows you to use it in the rendering process as well as in the additional enumeration.
 
+A [quick content release](#quick-content-releases) emits the signal for the documents it re-renders, so the extra
+nodes a slot adds are re-rendered along with them instead of staying at the rendering of the release which was
+copied. They are not part of the release's [scope](#scoping-your-own-validators), though: a validator which
+reads `getChangedUrls()` sees the documents that were named, not the variants a slot derived from them.
+
 ### Extending the backend module
 
 - You need a Views.yaml in your package, looking like this:

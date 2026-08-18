@@ -79,10 +79,29 @@ class NodeEnumerator
 
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
 
-            // DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
-            foreach ($enumeration as $enumeratedNode) {
-                $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
-            }
+            $this->emitNodesEnumerated($enumeration, $releaseIdentifier, $contentReleaseLogger);
+        }
+    }
+
+    /**
+     * Emit {@see emitNodeEnumerated()} for a batch of nodes, including one another enumerator wrote.
+     *
+     * A signal is identified by the class which declares it, so a slot connected to this one hears nothing about the
+     * nodes a quick release enumerates unless that release emits it from here as well - and the extra variants such
+     * a slot adds for a document (pagination, filter arguments) would keep the rendering of the release which was
+     * copied while the document itself is re-rendered.
+     *
+     * DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
+     *
+     * @param array<int, EnumeratedNode> $enumeration
+     */
+    public function emitNodesEnumerated(
+        array $enumeration,
+        ContentReleaseIdentifier $releaseIdentifier,
+        ContentReleaseLogger $contentReleaseLogger
+    ): void {
+        foreach ($enumeration as $enumeratedNode) {
+            $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
         }
     }
 

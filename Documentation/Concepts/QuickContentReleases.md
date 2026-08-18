@@ -167,6 +167,14 @@ full one.
 those nodes only, through `NodeRenderingExtensionManager::enumerateDocumentNode()` so that every configured renderer
 is covered.
 
+The deprecated `nodeEnumerated` signal is emitted for that enumeration too, through
+`NodeEnumerator::emitNodesEnumerated()` — a signal is identified by the class which declares it, so emitting it from
+the quick enumerator would reach nobody. A slot on it derives further variants of a document (pagination, filter
+arguments) and writes them into the enumeration itself; without the signal those variants would keep the rendering of
+the release which was copied while the document itself is re-rendered, so a page and its own paginated variants would
+go live disagreeing with each other. They are not written into `quickPublish:changedUrls`, though, which only knows
+the documents that were named — a scoped validator does not see them.
+
 The hidden / orphaned / node-type guards are shared with the full enumeration through
 `NodeEnumeration/Domain/Service/DocumentNodeFilter`, which expresses `nodeTypeWhitelist` twice: as the FlowQuery
 filter string the full enumeration passes to `find()`, and as a check for a single node, which is what an enumerator

@@ -14,6 +14,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\DocumentNodeFilter;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
+use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderingUriService;
@@ -46,6 +47,9 @@ final class QuickPublishNodeEnumerator
 
     #[Flow\Inject]
     protected NodeContextCombinator $nodeContextCombinator;
+
+    #[Flow\Inject]
+    protected NodeEnumerator $nodeEnumerator;
 
     #[Flow\Inject]
     protected DocumentNodeFilter $documentNodeFilter;
@@ -121,6 +125,11 @@ final class QuickPublishNodeEnumerator
         ) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
+
+            // through the full enumerator, because that is the class the deprecated signal is declared in: a slot
+            // which adds further variants of a document would otherwise not hear about a quick release, and those
+            // variants would stay at the rendering of the release this one was copied from
+            $this->nodeEnumerator->emitNodesEnumerated($enumeration, $releaseIdentifier, $contentReleaseLogger);
         }
 
         $this->writeChangedUrls($nodesToRender, $releaseIdentifier, $contentReleaseLogger);
