@@ -24,12 +24,29 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
 
     public function testTheSwitchIsSetOnlyIfThePausedAtFieldExists(): void
     {
-        // countSuppressedRelease() re-creates the key with nothing but its counter if it races a resume, so the
-        // existence of the key itself says nothing
+        // the key also holds the counter of what the pause suppressed, so it is that field which says it is set
         $redis = $this->createMock(Redis::class);
         $redis->method('hExists')->with(self::REDIS_KEY, 'pausedAt')->willReturn(false);
 
         self::assertFalse($this->buildService($redis)->isPaused());
+    }
+
+    public function testASuppressedReleaseIsCountedWithoutEverCreatingTheKey(): void
+    {
+        // HINCRBY would create the hash, leaving a key holding nothing but a counter behind if a resume happened
+        // between the caller's isPaused() check and the count - and pruning never reaches that key
+        $redis = $this->createMock(Redis::class);
+        $redis->expects(self::never())->method('hIncrBy');
+        $redis
+            ->expects(self::once())
+            ->method('eval')
+            ->with(
+                self::stringContains('HEXISTS'),
+                self::equalTo([self::REDIS_KEY]),
+                self::equalTo(1)
+            );
+
+        $this->buildService($redis)->countSuppressedRelease();
     }
 
     public function testPausingWhileAlreadyPausedKeepsTheOriginalState(): void

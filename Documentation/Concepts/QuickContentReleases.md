@@ -256,8 +256,10 @@ A quick release only makes sense while ordinary releases are held back, so the p
 The state is a Redis hash on the primary instance, `contentStore:automaticReleasesPaused`, outside the per-release
 key space so pruning never touches it, holding `pausedAt`, `accountId` and `suppressedReleaseCount`. A hash rather
 than a JSON string so the counter can be raised with `HINCRBY`, without a read-modify-write race against a
-concurrent publish. `isPaused()` tests the `pausedAt` field, not the key: an increment racing a resume would
-otherwise re-create the key with nothing but its counter and read as paused forever.
+concurrent publish. `HINCRBY` creates the hash it counts in, though, so `countSuppressedRelease()` runs it from a Lua
+script guarded by `HEXISTS … pausedAt`: an increment racing a resume would otherwise leave a key behind holding
+nothing but a counter, and that key is outside the space pruning cleans. `isPaused()` tests the `pausedAt` field
+rather than the key for the same reason — it is that field which records the pause.
 
 `ContentReleaseManager::startIncrementalContentRelease()` is the single entry point for **all** automatic releases —
 workspace publish, asset change, re-render after a rendering error — so one gate there covers every trigger.
