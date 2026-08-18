@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Tests\Unit\NodeEnumeration\Domain\Service;
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\DocumentNodeFilter;
+use Neos\ContentRepository\Domain\Model\Node;
+use Neos\ContentRepository\Domain\Model\NodeType;
+use Neos\ContentRepository\Exception\NodeException;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -14,6 +18,9 @@ use PHPUnit\Framework\TestCase;
  *     nodeTypeWhitelist:
  *       - 'Neos.Neos:Document'
  *       - '!My.Package:Bar'
+ *
+ * ... and the checks a node named by identifier for a quick release has to pass, which the FlowQuery filter and the
+ * traversal of the full enumeration answer implicitly.
  */
 class DocumentNodeFilterTest extends TestCase
 {
@@ -100,5 +107,64 @@ class DocumentNodeFilterTest extends TestCase
     public function testEmptyWhitelistFallsBackToTheDefaultNodeType(): void
     {
         self::assertSame('[instanceof Neos.Neos:Document]', self::buildNodeTypeFilter([]));
+    }
+
+    public function testADocumentBelowAHiddenPageIsNotPublished(): void
+    {
+        // the full enumeration descends in a context which hides them and never reaches such a document, so a quick
+        // release publishing it would put a page live which the next full release removes again
+        $siteNode = $this->nodeMock(false, null);
+        $hiddenParentNode = $this->nodeMock(true, $siteNode);
+        $node = $this->nodeMock(false, $hiddenParentNode);
+
+        self::assertSame(
+            'below a hidden page',
+            $this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode)
+        );
+    }
+
+    public function testADocumentBelowVisiblePagesIsPublished(): void
+    {
+        $siteNode = $this->nodeMock(false, null);
+        $parentNode = $this->nodeMock(false, $siteNode);
+        $node = $this->nodeMock(false, $parentNode);
+
+        self::assertNull($this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode));
+    }
+
+    private function buildDocumentNodeFilter(): DocumentNodeFilter
+    {
+        $documentNodeFilter = new DocumentNodeFilter();
+
+        // the setting arrives by InjectConfiguration, which no container assembles in a unit test
+        $nodeTypeWhitelist = new \ReflectionProperty(DocumentNodeFilter::class, 'nodeTypeWhitelist');
+        $nodeTypeWhitelist->setValue($documentNodeFilter, ['Neos.Neos:Document']);
+
+        return $documentNodeFilter;
+    }
+
+    /**
+     * The content repository's node class is mocked rather than one of the two interfaces, because the walk up needs
+     * TraversableNodeInterface while everything else is NodeInterface, and that class is what implements both.
+     *
+     * @param Node|null $parentNode NULL where the walk up leaves the tree, as it does above the root node
+     * @return Node&MockObject
+     */
+    private function nodeMock(bool $hidden, ?Node $parentNode): Node
+    {
+        $nodeType = $this->createMock(NodeType::class);
+        $nodeType->method('isOfType')->willReturn(true);
+
+        $node = $this->createMock(Node::class);
+        $node->method('isHidden')->willReturn($hidden);
+        $node->method('getNodeType')->willReturn($nodeType);
+
+        if ($parentNode === null) {
+            $node->method('findParentNode')->willThrowException(new NodeException());
+        } else {
+            $node->method('findParentNode')->willReturn($parentNode);
+        }
+
+        return $node;
     }
 }

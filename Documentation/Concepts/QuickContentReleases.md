@@ -174,19 +174,22 @@ starting from identifiers needs. The node-type check is deliberately **not** par
 `NodeEnumerator` adds the site node to its result without passing it through the FlowQuery filter, so folding the
 node type into the shared guard would silently drop site nodes whose type is excluded.
 
-Two failures abort the task rather than shrinking the release quietly: an identifier which resolves in no site and
-dimension, and an enumeration which ends up empty. A quick release which renders nothing would publish the release it
-copied and look like a successful publish while the change is nowhere. Everything it skips is logged as a warning
-rather than at debug level, because somebody asked for those documents by hand.
+One failure aborts the task rather than shrinking the release quietly: an enumeration which ends up empty. A quick
+release which renders nothing would publish the release it copied and look like a successful publish while the change
+is nowhere. An identifier which resolves in no site and dimension is a skip like any other, because a document can be
+deleted between the confirmation page and the confirmation itself. Everything skipped is logged as a warning rather
+than at debug level, because somebody asked for those documents by hand.
 
 The identifiers are a value object, `QuickPublish/Dto/NodeIdentifiers`, which rejects anything that is not a UUID.
 This is not cosmetic: the list travels through a pipeline variable into a shell command, so unvalidated input is a
 command-injection hole. The check lives at the point where the list is read, not only in the backend form.
 
 Variants of a node are resolved through `NodeContextCombinator::nodeVariantsWithSiteNode()` — via `sites()` and
-`siteNodeInContexts()` rather than `nodeInContexts()`, because the orphan check needs the site node, and
-`getNodeByIdentifier()` searches the whole content repository rather than one site, so iterating every site would
-hand out the same variants once per site.
+`siteNodeInContexts()` rather than `nodeInContexts()`, because the orphan check needs the site node.
+`getNodeByIdentifier()` searches the whole content repository rather than one site, so it answers for every site
+alike: each candidate is matched against the site node by its `findNodePath()` before it is handed out, or a
+multi-site installation would pair every node with the first site and report it as orphaned. Once a site has claimed
+the node the remaining ones are skipped, since a node belongs to exactly one site.
 
 That lookup shows invisible content regardless of `nodeRendering.recurseHiddenContent`, which defaults to `false`.
 The setting is about recursing into hidden content while walking the tree; applied to a lookup by identifier it makes
@@ -194,6 +197,13 @@ a hidden page indistinguishable from one which does not exist, and the first hid
 any site and dimension". `siteNodeInContexts()` therefore takes an `$invisibleContentShown` override, `NULL` keeping
 the configured behaviour for the full enumeration. Hidden pages are still not published — the skip reason says
 "hidden", on the confirmation page and in the pipeline log alike.
+
+Because of that override, `skipReasonForNamedNode()` also has to walk the pages **above** the node, which
+`skipReason()` does not: the full enumeration descends from the site node in a context which hides them, so a
+document below a hidden page is not in the content store at all. Naming it in a quick release would resolve, render
+and publish it — a page live until the next full release quietly removes it again. The skip reason for that is
+"below a hidden page". It is the node's own `hidden` flag which is checked, so a page hidden by
+`hiddenBeforeDateTime` / `hiddenAfterDateTime` is not covered on either level.
 
 ## 6. Validation scoped to the changed URLs
 

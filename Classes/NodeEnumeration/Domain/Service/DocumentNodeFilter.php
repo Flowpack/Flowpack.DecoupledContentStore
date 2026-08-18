@@ -98,8 +98,9 @@ final class DocumentNodeFilter
     /**
      * Why a node somebody named by identifier must not go into a content release, or NULL if it may.
      *
-     * The node type is part of the answer here, unlike in {@see skipReason()}: a node which was named by hand did
-     * not come out of the FlowQuery filter, so nothing else checked it.
+     * The node type and the pages above the node are part of the answer here, unlike in {@see skipReason()}: a node
+     * which was named by hand did not come out of the FlowQuery filter and was not reached by descending from the
+     * site node, so nothing else checked either of them.
      */
     public function skipReasonForNamedNode(NodeInterface $node, NodeInterface $siteNode): ?string
     {
@@ -108,7 +109,34 @@ final class DocumentNodeFilter
             return $skipReason;
         }
 
+        if (self::hasHiddenAncestor($node)) {
+            return 'below a hidden page';
+        }
+
         return $this->matchesNodeTypeWhitelist($node) ? null : 'not of a node type which is published';
+    }
+
+    /**
+     * Whether one of the pages above the node is hidden.
+     *
+     * Only asked about a node named by identifier, which is resolved in a context that shows hidden nodes so that
+     * "it is hidden" can be reported instead of "it does not exist". The full enumeration needs no such check: it
+     * descends from the site node in a context which hides them, and therefore never reaches a document below a
+     * hidden page - publishing one from a quick release would put a page live which the next full release removes
+     * again. The walk goes past the site node, because a hidden site node keeps its whole site out of a full release
+     * just as well.
+     */
+    private static function hasHiddenAncestor(NodeInterface $node): bool
+    {
+        $parentNode = self::getParentNodeOrNull($node);
+        while ($parentNode !== null) {
+            if ($parentNode->isHidden()) {
+                return true;
+            }
+            $parentNode = self::getParentNodeOrNull($parentNode);
+        }
+
+        return false;
     }
 
     private static function isOrphaned(NodeInterface $node, NodeInterface $siteNode): bool
