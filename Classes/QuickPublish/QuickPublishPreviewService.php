@@ -9,6 +9,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCom
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\QuickPublishPreviewRow;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ControllerContext;
 
@@ -43,7 +44,7 @@ final class QuickPublishPreviewService
                 $rows[] = QuickPublishPreviewRow::forNode(
                     $nodeIdentifier,
                     $node->getLabel(),
-                    $node->getPath(),
+                    $node instanceof TraversableNodeInterface ? (string)$node->findNodePath() : '',
                     self::describeDimensions($node),
                     $node->getNodeType()->getName(),
                     $this->backendUri($node, $controllerContext),
