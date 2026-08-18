@@ -160,7 +160,13 @@ class ContentReleaseManager
             ->loadPipelinesAndJobs()
             ->getJobs()
             ->forPipeline(PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME));
-        if ($quickReleaseJobs->running()->getArray() !== [] || $quickReleaseJobs->waiting()->getArray() !== []) {
+        // Jobs::waiting() means "never started", which is true of a job cancelled while it was still queued as well.
+        // Such a job stays in prunner's list until it falls out of the pipeline's retention_count - a window only
+        // quick releases consume - so without the isCompleted() guard one cancelled job blocks them all until then.
+        $queuedQuickReleaseJobs = $quickReleaseJobs
+            ->waiting()
+            ->filter(static fn(Job $job): bool => !$job->isCompleted());
+        if ($quickReleaseJobs->running()->getArray() !== [] || $queuedQuickReleaseJobs->getArray() !== []) {
             throw new QuickContentReleaseNotPossibleException(
                 'Another quick content release is still on its way. Wait for it to go live, then publish these nodes.',
                 1786963711

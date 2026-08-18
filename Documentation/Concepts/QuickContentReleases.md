@@ -122,7 +122,13 @@ which demanded every required key would refuse to build on a perfectly good rele
 would silently replace a quick release.
 
 For the same reason the quick pipeline does **not** use `queue_strategy: replace` either: a quick release publishes
-exactly the documents somebody named, so a queued one must not be thrown away by the next one.
+exactly the documents somebody named, so a queued one must not be thrown away by the next one. Instead
+`ContentReleaseManager::startQuickContentRelease()` refuses to schedule a second one while the first has not gone
+live, because the copy source is resolved when the release is scheduled: a queued release would build on the release
+the first one is about to replace and drop that change without a word. `Jobs::waiting()` alone is not that check —
+it means "never started", which a job cancelled while it was still queued never was either, and such a job stays in
+prunner's list until it falls out of `retention_count`. It is therefore combined with `isCompleted()`, or one
+cancelled job would block every quick release for as long as it is kept.
 
 Details of the pipeline which are not obvious from reading it:
 

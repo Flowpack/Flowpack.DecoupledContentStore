@@ -135,6 +135,18 @@ class ContentReleaseManagerTest extends UnitTestCase
         return ['running' => [true], 'waiting in the queue' => [false]];
     }
 
+    public function testAQuickReleaseIsScheduledAfterAnEarlierOneWasCancelledBeforeItStarted(): void
+    {
+        // such a job has no start time, so it counts as waiting for as long as prunner keeps it in its job list
+        $this->currentContentReleaseId = '5';
+        $this->prunnerApiService
+            ->method('loadPipelinesAndJobs')
+            ->willReturn($this->jobsResponse('do_quick_content_release', false, true));
+        $this->prunnerApiService->expects(self::once())->method('schedulePipeline');
+
+        $this->buildContentReleaseManager()->startQuickContentRelease($this->nodeIdentifiers());
+    }
+
     public function testARunningQuickReleaseIsCancelledAlongWithTheOtherContentReleases(): void
     {
         // it ends up being switched live just like a full release does, so "cancel" has to reach it
@@ -151,8 +163,14 @@ class ContentReleaseManagerTest extends UnitTestCase
         return NodeIdentifiers::fromCommaSeparatedString(self::NODE_IDENTIFIER);
     }
 
-    private function jobsResponse(string $pipeline, bool $started): PipelinesAndJobsResponse
-    {
+    /**
+     * @param bool $canceled a cancelled job is a completed one as well, whether or not it ever started
+     */
+    private function jobsResponse(
+        string $pipeline,
+        bool $started,
+        bool $canceled = false
+    ): PipelinesAndJobsResponse {
         return PipelinesAndJobsResponse::fromJsonArray([
             'pipelines' => [],
             'jobs' => [
@@ -160,8 +178,8 @@ class ContentReleaseManagerTest extends UnitTestCase
                     'id' => 'job-id',
                     'pipeline' => $pipeline,
                     'tasks' => [],
-                    'completed' => false,
-                    'canceled' => false,
+                    'completed' => $canceled,
+                    'canceled' => $canceled,
                     'errored' => false,
                     'created' => '2026-08-17T10:00:00+02:00',
                     'start' => $started ? '2026-08-17T10:00:01+02:00' : null,
