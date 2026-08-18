@@ -30,6 +30,9 @@ final class DocumentNodeFilter
     #[Flow\InjectConfiguration('nodeRendering.nodeTypeWhitelist')]
     protected array $nodeTypeWhitelist;
 
+    #[Flow\InjectConfiguration('nodeRendering.recurseHiddenContent')]
+    protected bool $recurseHiddenContent;
+
     /**
      * Builds a FlowQuery filter string from the node type whitelist,
      * where entries prefixed with "!" are excluded.
@@ -88,7 +91,9 @@ final class DocumentNodeFilter
             return 'orphaned';
         }
 
-        if ($node->isHidden()) {
+        // isVisible() rather than isHidden(), so that a page hidden by "hiddenBeforeDateTime" or
+        // "hiddenAfterDateTime" counts as hidden as well - it is hidden to a visitor just the same
+        if (!$node->isVisible()) {
             return 'hidden';
         }
 
@@ -109,7 +114,9 @@ final class DocumentNodeFilter
             return $skipReason;
         }
 
-        if (self::hasHiddenAncestor($node)) {
+        // "recurseHiddenContent" is what the full enumeration descends into hidden pages with, so where it is set a
+        // document below one is part of an ordinary release and has to be part of a quick release just the same
+        if (!$this->recurseHiddenContent && self::hasHiddenAncestor($node)) {
             return 'below a hidden page';
         }
 
@@ -117,20 +124,20 @@ final class DocumentNodeFilter
     }
 
     /**
-     * Whether one of the pages above the node is hidden.
+     * Whether one of the pages above the node is hidden, by its flag or by its hidden-before/after dates.
      *
      * Only asked about a node named by identifier, which is resolved in a context that shows hidden nodes so that
      * "it is hidden" can be reported instead of "it does not exist". The full enumeration needs no such check: it
-     * descends from the site node in a context which hides them, and therefore never reaches a document below a
-     * hidden page - publishing one from a quick release would put a page live which the next full release removes
-     * again. The walk goes past the site node, because a hidden site node keeps its whole site out of a full release
-     * just as well.
+     * descends from the site node in a context built from "recurseHiddenContent", and therefore never reaches a
+     * document below a hidden page unless that setting says it should - publishing one from a quick release would
+     * put a page live which the next full release removes again. The walk goes past the site node, because a hidden
+     * site node keeps its whole site out of a full release just as well.
      */
     private static function hasHiddenAncestor(NodeInterface $node): bool
     {
         $parentNode = self::getParentNodeOrNull($node);
         while ($parentNode !== null) {
-            if ($parentNode->isHidden()) {
+            if (!$parentNode->isVisible()) {
                 return true;
             }
             $parentNode = self::getParentNodeOrNull($parentNode);

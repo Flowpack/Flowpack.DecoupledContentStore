@@ -113,9 +113,9 @@ class DocumentNodeFilterTest extends TestCase
     {
         // the full enumeration descends in a context which hides them and never reaches such a document, so a quick
         // release publishing it would put a page live which the next full release removes again
-        $siteNode = $this->nodeMock(false, null);
-        $hiddenParentNode = $this->nodeMock(true, $siteNode);
-        $node = $this->nodeMock(false, $hiddenParentNode);
+        $siteNode = $this->nodeMock(true, null);
+        $hiddenParentNode = $this->nodeMock(false, $siteNode);
+        $node = $this->nodeMock(true, $hiddenParentNode);
 
         self::assertSame(
             'below a hidden page',
@@ -125,20 +125,49 @@ class DocumentNodeFilterTest extends TestCase
 
     public function testADocumentBelowVisiblePagesIsPublished(): void
     {
-        $siteNode = $this->nodeMock(false, null);
-        $parentNode = $this->nodeMock(false, $siteNode);
-        $node = $this->nodeMock(false, $parentNode);
+        $siteNode = $this->nodeMock(true, null);
+        $parentNode = $this->nodeMock(true, $siteNode);
+        $node = $this->nodeMock(true, $parentNode);
 
         self::assertNull($this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode));
     }
 
-    private function buildDocumentNodeFilter(): DocumentNodeFilter
+    public function testAPageHiddenByItsDatesRatherThanByItsFlagHidesWhatIsBelowItToo(): void
+    {
+        // a page whose "hiddenBeforeDateTime" / "hiddenAfterDateTime" hides it has its "hidden" flag unset, which is
+        // what isVisible() adds over isHidden() - the node data behind those dates is the node class' own business
+        $siteNode = $this->nodeMock(true, null);
+        $parentNode = $this->nodeMock(false, $siteNode);
+        $parentNode->method('isHidden')->willReturn(false);
+        $node = $this->nodeMock(true, $parentNode);
+
+        self::assertSame(
+            'below a hidden page',
+            $this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode)
+        );
+    }
+
+    public function testADocumentBelowAHiddenPageIsPublishedWhereTheFullEnumerationRecursesIntoOne(): void
+    {
+        // with "recurseHiddenContent" the full enumeration reaches such a document, so skipping it in a quick
+        // release would be the same mismatch the other way round
+        $siteNode = $this->nodeMock(true, null);
+        $hiddenParentNode = $this->nodeMock(false, $siteNode);
+        $node = $this->nodeMock(true, $hiddenParentNode);
+
+        self::assertNull($this->buildDocumentNodeFilter(true)->skipReasonForNamedNode($node, $siteNode));
+    }
+
+    private function buildDocumentNodeFilter(bool $recurseHiddenContent = false): DocumentNodeFilter
     {
         $documentNodeFilter = new DocumentNodeFilter();
 
-        // the setting arrives by InjectConfiguration, which no container assembles in a unit test
+        // the settings arrive by InjectConfiguration, which no container assembles in a unit test
         $nodeTypeWhitelist = new \ReflectionProperty(DocumentNodeFilter::class, 'nodeTypeWhitelist');
         $nodeTypeWhitelist->setValue($documentNodeFilter, ['Neos.Neos:Document']);
+
+        $recurseHiddenContentProperty = new \ReflectionProperty(DocumentNodeFilter::class, 'recurseHiddenContent');
+        $recurseHiddenContentProperty->setValue($documentNodeFilter, $recurseHiddenContent);
 
         return $documentNodeFilter;
     }
@@ -147,16 +176,17 @@ class DocumentNodeFilterTest extends TestCase
      * The content repository's node class is mocked rather than one of the two interfaces, because the walk up needs
      * TraversableNodeInterface while everything else is NodeInterface, and that class is what implements both.
      *
+     * @param bool $visible what isVisible() answers - the flag and the hidden-before/after dates together
      * @param Node|null $parentNode NULL where the walk up leaves the tree, as it does above the root node
      * @return Node&MockObject
      */
-    private function nodeMock(bool $hidden, ?Node $parentNode): Node
+    private function nodeMock(bool $visible, ?Node $parentNode): Node
     {
         $nodeType = $this->createMock(NodeType::class);
         $nodeType->method('isOfType')->willReturn(true);
 
         $node = $this->createMock(Node::class);
-        $node->method('isHidden')->willReturn($hidden);
+        $node->method('isVisible')->willReturn($visible);
         $node->method('getNodeType')->willReturn($nodeType);
 
         if ($parentNode === null) {

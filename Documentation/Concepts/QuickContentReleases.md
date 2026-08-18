@@ -207,11 +207,19 @@ the configured behaviour for the full enumeration. Hidden pages are still not pu
 "hidden", on the confirmation page and in the pipeline log alike.
 
 Because of that override, `skipReasonForNamedNode()` also has to walk the pages **above** the node, which
-`skipReason()` does not: the full enumeration descends from the site node in a context which hides them, so a
-document below a hidden page is not in the content store at all. Naming it in a quick release would resolve, render
-and publish it — a page live until the next full release quietly removes it again. The skip reason for that is
-"below a hidden page". It is the node's own `hidden` flag which is checked, so a page hidden by
-`hiddenBeforeDateTime` / `hiddenAfterDateTime` is not covered on either level.
+`skipReason()` does not: with `recurseHiddenContent` at its default the full enumeration descends from the site node
+in a context which hides them, so a document below a hidden page is not in the content store at all. Naming it in a
+quick release would resolve, render and publish it — a page live until the next full release quietly removes it
+again. The skip reason for that is "below a hidden page".
+
+That walk is therefore gated on the very setting which decides the traversal: where `recurseHiddenContent` is `true`
+the full enumeration does reach such a document, and skipping it in a quick release would be the same mismatch the
+other way round. The hidden page itself stays unpublished either way — that is `skipReason()`, which the setting does
+not touch.
+
+Both levels ask `isVisible()` rather than `isHidden()`, so a page hidden by `hiddenBeforeDateTime` /
+`hiddenAfterDateTime` counts as hidden as well: it is hidden to a visitor just the same, and the context of the full
+enumeration filters it on exactly that measure.
 
 ## 6. Validation scoped to the changed URLs
 
