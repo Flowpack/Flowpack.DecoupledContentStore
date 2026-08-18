@@ -1,20 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
+use Composer\InstalledVersions;
 use Flowpack\DecoupledContentStore\Command\ContentReleaseValidationCommandController;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
-use Flowpack\DecoupledContentStore\Exception as DecoupledContentStoreException;
-use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
-use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
-use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
-use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
+use Flowpack\DecoupledContentStore\Exception as DecoupledContentStoreException;
 use Flowpack\DecoupledContentStore\IncrementalContentReleaseHandler;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
@@ -32,15 +32,26 @@ use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
+use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
+use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
+use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
 use Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures\StubPrunnerApiService;
-use Neos\Behat\Tests\Behat\FlowContextTrait;
+use Neos\Behat\FlowBootstrapTrait;
+use Neos\Behat\FlowEntitiesTrait;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
+use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-use Neos\Flow\Tests\Behavior\Features\Bootstrap\SecurityOperationsTrait;
+use Neos\Flow\Security\Account;
+use Neos\Flow\Security\Authentication\AuthenticationProviderManager;
+use Neos\Flow\Security\Authentication\Provider\TestingProvider;
+use Neos\Flow\Security\Authentication\TokenAndProviderFactoryInterface;
+use Neos\Flow\Security\Authentication\TokenInterface;
+use Neos\Flow\Security\Context as SecurityContext;
+use Neos\Flow\Security\Policy\PolicyService;
 use Neos\Neos\Domain\Model\Domain;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\DomainRepository;
@@ -49,32 +60,41 @@ use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Neos\Utility\Arrays;
 use Neos\Utility\ObjectAccess;
 use PHPUnit\Framework\Assert;
+use Psr\Http\Message\ServerRequestFactoryInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Yaml\Yaml;
 
-require_once __DIR__ . '/../../../../../../Packages/Application/Neos.Behat/Tests/Behat/FlowContextTrait.php';
-require_once
-    __DIR__
-        . '/../../../../../../Packages/Application/Neos.ContentRepository/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php';
-require_once
-    __DIR__
-        . '/../../../../../../Packages/Framework/Neos.Flow/Tests/Behavior/Features/Bootstrap/SecurityOperationsTrait.php';
+// The content repository keeps its step definitions in a directory no autoloader knows about, so the file has to be
+// included by hand. Composer knows where the package was installed, which holds wherever this package itself sits -
+// inside a Neos installation as well as in a checkout of its own.
+require_once InstalledVersions::getInstallPath('neos/content-repository')
+    . '/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php';
 
 /**
  * Features context
  */
 class FeatureContext implements Context
 {
-    use FlowContextTrait;
-    use SecurityOperationsTrait;
+    use FlowBootstrapTrait;
+    use FlowEntitiesTrait;
     use NodeOperationsTrait;
 
+    /**
+     * The step definitions of the content repository run their steps in a sub process where this is TRUE, which none
+     * of the features here ask for.
+     */
     protected $isolated = false;
 
     /**
      * @var ObjectManagerInterface
      */
     protected $objectManager;
+
+    private SecurityContext $securityContext;
+    private ActionRequest $securityActionRequest;
+    private AuthenticationProviderManager $authenticationManager;
+    private TestingProvider $testingProvider;
+    private PolicyService $policyService;
 
     private ?InterruptibleProcessRuntime $renderOrchestratorProcess;
     private ?InterruptibleProcessRuntimeEventInterface $renderOrchestratorProcessLastEvent;
@@ -83,10 +103,7 @@ class FeatureContext implements Context
 
     public function __construct()
     {
-        if (self::$bootstrap === null) {
-            self::$bootstrap = $this->initializeFlow();
-        }
-        $this->objectManager = self::$bootstrap->getObjectManager();
+        $this->objectManager = self::bootstrapFlow()->getObjectManager();
         $this->setupSecurity();
 
         // for testing, we use Private/EndToEndTestFusion as fusion folder to load.
@@ -114,6 +131,63 @@ class FeatureContext implements Context
     public function getObjectManager(): ObjectManagerInterface
     {
         return $this->objectManager;
+    }
+
+    /**
+     * Persist any changes - part of what the content repository's step definitions expect from their context.
+     */
+    public function persistAll(): void
+    {
+        $persistenceManager = $this->getObject(PersistenceManagerInterface::class);
+        $persistenceManager->persistAll();
+        $persistenceManager->clearState();
+
+        // roles are read through the policy service, which holds on to them across a database reset
+        $this->policyService->reset();
+    }
+
+    /**
+     * The authentication a scenario gets through "I am authenticated with role" needs a security context which has
+     * a request, and a TestingProvider to hand the account to.
+     */
+    private function setupSecurity(): void
+    {
+        $this->policyService = $this->getObject(PolicyService::class);
+        $this->authenticationManager = $this->getObject(AuthenticationProviderManager::class);
+
+        // asking for the providers is what builds them, and with them the singleton TestingProvider
+        $providers = $this->getObject(TokenAndProviderFactoryInterface::class)->getProviders();
+        $this->testingProvider = $providers['TestingProvider'];
+
+        $httpRequest = $this->getObject(ServerRequestFactoryInterface::class)
+            ->createServerRequest('GET', 'http://localhost/');
+        $this->securityActionRequest = ActionRequest::fromHttpRequest($httpRequest);
+
+        $this->securityContext = $this->getObject(SecurityContext::class);
+        $this->securityContext->clearContext();
+        $this->securityContext->setRequest($this->securityActionRequest);
+    }
+
+    /**
+     * @Given /^I am authenticated with role "([^"]*)"$/
+     */
+    public function iAmAuthenticatedWithRole(string $roleIdentifier): void
+    {
+        $roles = [];
+        foreach (Arrays::trimExplode(',', $roleIdentifier) as $roleName) {
+            $roles[] = $this->policyService->getRole($roleName);
+        }
+
+        $account = new Account();
+        $account->setAccountIdentifier('TestAccount');
+        $account->setRoles($roles);
+
+        $this->testingProvider->setAuthenticationStatus(TokenInterface::AUTHENTICATION_SUCCESSFUL);
+        $this->testingProvider->setAccount($account);
+
+        $this->securityContext->clearContext();
+        $this->securityContext->setRequest($this->securityActionRequest);
+        $this->authenticationManager->authenticate();
     }
 
     /**
@@ -331,7 +405,7 @@ class FeatureContext implements Context
             } )()
         );
 
-        Assert::assertCount($expectedCount, $enumerationAsArray);
+        Assert::assertCount((int)$expectedCount, $enumerationAsArray);
     }
 
     /**
@@ -488,7 +562,7 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisRenderingErrorManager = $this->getObjectManager()->get(RedisRenderingErrorManager::class);
         $renderingErrors = $redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier);
-        Assert::assertCount($expectedNumberOfErrors, $renderingErrors);
+        Assert::assertCount((int)$expectedNumberOfErrors, $renderingErrors);
     }
 
     private const DEFAULT_NODETYPES_CONFIG = <<<EOF

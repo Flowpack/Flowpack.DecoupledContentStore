@@ -1,4 +1,5 @@
 @fixtures
+@flowEntities
 @resetRedis
 Feature: Renamings before rendering, and during a rendering.
 
@@ -259,14 +260,15 @@ Feature: Renamings before rendering, and during a rendering.
     And I flush the content cache depending on the modified nodes
     And a next content release was triggered
 
-    # - here, /sites/test is not in the cache (DescendantOf_ modification), /sites/test/sub2 is not in the cache (DescendantOf_ modification)
-    # and /sites/test/sub is IN THE CACHE.
+    # - here, /sites/test/sub2 is not in the cache (DescendantOf_ modification of its content collection),
+    # while /sites/test and /sites/test/sub ARE IN THE CACHE: a content collection is tagged with the collection
+    # node, so a change below another document does not reach them.
 
     # NOW, start a new enumeration and a new content release.
     When I create a content release "6"
     When I enumerate all nodes for content release "6"
     Then the enumeration for content release "6" contains 3 nodes
-    # - Render Orchestrator would add /sites/test/sub to Content Release, and schedule /sites/test and /sites/test/sub2 for rendering
+    # - Render Orchestrator would add /sites/test and /sites/test/sub to Content Release, and schedule /sites/test/sub2 for rendering
     When I run the render-orchestrator control loop once for content release "6"
 
     # - Rename Uri Path Semgment to "foo" for the sub2 page
@@ -278,18 +280,19 @@ Feature: Renamings before rendering, and during a rendering.
     And I flush the content cache depending on the modified nodes
 
     # - Cache is flushed for sub2
-    # - Cache should also be flushed for /sites/site and /sites/site/sub because of FixedNodeLinkHandlingInContentCacheFlusherAspect
-    # - however, /sites/site/sub has already a been added to the content release with the old URI -> BROKEN LINK which goes live.
+    # - Cache is also flushed for /sites/test and /sites/test/sub, because both link to sub2 and therefore carry its
+    #   NodeDynamicTag_ (added by Neos.Neos:ConvertUris while rendering the link)
+    # - however, both have already been added to the content release with the old URI -> BROKEN LINKS which go live.
     And I run the renderer for content release "6" until the queue is empty
     When I continue running the render-orchestrator control loop
     Then I expect the render-orchestrator control loop to exit with status code 0
 
     Then during rendering of content release "6", 0 errors occured
     Then I expect the content release "6" to not contain anything for URI "http://test.de/de/nested2"
-    # no broken link :-)
+    # THIS IS THE BROKEN LINK
     Then I expect the content release "6" to contain the following HTML content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
     """
-    BEFOREHallo - this is rendered. <a href="/de/foo">Link to /nested2</a>AFTER
+    BEFOREHallo - this is rendered. <a href="/de/nested2">Link to /nested2</a>AFTER
     """
     # THIS IS THE BROKEN LINK
     Then I expect the content release "6" to contain the following HTML content for URI "http://test.de/de/nested" at CSS selector "body .neos-contentcollection":
@@ -314,7 +317,7 @@ Feature: Renamings before rendering, and during a rendering.
     Then I expect the render-orchestrator control loop to exit with status code 0
     Then during rendering of content release "7", 0 errors occured
     Then I expect the content release "6" to not contain anything for URI "http://test.de/de/nested2"
-    # no broken link :-)
+    # BROKEN LINK -> fixed
     Then I expect the content release "7" to contain the following HTML content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
     """
     BEFOREHallo - this is rendered. <a href="/de/foo">Link to /nested2</a>AFTER

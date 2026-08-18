@@ -727,25 +727,37 @@ The orchestrator's exit codes: `1` release already completed, `2` empty enumerat
 
 ### Testing the Rendering
 
-For executing behavioral tests, install the `neos/behat` package and run `./flow behat:setup`. Then:
+The behavioral tests need the `neos/behat` package (`composer require --dev neos/behat`), which brings Behat itself
+along. Behat is used from the main composer installation:
 
 ```bash
 cd Packages/Application/Flowpack.DecoupledContentStore/Tests/Behavior
-../../../../bin/behat -c behat.yml.dist
+../../../../../bin/behat -c behat.yml.dist
 ```
+
+(five levels up is the installation root - adjust the path if the package sits somewhere else, for example as a symlink
+into a `DistributionPackages` checkout)
+
+The tests bootstrap the `Testing/Behat` context, so the database and the Redis instances they work on are the ones
+configured in `Configuration/Testing/Behat/`.
+
+**Every feature file is tagged `@resetRedis`, and that hook calls `FLUSHALL`** on the primary content store - not just
+the configured database, but every database on that Redis server. Point the Behat context at a Redis instance whose
+contents you are willing to lose; if it is the same server a development content store uses, running the tests wipes it,
+including caches other applications keep there.
 
 Behat also supports running single tests or single files - they need to be specified after the config file, e.g.
 
 ```bash
 
 # run all scenarios in a given folder
-../../../../bin/behat -c behat.yml.dist Features/ContentStore/
+../../../../../bin/behat -c behat.yml.dist Features/ContentStore/
 
 # run all scenarios in the single feature file
-../../../../bin/behat -c behat.yml.dist Features/ContentStore/Basics.feature
+../../../../../bin/behat -c behat.yml.dist Features/ContentStore/Basics.feature
 
 # run the scenario starting at line 66
-../../../../bin/behat -c behat.yml.dist Features/ContentStore/Basics.feature:66
+../../../../../bin/behat -c behat.yml.dist Features/ContentStore/Basics.feature:66
 ```
 
 In case of exceptions, it might be helpful to run the tests with `--stop-on-failure`, which stops the test cases at the first
