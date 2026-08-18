@@ -469,8 +469,9 @@ job log:
 
 The copy refuses a source release whose status is not `success` or which is missing a required key, because
 switching a release live by hand is possible and "currently live" alone does not guarantee a clean release. The
-enumeration refuses an identifier which resolves nowhere, and refuses to end up empty — a quick release which renders
-nothing would publish the release it copied and look like a successful publish while the change is nowhere.
+enumeration skips an identifier which resolves nowhere — with a warning in the job log, like every other node it
+cannot publish — and refuses to end up empty: a quick release which renders nothing would publish the release it
+copied and look like a successful publish while the change is nowhere.
 
 To start one from your own code:
 

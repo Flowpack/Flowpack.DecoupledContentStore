@@ -10,7 +10,6 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Exception\InvalidReleaseException;
-use Flowpack\DecoupledContentStore\Exception\NodeNotFoundException;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\DocumentNodeFilter;
@@ -64,7 +63,7 @@ final class QuickPublishNodeEnumerator
     protected ContentReleaseScope $contentReleaseScope;
 
     /**
-     * @throws Exception if a given node cannot be published, or nothing is left to render
+     * @throws Exception if nothing is left to render
      */
     public function enumerateGivenNodesAndStoreInRedis(
         NodeIdentifiers $nodeIdentifiers,
@@ -157,8 +156,9 @@ final class QuickPublishNodeEnumerator
     }
 
     /**
+     * The node variants to render, skipping every given identifier which must not or cannot be published.
+     *
      * @return array<int, array{0: NodeInterface, 1: EnumeratedNode}>
-     * @throws Exception
      */
     private function enumerateGivenNodes(
         NodeIdentifiers $nodeIdentifiers,
@@ -199,12 +199,13 @@ final class QuickPublishNodeEnumerator
             }
 
             if (!$contentCacheFlushed) {
-                throw new NodeNotFoundException(
-                    sprintf(
-                        'Could not find node %s in any site and dimension, so it cannot be published.',
-                        $nodeIdentifier
-                    ),
-                    1786958514
+                // skipped like every other unpublishable node rather than failing the task: the confirmation page
+                // lists an identifier which resolves nowhere as one row among the others, so somebody publishing
+                // five documents of which one was deleted in the meantime gets the other four. A list in which
+                // nothing at all can be published still fails, in enumerateGivenNodesAndStoreInRedis()
+                $contentReleaseLogger->warn(
+                    'Skipping node from publishing, because it is not found in any site and dimension',
+                    ['node' => $nodeIdentifier]
                 );
             }
         }

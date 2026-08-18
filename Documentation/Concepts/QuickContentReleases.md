@@ -286,6 +286,13 @@ method the enumerator calls, so what the confirmation page says will be skipped 
 skips rather than a second implementation of the same rules. An identifier which resolves nowhere becomes a row
 rather than an error: somebody who pasted five identifiers needs to see which one is wrong.
 
+The enumeration skips such an identifier as well, instead of failing the task. Otherwise the page's promise would
+not hold in the one case it cannot rule out: a document deleted between the preview and the confirmation would take
+the whole release down with it — with the release already marked `running` and its enumeration cleared — rather than
+publishing the other four documents the editor asked for. `DocumentNodeFilter::NOT_FOUND_SKIP_REASON` is the wording
+both sides use. What still fails the task is a list in which *nothing* can be published, because the release would
+then be a copy of the live one under a new identifier.
+
 One trap for anyone adding forms to this module: Neos dispatches a backend module as a sub-request and reads its
 arguments from the `moduleArguments` namespace alone, so a field posted at the top level never reaches the action and
 fails with "required argument is missing". Both forms name their fields `moduleArguments[…]`; `__csrfToken` belongs
