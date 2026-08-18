@@ -217,8 +217,10 @@ every ordinary release through, so the two cases have to be handled explicitly.
 
 This is a trap rather than an optimisation. The validator compares the enumeration count of the new release against
 the live one and aborts below 70%. A quick release deliberately enumerates a handful of documents instead of all of
-them, so the check would fail every single time. For a quick release it compares the number of *published* URLs
-instead, which after a copy-forward equals the previous release.
+them, so it is counted by its number of *published* URLs instead, which after a copy-forward equals the release it
+was built on. Both sides of the comparison are measured that way, each release on its own terms: as the new release a
+quick one would fail the check every single time, and as the currently live release it would put the threshold at a
+handful of URLs and let the next full release pass no matter how much of the site that one lost.
 
 Any project validator which reasons about the size of the enumeration has the same problem, and the failure mode is
 the good one — the release is refused rather than published wrongly — but it needs the same treatment.

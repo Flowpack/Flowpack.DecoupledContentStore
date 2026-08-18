@@ -449,8 +449,10 @@ document hash into an `hMGet` for the changed URLs.
 
 The package's own `contentReleaseValidation:validate` already does this, and it had to: it compares the enumeration
 of the new release against the live one and aborts below 70%, while a quick release deliberately enumerates a handful
-of documents instead of all of them. For a quick release it compares the number of published URLs instead, which
-after a copy-forward equals the previous release.
+of documents instead of all of them. A quick release is therefore counted by its number of published URLs — which
+after a copy-forward equals the release it was built on — whichever side of the comparison it stands on. As the new
+release its enumeration would fail the check every single time; as the currently live one it would put the threshold
+at a handful of URLs and wave the next full release through however much of the site that one lost.
 
 ### The commands
 
