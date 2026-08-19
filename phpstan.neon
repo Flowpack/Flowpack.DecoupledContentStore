@@ -4,6 +4,7 @@ parameters:
     level: 8
     paths:
         - Classes
+        - Tests/Unit
     ergebnis:
         noExtends:
             enabled: false
