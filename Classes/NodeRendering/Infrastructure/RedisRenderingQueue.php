@@ -33,23 +33,20 @@ class RedisRenderingQueue
      */
     public function appendRenderingJob(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        EnumeratedNode $enumeratedNode
+        EnumeratedNode $enumeratedNode,
     ) {
         $encodedNode = json_encode($enumeratedNode, JSON_THROW_ON_ERROR);
         $this->redisClientManager->getPrimaryRedis()->rPush(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'),
-            $encodedNode
+            $encodedNode,
         );
     }
 
     public function numberOfQueuedJobs(ContentReleaseIdentifier $contentReleaseIdentifier): int
     {
-        return (
-            $this->redisClientManager
-                ->getPrimaryRedis()
-                ->lLen($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'))
-            ?? 0
-        );
+        return $this->redisClientManager
+            ->getPrimaryRedis()
+            ->lLen($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue')) ?? 0;
     }
 
     public function numberOfRenderingsInProgress(ContentReleaseIdentifier $contentReleaseIdentifier): int
@@ -57,14 +54,16 @@ class RedisRenderingQueue
         return (
             $this->redisClientManager
                 ->getPrimaryRedis()
-                ->hLen($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'))
-            ?? 0
+                ->hLen($this->redisKeyService->getRedisKeyForPostfix(
+                    $contentReleaseIdentifier,
+                    'inProgressRenderings',
+                )) ?? 0
         );
     }
 
     public function fetchAndReserveNextRenderingJob(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        RendererIdentifier $rendererIdentifier
+        RendererIdentifier $rendererIdentifier,
     ): ?EnumeratedNode {
         $redis = $this->redisClientManager->getPrimaryRedis();
 
@@ -89,9 +88,9 @@ class RedisRenderingQueue
             array(
                 $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'),
                 $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'),
-                $rendererIdentifier->string()
+                $rendererIdentifier->string(),
             ),
-            2
+            2,
         );
         if ($nextEntry === false && $redis->getLastError() !== null) {
             throw new \Exception('Redis operation EVAL failed: ' . $redis->getLastError(), 1471442667);
@@ -115,12 +114,12 @@ class RedisRenderingQueue
      */
     public function registerRenderingAttempt(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        EnumeratedNode $enumeratedNode
+        EnumeratedNode $enumeratedNode,
     ): int {
         return (int) $this->redisClientManager->getPrimaryRedis()->hIncrBy(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderAttempts'),
             json_encode($enumeratedNode, JSON_THROW_ON_ERROR),
-            1
+            1,
         );
     }
 
@@ -134,7 +133,7 @@ class RedisRenderingQueue
     public function removeRenderingJobFromReservedList(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         EnumeratedNode $enumeratedNode,
-        RendererIdentifier $rendererIdentifier
+        RendererIdentifier $rendererIdentifier,
     ): bool {
         // Defensive Programming: It might be that the job has been claimed by another worker in the meantime (no clue how this might have happened though)
         $script = "
@@ -160,9 +159,9 @@ class RedisRenderingQueue
             array(
                 $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'),
                 json_encode($enumeratedNode, JSON_THROW_ON_ERROR),
-                $rendererIdentifier->string()
+                $rendererIdentifier->string(),
             ),
-            1
+            1,
         );
     }
 
@@ -171,7 +170,7 @@ class RedisRenderingQueue
         $this->redisClientManager->getPrimaryRedis()->del(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'),
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'),
-            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderAttempts')
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderAttempts'),
         );
     }
 }

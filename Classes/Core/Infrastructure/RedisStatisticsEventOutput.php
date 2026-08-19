@@ -16,7 +16,7 @@ class RedisStatisticsEventOutput implements StatisticsEventOutputInterface
         ContentReleaseIdentifier $contentReleaseIdentifier,
         string $prefix,
         string $event,
-        array $additionalPayload
+        array $additionalPayload,
     ): void {
         $this->redisStatisticsEventService->addEvent($contentReleaseIdentifier, $prefix, $event, $additionalPayload);
     }

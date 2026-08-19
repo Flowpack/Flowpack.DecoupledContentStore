@@ -34,7 +34,7 @@ final class RedisKeyPostfixForEachRelease
         $transfer,
         string $transferMode,
         bool $isRequired,
-        bool $copyOnQuickRelease
+        bool $copyOnQuickRelease,
     ) {
         if (!in_array($transferMode, [self::TRANSFER_MODE_HASH_INCREMENTAL, self::TRANSFER_MODE_DUMP])) {
             throw new \RuntimeException('TransferMode ' . $transferMode . ' not supported.');
@@ -42,7 +42,7 @@ final class RedisKeyPostfixForEachRelease
 
         if (is_bool($transfer)) {
             $this->transfer = [
-                '*' => $transfer
+                '*' => $transfer,
             ];
         } else {
             $this->transfer = $transfer;
@@ -64,7 +64,7 @@ final class RedisKeyPostfixForEachRelease
             // keys registered before quick releases existed do not carry the flag, and not copying them is the safe
             // default: a key which should have been copied shows up as missing content, a key which should not have
             // been copied describes a different release
-            $in['copyOnQuickRelease'] ?? false
+            $in['copyOnQuickRelease'] ?? false,
         );
     }
 

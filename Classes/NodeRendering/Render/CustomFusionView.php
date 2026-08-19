@@ -138,7 +138,7 @@ class CustomFusionView extends FusionView
                 // !!*WHICH CHANGES FOR EVERY DOCUMENT*!!
                 $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath] = new Runtime(
                     $fusionObjectTree,
-                    $this->controllerContext
+                    $this->controllerContext,
                 );
             }
             $this->fusionRuntime = $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath];
@@ -158,7 +158,7 @@ class CustomFusionView extends FusionView
             // but I felt this would be an additional safeguard against problems with the cache (e.g. content leaking through dimensions or pages)
             $this->runtimeContentCacheAccessor->setValue(
                 $this->fusionRuntime,
-                new RuntimeContentCache($this->fusionRuntime)
+                new RuntimeContentCache($this->fusionRuntime),
             );
 
             // after replacing the RuntimeContentCache, we again need to enable the content cache explicitly.

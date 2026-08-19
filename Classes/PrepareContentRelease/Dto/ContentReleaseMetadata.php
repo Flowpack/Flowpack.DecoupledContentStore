@@ -57,7 +57,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
         ?array $manualTransferJobIds = [],
         string $workspaceName = 'live',
         ?string $accountId = 'cli',
-        ?float $contentReleaseSize = null
+        ?float $contentReleaseSize = null,
     ) {
         $this->prunnerJobId = $prunnerJobId;
         $this->startTime = $startTime;
@@ -74,7 +74,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
         PrunnerJobId $prunnerJobId,
         \DateTimeInterface $startTime,
         string $workspace = 'live',
-        string $accountId = 'cli'
+        string $accountId = 'cli',
     ): self {
         return new self(
             $prunnerJobId,
@@ -84,7 +84,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             NodeRenderingCompletionStatus::scheduled(),
             [],
             $workspace,
-            $accountId
+            $accountId,
         );
     }
 
@@ -110,12 +110,13 @@ final class ContentReleaseMetadata implements \JsonSerializable
                 ? \DateTimeImmutable::createFromFormat(\DateTime::RFC3339_EXTENDED, $tmp['switchTime'])
                 : null,
             NodeRenderingCompletionStatus::fromString($tmp['status']),
-            isset($tmp['manualTransferJobIds']) ? array_map(function (string $item) {
+            isset($tmp['manualTransferJobIds'])
+                ? array_map(function (string $item) {
                     return PrunnerJobId::fromString($item);
                 }, json_decode($tmp['manualTransferJobIds'])) : [],
             $tmp['workspaceName'] ?? 'live',
             key_exists('accountId', $tmp) ? $tmp['accountId'] : 'cli',
-            isset($tmp['contentReleaseSize']) ? (float) $tmp['contentReleaseSize'] : null
+            isset($tmp['contentReleaseSize']) ? (float) $tmp['contentReleaseSize'] : null,
         );
     }
 
@@ -130,7 +131,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             'manualTransferJobIds' => json_encode($this->manualTransferJobIds),
             'workspaceName' => $this->workspaceName,
             'accountId' => $this->accountId,
-            'contentReleaseSize' => $this->contentReleaseSize
+            'contentReleaseSize' => $this->contentReleaseSize,
         ];
     }
 
@@ -145,7 +146,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             $this->manualTransferJobIds,
             $this->workspaceName,
             $this->accountId,
-            $this->contentReleaseSize
+            $this->contentReleaseSize,
         );
     }
 
@@ -160,7 +161,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             $this->manualTransferJobIds,
             $this->workspaceName,
             $this->accountId,
-            $this->contentReleaseSize
+            $this->contentReleaseSize,
         );
     }
 
@@ -175,7 +176,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             $this->manualTransferJobIds,
             $this->workspaceName,
             $this->accountId,
-            $this->contentReleaseSize
+            $this->contentReleaseSize,
         );
     }
 
@@ -192,7 +193,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             $manualTransferIdArray,
             $this->workspaceName,
             $this->accountId,
-            $this->contentReleaseSize
+            $this->contentReleaseSize,
         );
     }
 
@@ -207,7 +208,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
             $this->manualTransferJobIds,
             $this->workspaceName,
             $this->accountId,
-            $contentReleaseSize
+            $contentReleaseSize,
         );
     }
 

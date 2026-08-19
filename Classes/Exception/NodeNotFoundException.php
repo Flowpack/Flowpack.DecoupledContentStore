@@ -6,6 +6,4 @@ namespace Flowpack\DecoupledContentStore\Exception;
 
 use Flowpack\DecoupledContentStore\Exception;
 
-class NodeNotFoundException extends Exception
-{
-}
+class NodeNotFoundException extends Exception {}

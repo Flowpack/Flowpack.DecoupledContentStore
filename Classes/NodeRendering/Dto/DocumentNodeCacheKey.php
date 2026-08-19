@@ -53,7 +53,7 @@ final class DocumentNodeCacheKey
             $node->getIdentifier(),
             $node->getContext()->getDimensions(),
             $node->getWorkspace()->getName(),
-            $arguments
+            $arguments,
         );
     }
 
@@ -63,7 +63,7 @@ final class DocumentNodeCacheKey
             $enumeratedNode->getNodeIdentifier(),
             $enumeratedNode->getDimensionsFromContextPath(),
             $enumeratedNode->getWorkspaceNameFromContextPath(),
-            $enumeratedNode->getArguments()
+            $enumeratedNode->getArguments(),
         );
     }
 
@@ -77,8 +77,8 @@ final class DocumentNodeCacheKey
                 'doc--%s-%s-%s',
                 $this->nodeIdentifier,
                 json_encode($this->dimensions),
-                json_encode($this->arguments)
-            )
+                json_encode($this->arguments),
+            ),
         );
     }
 

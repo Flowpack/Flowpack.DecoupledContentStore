@@ -41,7 +41,7 @@ final class ContentReleaseScope
             ->getPrimaryRedis()
             ->sMembers($this->redisKeyService->getRedisKeyForPostfix(
                 $contentReleaseIdentifier,
-                self::CHANGED_URLS_POSTFIX
+                self::CHANGED_URLS_POSTFIX,
             ));
 
         // a quick release which changed nothing is never published, so an empty set means there is no scope
@@ -63,7 +63,7 @@ final class ContentReleaseScope
 
         $this->redisClientManager->getPrimaryRedis()->sAdd(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, self::CHANGED_URLS_POSTFIX),
-            ...$changedUrls
+            ...$changedUrls,
         );
     }
 

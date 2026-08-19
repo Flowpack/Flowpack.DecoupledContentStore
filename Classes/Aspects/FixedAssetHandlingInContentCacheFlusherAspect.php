@@ -116,7 +116,7 @@ class FixedAssetHandlingInContentCacheFlusherAspect
         $tagsToFlush[$assetCacheTag] = sprintf(
             'which were tagged with "%s" because asset "%s" has changed.',
             $assetCacheTag,
-            $assetIdentifier
+            $assetIdentifier,
         );
         ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', $tagsToFlush, true);
 
@@ -128,7 +128,7 @@ class FixedAssetHandlingInContentCacheFlusherAspect
                 'workspaceName' => $assetUsage->getWorkspaceName(),
                 'dimensions' => $assetUsage->getDimensionValues(),
                 'invisibleContentShown' => true,
-                'removedContentShown' => true
+                'removedContentShown' => true,
             ]);
 
             $node = $context->getNodeByIdentifier($assetUsage->getNodeIdentifier());
@@ -144,7 +144,7 @@ class FixedAssetHandlingInContentCacheFlusherAspect
             $tagsToFlush[$assetCacheTagWithWorkspace] = sprintf(
                 'which were tagged with "%s" because asset "%s" has changed.',
                 $assetCacheTagWithWorkspace,
-                $assetIdentifier
+                $assetIdentifier,
             );
             ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', $tagsToFlush, true);
 

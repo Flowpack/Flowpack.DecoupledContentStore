@@ -51,7 +51,7 @@ class RedisReleaseSwitchService
     public function switchContentRelease(
         RedisInstanceIdentifier $redisInstanceIdentifier,
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ) {
         $redis = $this->redisClient->getRedis($redisInstanceIdentifier);
         $current = $redis->get('contentStore:current');
@@ -61,12 +61,12 @@ class RedisReleaseSwitchService
         if (!in_array($contentReleaseIdentifier->getIdentifier(), $redis->zRevRangeByLex(
             'contentStore:registeredReleases',
             '+',
-            '-'
+            '-',
         ))) {
             $contentReleaseLogger->error(
                 'Content release identifier '
                 . $contentReleaseIdentifier->getIdentifier()
-                . ' is not listed in current releases thus we do not switch.'
+                . ' is not listed in current releases thus we do not switch.',
             );
             return;
         }
@@ -77,11 +77,11 @@ class RedisReleaseSwitchService
             if ($requiredPostfix->shouldTransfer($redisInstanceIdentifier)) {
                 $key = $this->redisKeyService->getRedisKeyForPostfix(
                     $contentReleaseIdentifier,
-                    $requiredPostfix->getRedisKeyPostfix()
+                    $requiredPostfix->getRedisKeyPostfix(),
                 );
                 if (!$redis->exists($key)) {
                     $contentReleaseLogger->error(
-                        'Required redis key ' . $key . ' does not exist for release thus we do not switch.'
+                        'Required redis key ' . $key . ' does not exist for release thus we do not switch.',
                     );
                     $hasError = true;
                 }
@@ -99,14 +99,14 @@ class RedisReleaseSwitchService
         $this->redisContentReleaseService->setContentReleaseMetadata(
             $contentReleaseIdentifier,
             $releaseMetadata->withSwitchTime(new \DateTimeImmutable()),
-            $redisInstanceIdentifier
+            $redisInstanceIdentifier,
         );
 
         $contentReleaseLogger->info(sprintf(
             'Switched redis %s from content release %s to %s',
             $redisInstanceIdentifier->getIdentifier(),
             $current,
-            $contentReleaseIdentifier->getIdentifier()
+            $contentReleaseIdentifier->getIdentifier(),
         ));
     }
 

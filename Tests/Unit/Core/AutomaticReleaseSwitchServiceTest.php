@@ -37,13 +37,12 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
         // between the caller's isPaused() check and the count - and pruning never reaches that key
         $redis = $this->createMock(Redis::class);
         $redis->expects(self::never())->method('hIncrBy');
-        $redis
-            ->expects(self::once())
+        $redis->expects(self::once())
             ->method('eval')
             ->with(
                 self::stringContains('HEXISTS'),
                 self::equalTo([self::REDIS_KEY]),
-                self::equalTo(1)
+                self::equalTo(1),
             );
 
         $this->buildService($redis)->countSuppressedRelease();
@@ -63,8 +62,7 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     {
         $redis = $this->createMock(Redis::class);
         $redis->method('hExists')->willReturn(false);
-        $redis
-            ->expects(self::once())
+        $redis->expects(self::once())
             ->method('hMSet')
             ->with(self::REDIS_KEY, self::callback(static function (array $hash): bool {
                 return (
@@ -88,12 +86,11 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     public function testThePauseStateIsReadFromTheHash(): void
     {
         $redis = $this->createMock(Redis::class);
-        $redis
-            ->method('hGetAll')
+        $redis->method('hGetAll')
             ->willReturn([
                 'pausedAt' => '2026-08-13T09:15:00+02:00',
                 'accountId' => 'admin',
-                'suppressedReleaseCount' => '4'
+                'suppressedReleaseCount' => '4',
             ]);
 
         $pauseState = $this->buildService($redis)->getPauseState();

@@ -17,7 +17,7 @@ final class RedisKeyPostfixesForEachReleaseTest extends UnitTestCase
         $redisKeyPostfixes = RedisKeyPostfixesForEachRelease::fromArray([
             'renderedDocuments' => self::keyConfiguration('renderedDocuments', true),
             'renderingJobQueue' => self::keyConfiguration('renderingJobQueue', false),
-            'metaUrls' => self::keyConfiguration('meta:urls', true)
+            'metaUrls' => self::keyConfiguration('meta:urls', true),
         ]);
 
         self::assertSame(['renderedDocuments', 'meta:urls'], self::copiedPostfixes($redisKeyPostfixes));
@@ -30,7 +30,7 @@ final class RedisKeyPostfixesForEachReleaseTest extends UnitTestCase
         unset($configurationWithoutTheFlag['copyOnQuickRelease']);
 
         $redisKeyPostfixes = RedisKeyPostfixesForEachRelease::fromArray([
-            'renderedDocuments' => $configurationWithoutTheFlag
+            'renderedDocuments' => $configurationWithoutTheFlag,
         ]);
 
         self::assertSame([], self::copiedPostfixes($redisKeyPostfixes));
@@ -58,7 +58,7 @@ final class RedisKeyPostfixesForEachReleaseTest extends UnitTestCase
             'transfer' => true,
             'transferMode' => 'dump',
             'isRequired' => true,
-            'copyOnQuickRelease' => $copyOnQuickRelease
+            'copyOnQuickRelease' => $copyOnQuickRelease,
         ];
     }
 }

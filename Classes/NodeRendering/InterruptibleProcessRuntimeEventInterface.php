@@ -7,6 +7,4 @@ namespace Flowpack\DecoupledContentStore\NodeRendering;
 /**
  * Marker interface for Interruptible Process Runtime Events
  */
-interface InterruptibleProcessRuntimeEventInterface
-{
-}
+interface InterruptibleProcessRuntimeEventInterface {}

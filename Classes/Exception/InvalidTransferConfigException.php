@@ -6,6 +6,4 @@ namespace Flowpack\DecoupledContentStore\Exception;
 
 use Flowpack\DecoupledContentStore\Exception;
 
-class InvalidTransferConfigException extends Exception
-{
-}
+class InvalidTransferConfigException extends Exception {}

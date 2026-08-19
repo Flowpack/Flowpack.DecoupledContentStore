@@ -16,8 +16,8 @@ use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingTi
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
-use Neos\Flow\Annotations as Flow;
 use Flowpack\Prunner\PrunnerApiService;
+use Neos\Flow\Annotations as Flow;
 
 /**
  * @Flow\Scope("singleton")
@@ -65,33 +65,33 @@ class BackendUiDataService
         $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier);
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(
             $redisInstanceIdentifier,
-            ...$contentReleaseIds
+            ...$contentReleaseIds,
         );
         $counts = $this->redisEnumerationRepository->countMultiple($redisInstanceIdentifier, ...$contentReleaseIds);
         $iterationsCounts = $this->redisRenderingStatisticsStore->countMultipleRenderingStatistics(
             $redisInstanceIdentifier,
-            ...$contentReleaseIds
+            ...$contentReleaseIds,
         );
         $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors(
             $redisInstanceIdentifier,
-            ...$contentReleaseIds
+            ...$contentReleaseIds,
         );
         $lastRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getLastRenderingStatisticsEntry(
             $redisInstanceIdentifier,
-            ...$contentReleaseIds
+            ...$contentReleaseIds,
         );
         $firstRenderingStatisticsEntries = $this->redisRenderingStatisticsStore->getFirstRenderingStatisticsEntry(
             $redisInstanceIdentifier,
-            ...$contentReleaseIds
+            ...$contentReleaseIds,
         );
 
         $result = [];
         foreach ($contentReleaseIds as $contentReleaseId) {
             $lastRendering = RenderingStatistics::fromJsonString($lastRenderingStatisticsEntries->getResultForContentRelease(
-                $contentReleaseId
+                $contentReleaseId,
             ));
             $firstRendering = RenderingStatistics::fromJsonString($firstRenderingStatisticsEntries->getResultForContentRelease(
-                $contentReleaseId
+                $contentReleaseId,
             ));
 
             $metadataForContentRelease = $metadata->getResultForContentRelease($contentReleaseId);
@@ -106,15 +106,15 @@ class BackendUiDataService
                 is_int($iterationsCountForContentRelease) ? $iterationsCountForContentRelease : 0,
                 is_int($errorCountForContentRelease) ? $errorCountForContentRelease : 0,
                 $lastRendering->getTotalJobs() > 0
-                    ? round(( $lastRendering->getRenderedJobs() / $lastRendering->getTotalJobs() ) * 100)
+                    ? round(($lastRendering->getRenderedJobs() / $lastRendering->getTotalJobs()) * 100)
                     : 100,
                 $firstRendering->getRenderedJobs(),
                 $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease(
-                    $redisInstanceIdentifier
+                    $redisInstanceIdentifier,
                 )),
                 $metadataForContentRelease instanceof ContentReleaseMetadata
                     ? $metadataForContentRelease->getContentReleaseSize()
-                    : null
+                    : null,
             );
         }
 
@@ -123,11 +123,11 @@ class BackendUiDataService
 
     public function loadDetailsData(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        RedisInstanceIdentifier $redisInstanceIdentifier
+        RedisInstanceIdentifier $redisInstanceIdentifier,
     ): ?ContentReleaseDetails {
         $contentReleaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease(
             $contentReleaseIdentifier,
-            $redisInstanceIdentifier
+            $redisInstanceIdentifier,
         );
 
         if (!$contentReleaseMetadata) {
@@ -135,7 +135,7 @@ class BackendUiDataService
         }
 
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail(
-            $contentReleaseMetadata->getPrunnerJobId()->toJobId()
+            $contentReleaseMetadata->getPrunnerJobId()->toJobId(),
         );
 
         $manualTransferJobs = count($contentReleaseMetadata->getManualTransferJobIds())
@@ -150,13 +150,13 @@ class BackendUiDataService
             },
             $this->redisRenderingStatisticsStore->getRenderingStatistics(
                 $contentReleaseIdentifier,
-                $redisInstanceIdentifier
-            )
+                $redisInstanceIdentifier,
+            ),
         );
 
         $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors(
             $contentReleaseIdentifier,
-            $redisInstanceIdentifier
+            $redisInstanceIdentifier,
         ));
 
         $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier);
@@ -169,7 +169,7 @@ class BackendUiDataService
             $renderingErrorCount,
             $contentReleaseIdentifier->equals($currentReleaseIdentifier),
             $manualTransferJobs,
-            $contentReleaseMetadata->getContentReleaseSize()
+            $contentReleaseMetadata->getContentReleaseSize(),
         );
     }
 }

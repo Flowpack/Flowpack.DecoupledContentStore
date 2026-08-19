@@ -92,7 +92,7 @@ final class RenderingStatistics implements \JsonSerializable
             'remainingJobs' => $this->remainingJobs,
             'totalJobs' => $this->totalJobs,
             'renderingsPerSecond' => $this->renderingsPerSecond,
-            'svgSparkline' => $this->svgSparkline
+            'svgSparkline' => $this->svgSparkline,
         ];
     }
 }

@@ -36,7 +36,7 @@ final class QuickPublishPreviewRow
         string $dimensions,
         string $nodeTypeName,
         ?string $backendUri,
-        ?string $skipReason
+        ?string $skipReason,
     ) {
         $this->nodeIdentifier = $nodeIdentifier;
         $this->title = $title;
@@ -54,7 +54,7 @@ final class QuickPublishPreviewRow
         string $dimensions,
         string $nodeTypeName,
         ?string $backendUri,
-        ?string $skipReason
+        ?string $skipReason,
     ): self {
         return new self($nodeIdentifier, $title, $nodePath, $dimensions, $nodeTypeName, $backendUri, $skipReason);
     }

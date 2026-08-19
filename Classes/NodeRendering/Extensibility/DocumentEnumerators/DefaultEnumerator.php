@@ -10,14 +10,12 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
 
 class DefaultEnumerator implements DocumentEnumeratorInterface
 {
-    public function __construct(array $options = [])
-    {
-    }
+    public function __construct(array $options = []) {}
 
     public function enumerateDocumentNode(NodeInterface $documentNode): iterable
     {
         return [
-            EnumeratedNode::fromNode($documentNode)
+            EnumeratedNode::fromNode($documentNode),
         ];
     }
 }

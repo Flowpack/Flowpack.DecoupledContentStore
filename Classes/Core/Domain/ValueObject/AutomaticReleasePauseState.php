@@ -41,14 +41,14 @@ final class AutomaticReleasePauseState
         if (!array_key_exists('pausedAt', $redisHash)) {
             throw new InvalidArgumentException(
                 'The automatic release pause state must contain a "pausedAt" field.',
-                1786706446
+                1786706446,
             );
         }
 
         return new self(
             new DateTimeImmutable($redisHash['pausedAt']),
-            ( $redisHash['accountId'] ?? '' ) !== '' ? $redisHash['accountId'] : null,
-            (int) ( $redisHash['suppressedReleaseCount'] ?? 0 )
+            ($redisHash['accountId'] ?? '') !== '' ? $redisHash['accountId'] : null,
+            (int) ($redisHash['suppressedReleaseCount'] ?? 0),
         );
     }
 

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseSynchronizer;
 use Flowpack\DecoupledContentStore\Transfer\Resource\RemoteResourceSynchronizer;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Neos\Flow\Cli\CommandController;
 
 /**

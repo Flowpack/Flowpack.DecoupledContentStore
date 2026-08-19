@@ -36,7 +36,7 @@ class RemoteResourceSynchronizer
             'follow_symlinks' => true,
             'times' => true,
             'recursive' => true,
-            'show_output' => false
+            'show_output' => false,
         ]);
 
         $logger->debug('Syncing resources from ' . $origin);
@@ -64,7 +64,7 @@ class RemoteResourceSynchronizer
                 if ($port !== 22) {
                     // NOTE: it seems that when using setSshOptions, we also need to specify host and username etc... This is not yet done, as we normally run on port 22.
                     $rsync->setSshOptions([
-                        'port' => $port
+                        'port' => $port,
                     ]);
                 }
 

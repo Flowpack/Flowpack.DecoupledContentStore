@@ -72,11 +72,11 @@ final class QuickPublishNodeEnumerator
     public function enumerateGivenNodesAndStoreInRedis(
         NodeIdentifiers $nodeIdentifiers,
         ContentReleaseLogger $contentReleaseLogger,
-        ContentReleaseIdentifier $releaseIdentifier
+        ContentReleaseIdentifier $releaseIdentifier,
     ): void {
         $contentReleaseLogger->info('Starting quick content release', [
             'contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize(),
-            'nodeIdentifiers' => $nodeIdentifiers->jsonSerialize()
+            'nodeIdentifiers' => $nodeIdentifiers->jsonSerialize(),
         ]);
 
         $currentMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($releaseIdentifier);
@@ -84,9 +84,9 @@ final class QuickPublishNodeEnumerator
             throw new InvalidReleaseException(
                 sprintf(
                     'Content release %s does not exist, so its nodes cannot be enumerated.',
-                    $releaseIdentifier->getIdentifier()
+                    $releaseIdentifier->getIdentifier(),
                 ),
-                1786958512
+                1786958512,
             );
         }
 
@@ -94,7 +94,7 @@ final class QuickPublishNodeEnumerator
         $this->redisContentReleaseService->setContentReleaseMetadata(
             $releaseIdentifier,
             $newMetadata,
-            RedisInstanceIdentifier::primary()
+            RedisInstanceIdentifier::primary(),
         );
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
@@ -102,7 +102,7 @@ final class QuickPublishNodeEnumerator
         $nodesToRender = $this->enumerateGivenNodes(
             $nodeIdentifiers,
             $contentReleaseLogger,
-            $newMetadata->getWorkspaceName() ?? 'live'
+            $newMetadata->getWorkspaceName() ?? 'live',
         );
 
         // a quick release which renders nothing publishes exactly the release it was copied from - which looks like
@@ -113,15 +113,15 @@ final class QuickPublishNodeEnumerator
                     'None of the given nodes can be published (%s), so content release %s would only repeat the release '
                     . 'it was built on.',
                     (string) $nodeIdentifiers,
-                    $releaseIdentifier->getIdentifier()
+                    $releaseIdentifier->getIdentifier(),
                 ),
-                1786958513
+                1786958513,
             );
         }
 
         foreach (GeneratorUtility::createArrayBatch(
             array_map(static fn(array $nodeToRender): EnumeratedNode => $nodeToRender[1], $nodesToRender),
-            100
+            100,
         ) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
@@ -150,7 +150,7 @@ final class QuickPublishNodeEnumerator
     private function writeChangedUrls(
         array $nodesToRender,
         ContentReleaseIdentifier $releaseIdentifier,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         $changedUrls = [];
         foreach ($nodesToRender as [$node, $enumeratedNode]) {
@@ -160,7 +160,7 @@ final class QuickPublishNodeEnumerator
         $this->contentReleaseScope->setChangedUrls($releaseIdentifier, $changedUrls);
 
         $contentReleaseLogger->info('Content release is scoped to the URLs it renders', [
-            'changedUrls' => $changedUrls
+            'changedUrls' => $changedUrls,
         ]);
     }
 
@@ -172,7 +172,7 @@ final class QuickPublishNodeEnumerator
     private function enumerateGivenNodes(
         NodeIdentifiers $nodeIdentifiers,
         ContentReleaseLogger $contentReleaseLogger,
-        string $workspaceName
+        string $workspaceName,
     ): array {
         $nodesToRender = [];
 
@@ -193,7 +193,7 @@ final class QuickPublishNodeEnumerator
                 if ($skipReason !== null) {
                     // warn rather than debug: somebody asked for this node by hand and will not see it change
                     $contentReleaseLogger->warn('Skipping node from publishing, because it is ' . $skipReason, [
-                        'node' => $contextPath
+                        'node' => $contextPath,
                     ]);
                     continue;
                 }
@@ -201,7 +201,7 @@ final class QuickPublishNodeEnumerator
                 $contentReleaseLogger->info('Registering node for publishing', ['node' => $contextPath]);
 
                 foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode(
-                    $nodeToEnumerate
+                    $nodeToEnumerate,
                 ) as $enumeratedNode) {
                     $nodesToRender[] = [$nodeToEnumerate, $enumeratedNode];
                 }
@@ -214,7 +214,7 @@ final class QuickPublishNodeEnumerator
                 // nothing at all can be published still fails, in enumerateGivenNodesAndStoreInRedis()
                 $contentReleaseLogger->warn(
                     'Skipping node from publishing, because it is not found in any site and dimension',
-                    ['node' => $nodeIdentifier]
+                    ['node' => $nodeIdentifier],
                 );
             }
         }
@@ -230,7 +230,7 @@ final class QuickPublishNodeEnumerator
     private function flushContentCacheForNode(
         NodeInterface $node,
         string $nodeIdentifier,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         $flushedEntriesCount = 0;
         foreach ($this->cachingHelper->nodeTag($node) as $tag) {
@@ -240,7 +240,7 @@ final class QuickPublishNodeEnumerator
         $contentReleaseLogger->info(sprintf(
             'Flushed %d content cache entries for node %s before re-rendering it',
             $flushedEntriesCount,
-            $nodeIdentifier
+            $nodeIdentifier,
         ));
     }
 }

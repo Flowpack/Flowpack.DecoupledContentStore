@@ -22,15 +22,15 @@ class RedisStatisticsEventService
         ContentReleaseIdentifier $contentReleaseIdentifier,
         string $prefix,
         string $event,
-        array $additionalPayload
+        array $additionalPayload,
     ): void {
         $this->redisClientManager->getPrimaryRedis()->rPush(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'statisticsEvents'),
             json_encode([
                 'event' => $event,
                 'prefix' => $prefix,
-                'additionalPayload' => $additionalPayload
-            ])
+                'additionalPayload' => $additionalPayload,
+            ]),
         );
     }
 
@@ -45,7 +45,7 @@ class RedisStatisticsEventService
     public function countEvents(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         array $where,
-        array $groupBy
+        array $groupBy,
     ): array {
         $redis = $this->redisClientManager->getPrimaryRedis();
         $key = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'statisticsEvents');

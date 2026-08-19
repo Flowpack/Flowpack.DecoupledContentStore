@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntime;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Neos\Flow\Cli\CommandController;
 
 /**
@@ -37,7 +37,7 @@ class NodeRenderingCommandController extends CommandController
 
         InterruptibleProcessRuntime::create($this->nodeRenderOrchestrator->renderContentRelease(
             $contentReleaseIdentifier,
-            $logger
+            $logger,
         ))->runUntilEnd();
     }
 
@@ -50,7 +50,7 @@ class NodeRenderingCommandController extends CommandController
         InterruptibleProcessRuntime::create($this->nodeRenderer->render(
             $contentReleaseIdentifier,
             $logger,
-            $rendererIdentifier
+            $rendererIdentifier,
         ))->runUntilEnd();
     }
 }

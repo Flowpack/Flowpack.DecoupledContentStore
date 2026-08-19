@@ -32,7 +32,7 @@ class ContentReleaseOverviewRow
         float $progress,
         int $renderedUrlCount,
         bool $isActive,
-        ?float $releaseSize
+        ?float $releaseSize,
     ) {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->metadata = $metadata;

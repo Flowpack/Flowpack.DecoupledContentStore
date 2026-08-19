@@ -54,10 +54,10 @@ class NodeEnumerator
     public function enumerateAndStoreInRedis(
         ?Site $site,
         ContentReleaseLogger $contentReleaseLogger,
-        ContentReleaseIdentifier $releaseIdentifier
+        ContentReleaseIdentifier $releaseIdentifier,
     ): void {
         $contentReleaseLogger->info('Starting content release', [
-            'contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize()
+            'contentReleaseIdentifier' => $releaseIdentifier->jsonSerialize(),
         ]);
 
         // set content release status to running
@@ -66,13 +66,13 @@ class NodeEnumerator
         $this->redisContentReleaseService->setContentReleaseMetadata(
             $releaseIdentifier,
             $newMetadata,
-            RedisInstanceIdentifier::primary()
+            RedisInstanceIdentifier::primary(),
         );
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
         foreach (GeneratorUtility::createArrayBatch(
             $this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()),
-            100
+            100,
         ) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
             // $enumeration is an array of EnumeratedNode, with at most 100 elements in it.
@@ -98,7 +98,7 @@ class NodeEnumerator
     public function emitNodesEnumerated(
         array $enumeration,
         ContentReleaseIdentifier $releaseIdentifier,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         foreach ($enumeration as $enumeratedNode) {
             $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
@@ -112,7 +112,7 @@ class NodeEnumerator
     private function enumerateAll(
         ?Site $site,
         ContentReleaseLogger $contentReleaseLogger,
-        string $workspaceName
+        string $workspaceName,
     ): iterable {
         $combinator = new NodeContextCombinator();
 
@@ -121,7 +121,7 @@ class NodeEnumerator
         $queueSite = function (Site $site) use ($combinator, $nodeTypeFilter, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
-                'domain' => $site->getFirstActiveDomain()
+                'domain' => $site->getFirstActiveDomain(),
             ]);
 
             foreach ($combinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
@@ -129,7 +129,7 @@ class NodeEnumerator
                 $dimensionValues = $siteNode->getContext()->getDimensions();
 
                 $contentReleaseLogger->debug('Publishing dimension combination', [
-                    'dimensionValues' => $dimensionValues
+                    'dimensionValues' => $dimensionValues,
                 ]);
 
                 $nodeQuery = new FlowQuery([$siteNode]);
@@ -142,17 +142,17 @@ class NodeEnumerator
                     $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate, $siteNode);
                     if ($skipReason !== null) {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it is ' . $skipReason, [
-                            'node' => $contextPath
+                            'node' => $contextPath,
                         ]);
                         continue;
                     }
 
                     $contentReleaseLogger->debug('Registering node for publishing', [
-                        'node' => $contextPath
+                        'node' => $contextPath,
                     ]);
 
                     foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode(
-                        $nodeToEnumerate
+                        $nodeToEnumerate,
                     ) as $enumeratedNode) {
                         yield $enumeratedNode;
                     }
@@ -161,7 +161,7 @@ class NodeEnumerator
             $contentReleaseLogger->debug(sprintf(
                 'Finished enumerating site %s in %dms',
                 $site->getName(),
-                ( microtime(true) - $startTime ) * 1000
+                (microtime(true) - $startTime) * 1000,
             ));
         };
 
@@ -190,7 +190,6 @@ class NodeEnumerator
     protected function emitNodeEnumerated(
         EnumeratedNode $enumeratedNode,
         ContentReleaseIdentifier $releaseIdentifier,
-        ContentReleaseLogger $contentReleaseLogger
-    ) {
-    }
+        ContentReleaseLogger $contentReleaseLogger,
+    ) {}
 }

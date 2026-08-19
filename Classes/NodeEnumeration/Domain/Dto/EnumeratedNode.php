@@ -53,7 +53,7 @@ final class EnumeratedNode implements \JsonSerializable
         string $nodeIdentifier,
         string $nodeTypeName,
         array $arguments,
-        string $rendererId = ''
+        string $rendererId = '',
     ) {
         $this->contextPath = $contextPath;
         $this->nodeIdentifier = $nodeIdentifier;
@@ -69,7 +69,7 @@ final class EnumeratedNode implements \JsonSerializable
             $node->getIdentifier(),
             $node->getNodeType()->getName(),
             $arguments,
-            ''
+            '',
         );
     }
 
@@ -84,7 +84,7 @@ final class EnumeratedNode implements \JsonSerializable
             $tmp['nodeIdentifier'],
             $tmp['nodeTypeName'] ?? '',
             $tmp['arguments'],
-            $tmp['rendererId']
+            $tmp['rendererId'],
         );
     }
 
@@ -95,7 +95,7 @@ final class EnumeratedNode implements \JsonSerializable
             'nodeIdentifier' => $this->nodeIdentifier,
             'nodeTypeName' => $this->nodeTypeName,
             'arguments' => $this->arguments,
-            'rendererId' => $this->rendererId
+            'rendererId' => $this->rendererId,
         ];
     }
 
@@ -106,7 +106,7 @@ final class EnumeratedNode implements \JsonSerializable
         } else {
             throw new \Exception(
                 'Could not get site node name from context path "' . $this->contextPath . '"',
-                1495535171
+                1495535171,
             );
         }
     }
@@ -146,7 +146,7 @@ final class EnumeratedNode implements \JsonSerializable
             $this->nodeIdentifier,
             $this->arguments ? http_build_query($this->arguments) . ' ' : '',
             $this->contextPath,
-            $this->rendererId
+            $this->rendererId,
         );
     }
 

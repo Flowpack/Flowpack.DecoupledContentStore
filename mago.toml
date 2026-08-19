@@ -1,0 +1,26 @@
+#:schema https://mago.carthage.software/1.46.0/schema.json
+# Welcome to Mago!
+# For full documentation, see https://mago.carthage.software/1.46.0/en/tools/overview/
+version = "1"
+php-version = "8.1.0"
+
+[source]
+workspace = "."
+paths = ["Classes/", "Tests/"]
+includes = ["vendor"]
+excludes = []
+
+[source.glob]
+literal-separator = true
+
+[formatter]
+preset = "default"
+preserve-breaking-member-access-chain = true
+preserve-breaking-member-access-chain-first-method-on-same-line = true
+preserve-breaking-argument-list = true
+preserve-breaking-array-like = true
+preserve-breaking-parameter-list = true
+preserve-breaking-attribute-list = true
+preserve-breaking-conditional-expression = true
+preserve-breaking-condition-expression = true
+preserve-redundant-logical-binary-expression-parentheses = true

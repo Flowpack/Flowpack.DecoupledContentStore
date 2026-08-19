@@ -30,7 +30,7 @@ class BackendDateFormatter
         return $this->datetimeFormatter->formatDateTime(
             $dateTime,
             $this->localizationService->getConfiguration()->getCurrentLocale(),
-            DatesReader::FORMAT_LENGTH_MEDIUM
+            DatesReader::FORMAT_LENGTH_MEDIUM,
         );
     }
 }

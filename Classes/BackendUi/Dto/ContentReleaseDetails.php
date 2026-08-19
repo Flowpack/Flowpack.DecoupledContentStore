@@ -39,7 +39,7 @@ class ContentReleaseDetails
         int $renderingErrorCount,
         bool $isActive,
         array $manualTransferJobIds,
-        ?float $contentReleaseSize = null
+        ?float $contentReleaseSize = null,
     ) {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;

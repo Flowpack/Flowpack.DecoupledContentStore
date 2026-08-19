@@ -67,8 +67,9 @@ use Symfony\Component\Yaml\Yaml;
 // The content repository keeps its step definitions in a directory no autoloader knows about, so the file has to be
 // included by hand. Composer knows where the package was installed, which holds wherever this package itself sits -
 // inside a Neos installation as well as in a checkout of its own.
-require_once InstalledVersions::getInstallPath('neos/content-repository')
-    . '/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php';
+require_once
+    InstalledVersions::getInstallPath('neos/content-repository')
+        . '/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php';
 
 /**
  * Features context
@@ -281,8 +282,8 @@ class FeatureContext implements Context
         Assert::assertCount(
             0,
             $redisRenderingErrorManager->getRenderingErrors(ContentReleaseIdentifier::fromString(
-                $contentReleaseIdentifier
-            ))
+                $contentReleaseIdentifier,
+            )),
         );
     }
 
@@ -316,7 +317,7 @@ class FeatureContext implements Context
         $bufferedOutput = new BufferedOutput();
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput(
             $bufferedOutput,
-            $targetContentReleaseIdentifier
+            $targetContentReleaseIdentifier,
         );
 
         try {
@@ -324,7 +325,7 @@ class FeatureContext implements Context
                 RedisInstanceIdentifier::primary(),
                 $sourceContentReleaseIdentifier,
                 $targetContentReleaseIdentifier,
-                $contentReleaseLogger
+                $contentReleaseLogger,
             );
         } finally {
             echo $bufferedOutput->fetch();
@@ -364,7 +365,7 @@ class FeatureContext implements Context
             $quickPublishNodeEnumerator->enumerateGivenNodesAndStoreInRedis(
                 NodeIdentifiers::fromCommaSeparatedString($nodeIdentifiers),
                 $contentReleaseLogger,
-                $contentReleaseIdentifier
+                $contentReleaseIdentifier,
             );
         } finally {
             echo $bufferedOutput->fetch();
@@ -400,12 +401,12 @@ class FeatureContext implements Context
         $redisEnumerationRepository = $this->getObjectManager()->get(RedisEnumerationRepository::class);
         $iterable = $redisEnumerationRepository->findAll($contentReleaseIdentifier);
         $enumerationAsArray = iterator_to_array(
-            ( function () use ($iterable) {
+            (function () use ($iterable) {
                 yield from $iterable;
-            } )()
+            })(),
         );
 
-        Assert::assertCount((int)$expectedCount, $enumerationAsArray);
+        Assert::assertCount((int) $expectedCount, $enumerationAsArray);
     }
 
     /**
@@ -419,11 +420,11 @@ class FeatureContext implements Context
         $this->renderOrchestratorProcessBufferedOutput = new BufferedOutput();
         $contentReleaseLogger = ContentReleaseLogger::fromSymfonyOutput(
             $this->renderOrchestratorProcessBufferedOutput,
-            $contentReleaseIdentifier
+            $contentReleaseIdentifier,
         );
         $this->renderOrchestratorProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderOrchestrator->renderContentRelease(
             $contentReleaseIdentifier,
-            $contentReleaseLogger
+            $contentReleaseLogger,
         ));
         $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
 
@@ -446,18 +447,18 @@ class FeatureContext implements Context
     {
         Assert::assertNotNull(
             $this->renderOrchestratorProcessLastEvent,
-            'renderOrchestratorProcessLastEvent cannot be null'
+            'renderOrchestratorProcessLastEvent cannot be null',
         );
         Assert::assertInstanceOf(
             ExitEvent::class,
             $this->renderOrchestratorProcessLastEvent,
-            'renderOrchestratorProcessLastEvent needs to be an ExitEvent'
+            'renderOrchestratorProcessLastEvent needs to be an ExitEvent',
         );
         assert($this->renderOrchestratorProcessLastEvent instanceof ExitEvent);
         Assert::assertEquals(
             $expectedStatusCode,
             $this->renderOrchestratorProcessLastEvent->getStatusCode(),
-            'Status Code Mismatch'
+            'Status Code Mismatch',
         );
     }
 
@@ -469,8 +470,7 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
         assert($redisContentReleaseService instanceof RedisContentReleaseService);
-        $renderStatus = $redisContentReleaseService
-            ->fetchMetadataForContentRelease($contentReleaseIdentifier)
+        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)
             ->getStatus();
         Assert::isTrue($renderStatus->isFailed(), 'Completion Status should be failed');
         Assert::isFalse($renderStatus->isSuccessful(), 'Completion Status should not be successful');
@@ -484,8 +484,7 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
         assert($redisContentReleaseService instanceof RedisContentReleaseService);
-        $renderStatus = $redisContentReleaseService
-            ->fetchMetadataForContentRelease($contentReleaseIdentifier)
+        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)
             ->getStatus();
         Assert::isTrue($renderStatus->isSuccessful(), 'Completion Status should be success');
         Assert::isFalse($renderStatus->isFailed(), 'Completion Status should not be failed');
@@ -505,7 +504,7 @@ class FeatureContext implements Context
         $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render(
             $contentReleaseIdentifier,
             $contentReleaseLogger,
-            RendererIdentifier::fromString('rdr')
+            RendererIdentifier::fromString('rdr'),
         ));
         $renderProcess->runUntilEventEncountered(QueueEmptyEvent::class);
 
@@ -526,7 +525,7 @@ class FeatureContext implements Context
         $renderProcess = InterruptibleProcessRuntime::createForTesting($nodeRenderer->render(
             $contentReleaseIdentifier,
             $contentReleaseLogger,
-            RendererIdentifier::fromString('rdr')
+            RendererIdentifier::fromString('rdr'),
         ));
 
         for ($i = 0; $i < $expectedRenderCount; $i++) {
@@ -562,7 +561,7 @@ class FeatureContext implements Context
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisRenderingErrorManager = $this->getObjectManager()->get(RedisRenderingErrorManager::class);
         $renderingErrors = $redisRenderingErrorManager->getRenderingErrors($contentReleaseIdentifier);
-        Assert::assertCount((int)$expectedNumberOfErrors, $renderingErrors);
+        Assert::assertCount((int) $expectedNumberOfErrors, $renderingErrors);
     }
 
     private const DEFAULT_NODETYPES_CONFIG = <<<EOF
@@ -592,12 +591,12 @@ class FeatureContext implements Context
         if (strlen($additional) > 0) {
             $configuration = Arrays::arrayMergeRecursiveOverrule(
                 $this->nodeTypesConfiguration,
-                Yaml::parse($nodeTypesConfiguration->getRaw())
+                Yaml::parse($nodeTypesConfiguration->getRaw()),
             );
         } else {
             $combined = self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw();
             $this->nodeTypesConfiguration = Yaml::parse(
-                self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw()
+                self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw(),
             );
             $configuration = $this->nodeTypesConfiguration;
         }
@@ -611,7 +610,7 @@ class FeatureContext implements Context
         $contentReleaseIdentifier,
         $uri,
         $cssSelector,
-        PyStringNode $expected
+        PyStringNode $expected,
     ) {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
@@ -619,7 +618,7 @@ class FeatureContext implements Context
 
         $actualContent = $redisClient->getPrimaryRedis()->hGet(
             $redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
-            $uri
+            $uri,
         );
         Assert::assertIsString($actualContent, 'Did not find rendered document');
         $actualContentDecompressed = gzdecode($actualContent);
@@ -636,7 +635,7 @@ class FeatureContext implements Context
         $contentReleaseIdentifier,
         $uri,
         $cssSelector,
-        PyStringNode $expected
+        PyStringNode $expected,
     ) {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
@@ -644,7 +643,7 @@ class FeatureContext implements Context
 
         $actualContent = $redisClient->getPrimaryRedis()->hGet(
             $redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
-            $uri
+            $uri,
         );
         Assert::assertIsString($actualContent, 'Did not find rendered document');
         $actualContentDecompressed = gzdecode($actualContent);
@@ -664,7 +663,7 @@ class FeatureContext implements Context
         $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
         $actualContent = $redisClient->getPrimaryRedis()->hGet(
             $redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
-            $uri
+            $uri,
         );
         Assert::assertFalse($actualContent);
     }

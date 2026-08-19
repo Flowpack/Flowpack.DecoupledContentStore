@@ -16,13 +16,13 @@ class StubPrunnerApiService extends PrunnerApiService
     public function schedulePipeline(
         PipelineName $pipeline,
         array $variables,
-        ?QueuePartitionName $queuePartition = null
+        ?QueuePartitionName $queuePartition = null,
     ): JobId {
         $this->calls[] = [
             'method' => 'schedulePipeline',
             'pipeline' => $pipeline,
             'variables' => $variables,
-            'queuePartition' => $queuePartition
+            'queuePartition' => $queuePartition,
         ];
 
         return JobId::create('STUB' . count($this->calls));

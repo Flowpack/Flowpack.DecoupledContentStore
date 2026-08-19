@@ -23,7 +23,7 @@ class RenderingException extends \Flowpack\DecoupledContentStore\Exception
         NodeInterface $node,
         $nodeUri,
         int $code = 0,
-        ?Exception $previous = null
+        ?Exception $previous = null,
     ) {
         $this->nodeUri = $nodeUri;
         parent::__construct($message, $code, $previous);

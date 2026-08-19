@@ -32,17 +32,17 @@ class RedisRenderingTimeStatisticsStore
 
     public function addStatisticsIteration(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        ?RenderingStatistics $renderingStatistics
+        ?RenderingStatistics $renderingStatistics,
     ) {
         $this->redisClientManager->getPrimaryRedis()->rPush(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingStatistics'),
-            json_encode($renderingStatistics)
+            json_encode($renderingStatistics),
         );
     }
 
     public function replaceLastStatisticsIteration(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        RenderingStatistics $renderingStatistics
+        RenderingStatistics $renderingStatistics,
     ) {
         $this->redisClientManager
             ->getPrimaryRedis()
@@ -52,12 +52,12 @@ class RedisRenderingTimeStatisticsStore
 
     public function getRenderingStatistics(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        RedisInstanceIdentifier $redisInstanceIdentifier
+        RedisInstanceIdentifier $redisInstanceIdentifier,
     ): array {
         return $this->redisClientManager->getRedis($redisInstanceIdentifier)->lRange(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingStatistics'),
             0,
-            -1
+            -1,
         );
     }
 
@@ -65,13 +65,13 @@ class RedisRenderingTimeStatisticsStore
     {
         $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix(
             $contentReleaseIdentifier,
-            'renderingStatistics'
+            'renderingStatistics',
         ));
     }
 
     public function countMultipleRenderingStatistics(
         RedisInstanceIdentifier $redisInstanceIdentifier,
-        ContentReleaseIdentifier ...$releaseIdentifiers
+        ContentReleaseIdentifier ...$releaseIdentifiers,
     ): ContentReleaseBatchResult {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == count of statistics entries (= count of iterations)
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
@@ -80,7 +80,7 @@ class RedisRenderingTimeStatisticsStore
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->llen($this->redisKeyService->getRedisKeyForPostfix(
                     $releaseIdentifier,
-                    'renderingStatistics'
+                    'renderingStatistics',
                 ));
             }
             $res = $redisPipeline->exec();
@@ -93,7 +93,7 @@ class RedisRenderingTimeStatisticsStore
 
     public function getLastRenderingStatisticsEntry(
         RedisInstanceIdentifier $redisInstanceIdentifier,
-        ContentReleaseIdentifier ...$releaseIdentifiers
+        ContentReleaseIdentifier ...$releaseIdentifiers,
     ): ContentReleaseBatchResult {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == last rendering statistics entry)
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
@@ -102,7 +102,7 @@ class RedisRenderingTimeStatisticsStore
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->lindex(
                     $this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'renderingStatistics'),
-                    -1
+                    -1,
                 );
             }
             $res = $redisPipeline->exec();
@@ -115,7 +115,7 @@ class RedisRenderingTimeStatisticsStore
 
     public function getFirstRenderingStatisticsEntry(
         RedisInstanceIdentifier $redisInstanceIdentifier,
-        ContentReleaseIdentifier ...$releaseIdentifiers
+        ContentReleaseIdentifier ...$releaseIdentifiers,
     ): ContentReleaseBatchResult {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == first rendering statistics entry)
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
@@ -124,7 +124,7 @@ class RedisRenderingTimeStatisticsStore
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->lindex(
                     $this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'renderingStatistics'),
-                    0
+                    0,
                 );
             }
             $res = $redisPipeline->exec();

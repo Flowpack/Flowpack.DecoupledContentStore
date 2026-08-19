@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Command;
 
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Neos\Flow\Cli\CommandController;
 use Neos\Fusion\Core\Cache\ContentCache;
 
@@ -40,7 +40,7 @@ class ContentReleasePrepareCommandController extends CommandController
         string $contentReleaseIdentifier,
         string $prunnerJobId,
         string $workspaceName = 'live',
-        string $accountId = 'cli'
+        string $accountId = 'cli',
     ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $prunnerJobId = PrunnerJobId::fromString($prunnerJobId);
@@ -50,7 +50,7 @@ class ContentReleasePrepareCommandController extends CommandController
             $prunnerJobId,
             $logger,
             $workspaceName,
-            $accountId
+            $accountId,
         );
     }
 
@@ -72,11 +72,11 @@ class ContentReleasePrepareCommandController extends CommandController
 
     public function flushContentCacheIfRequiredCommand(
         string $contentReleaseIdentifier,
-        bool $flushContentCache = false
+        bool $flushContentCache = false,
     ): void {
         $logger = ContentReleaseLogger::fromConsoleOutput(
             $this->output,
-            ContentReleaseIdentifier::fromString($contentReleaseIdentifier)
+            ContentReleaseIdentifier::fromString($contentReleaseIdentifier),
         );
         if (!$flushContentCache) {
             $logger->info('Not flushing content cache');

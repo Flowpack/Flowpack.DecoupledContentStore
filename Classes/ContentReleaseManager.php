@@ -70,7 +70,7 @@ class ContentReleaseManager
     public function startIncrementalContentRelease(
         ?string $currentContentReleaseId = null,
         ?Workspace $workspace = null,
-        array $additionalVariables = []
+        array $additionalVariables = [],
     ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
 
@@ -79,9 +79,9 @@ class ContentReleaseManager
             $this->logger->info(
                 sprintf(
                     'Automatic content releases are paused, so content release %s was not scheduled.',
-                    $contentReleaseId->getIdentifier()
+                    $contentReleaseId->getIdentifier(),
                 ),
-                LogEnvironment::fromMethodName(__METHOD__)
+                LogEnvironment::fromMethodName(__METHOD__),
             );
 
             return $contentReleaseId;
@@ -97,8 +97,8 @@ class ContentReleaseManager
                 'validate' => true,
                 'flushContentCache' => false,
                 'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
-                'accountId' => $this->getAccountId()
-            ])
+                'accountId' => $this->getAccountId(),
+            ]),
         );
 
         return $contentReleaseId;
@@ -111,7 +111,7 @@ class ContentReleaseManager
         bool $validate = true,
         ?string $currentContentReleaseId = null,
         ?Workspace $workspace = null,
-        array $additionalVariables = []
+        array $additionalVariables = [],
     ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
         $this->prunnerApiService->schedulePipeline(
@@ -122,8 +122,8 @@ class ContentReleaseManager
                 'validate' => $validate,
                 'flushContentCache' => true,
                 'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
-                'accountId' => $this->getAccountId()
-            ])
+                'accountId' => $this->getAccountId(),
+            ]),
         );
 
         return $contentReleaseId;
@@ -143,14 +143,14 @@ class ContentReleaseManager
     public function startQuickContentRelease(
         NodeIdentifiers $nodeIdentifiers,
         ?Workspace $workspace = null,
-        array $additionalVariables = []
+        array $additionalVariables = [],
     ): ContentReleaseIdentifier {
         $currentContentReleaseId = $this->resolveCurrentContentReleaseId(null);
         if ($currentContentReleaseId === self::NO_PREVIOUS_RELEASE) {
             throw new QuickContentReleaseNotPossibleException(
                 'There is no content release live at the moment, so there is nothing to publish the given nodes into. '
                 . 'Run a full content release instead.',
-                1786963710
+                1786963710,
             );
         }
 
@@ -163,13 +163,12 @@ class ContentReleaseManager
         // Jobs::waiting() means "never started", which is true of a job cancelled while it was still queued as well.
         // Such a job stays in prunner's list until it falls out of the pipeline's retention_count - a window only
         // quick releases consume - so without the isCompleted() guard one cancelled job blocks them all until then.
-        $queuedQuickReleaseJobs = $quickReleaseJobs
-            ->waiting()
+        $queuedQuickReleaseJobs = $quickReleaseJobs->waiting()
             ->filter(static fn(Job $job): bool => !$job->isCompleted());
         if ($quickReleaseJobs->running()->getArray() !== [] || $queuedQuickReleaseJobs->getArray() !== []) {
             throw new QuickContentReleaseNotPossibleException(
                 'Another quick content release is still on its way. Wait for it to go live, then publish these nodes.',
-                1786963711
+                1786963711,
             );
         }
 
@@ -181,8 +180,8 @@ class ContentReleaseManager
                 'currentContentReleaseId' => $currentContentReleaseId,
                 'quickPublishNodeIdentifiers' => (string) $nodeIdentifiers,
                 'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
-                'accountId' => $this->getAccountId()
-            ])
+                'accountId' => $this->getAccountId(),
+            ]),
         );
 
         return $contentReleaseId;
@@ -219,7 +218,7 @@ class ContentReleaseManager
 
         return array_merge(
             $jobs->forPipeline(PipelineName::create(self::CONTENT_RELEASE_PIPELINE_NAME))->running()->getArray(),
-            $jobs->forPipeline(PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME))->running()->getArray()
+            $jobs->forPipeline(PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME))->running()->getArray(),
         );
     }
 

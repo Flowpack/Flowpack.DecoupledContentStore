@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters;
 
-use Flowpack\DecoupledContentStore\Core\RedisKeyService;
-use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriterInterface;
+use Neos\Flow\Annotations as Flow;
 use Ramsey\Uuid\Uuid;
 
 /**
@@ -41,7 +41,7 @@ class LegacyWriter implements ContentReleaseWriterInterface
     public function processRenderedDocument(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
-        ContentReleaseLogger $logger
+        ContentReleaseLogger $logger,
     ): void {
         $urlKey = $renderedDocumentFromContentCache->getLegacyUrlKey();
         $metadataUrlKey = $renderedDocumentFromContentCache->getLegacyMetadataKey();
@@ -65,7 +65,7 @@ class LegacyWriter implements ContentReleaseWriterInterface
         $redis->zAdd(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'),
             0,
-            $renderedDocumentFromContentCache->getUrl()
+            $renderedDocumentFromContentCache->getUrl(),
         );
     }
 }

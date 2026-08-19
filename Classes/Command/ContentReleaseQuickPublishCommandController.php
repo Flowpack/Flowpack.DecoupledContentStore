@@ -35,7 +35,7 @@ final class ContentReleaseQuickPublishCommandController extends CommandControlle
     public function copyReleaseWithinCommand(
         string $redisContentStoreIdentifier,
         string $sourceContentReleaseIdentifier,
-        string $targetContentReleaseIdentifier
+        string $targetContentReleaseIdentifier,
     ): void {
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisContentStoreIdentifier);
         $sourceIdentifier = ContentReleaseIdentifier::fromString($sourceContentReleaseIdentifier);
@@ -47,7 +47,7 @@ final class ContentReleaseQuickPublishCommandController extends CommandControlle
                 $redisInstanceIdentifier,
                 $sourceIdentifier,
                 $targetIdentifier,
-                $logger
+                $logger,
             );
         } catch (Exception $exception) {
             // the pipeline shows the task log, so an uncaught exception would bury the reason under a stack trace
@@ -72,7 +72,7 @@ final class ContentReleaseQuickPublishCommandController extends CommandControlle
             $this->quickPublishNodeEnumerator->enumerateGivenNodesAndStoreInRedis(
                 NodeIdentifiers::fromCommaSeparatedString($nodeIdentifiers),
                 $logger,
-                $releaseIdentifier
+                $releaseIdentifier,
             );
         } catch (Exception $exception) {
             $logger->error($exception->getMessage());

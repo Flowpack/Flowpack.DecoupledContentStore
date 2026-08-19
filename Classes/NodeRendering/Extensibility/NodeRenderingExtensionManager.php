@@ -65,7 +65,7 @@ class NodeRenderingExtensionManager
                 DocumentEnumeratorInterface::class,
                 'enumeratorClassName',
                 'enumeratorOptions',
-                true
+                true,
             );
         }
         foreach ($this->documentEnumerators as $rendererId => $documentEnumerator) {
@@ -80,14 +80,14 @@ class NodeRenderingExtensionManager
     public function tryToExtractRenderingForEnumeratedNodeFromContentCache(EnumeratedNode $enumeratedNode): RenderedDocumentFromContentCache
     {
         return $this->rendererFor($enumeratedNode)->tryToExtractRenderingForEnumeratedNodeFromContentCache(
-            $enumeratedNode
+            $enumeratedNode,
         );
     }
 
     public function renderDocumentNodeVariant(
         NodeInterface $node,
         EnumeratedNode $enumeratedNode,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         $this->rendererFor($enumeratedNode)->renderDocumentNodeVariant($node, $enumeratedNode, $contentReleaseLogger);
     }
@@ -99,12 +99,12 @@ class NodeRenderingExtensionManager
                 $this->configuredDocumentRenderers,
                 DocumentRendererInterface::class,
                 'rendererClassName',
-                preserveKey: true
+                preserveKey: true,
             );
         }
         if (!array_key_exists($enumeratedNode->rendererId, $this->documentRenderers)) {
             throw new \RuntimeException(
-                'No renderer found for renderer ID ' . $enumeratedNode->rendererId . ' - should never happen!'
+                'No renderer found for renderer ID ' . $enumeratedNode->rendererId . ' - should never happen!',
             );
         }
         return $this->documentRenderers[$enumeratedNode->rendererId];
@@ -123,12 +123,12 @@ class NodeRenderingExtensionManager
         NodeInterface $node,
         array $arguments,
         ControllerContext $controllerContext,
-        DocumentNodeCacheValues $cacheValues
+        DocumentNodeCacheValues $cacheValues,
     ): DocumentNodeCacheValues {
         if (!isset($this->documentMetadataGenerators)) {
             $this->documentMetadataGenerators = self::instantiateExtensions(
                 $this->configuredDocumentMetadataGenerators,
-                DocumentMetadataGeneratorInterface::class
+                DocumentMetadataGeneratorInterface::class,
             );
         }
         foreach ($this->documentMetadataGenerators as $documentMetadataGenerator) {
@@ -137,7 +137,7 @@ class NodeRenderingExtensionManager
                 $node,
                 $arguments,
                 $controllerContext,
-                $cacheValues
+                $cacheValues,
             );
         }
         return $cacheValues;
@@ -153,13 +153,13 @@ class NodeRenderingExtensionManager
         ContentReleaseIdentifier $contentReleaseIdentifier,
         EnumeratedNode $enumeratedNode,
         RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
-        ContentReleaseLogger $logger
+        ContentReleaseLogger $logger,
     ): void {
         if (!isset($this->contentReleaseWriters[$enumeratedNode->rendererId])) {
             $this->contentReleaseWriters[$enumeratedNode->rendererId] = self::instantiateExtensions(
                 $this->configuredDocumentRenderers[$enumeratedNode->rendererId]['contentReleaseWriters'],
                 ContentReleaseWriterInterface::class,
-                optionsKey: 'options'
+                optionsKey: 'options',
             );
         }
         foreach ($this->contentReleaseWriters[$enumeratedNode->rendererId] as $contentReleaseWriter) {
@@ -167,7 +167,7 @@ class NodeRenderingExtensionManager
             $contentReleaseWriter->processRenderedDocument(
                 $contentReleaseIdentifier,
                 $renderedDocumentFromContentCache,
-                $logger
+                $logger,
             );
         }
     }
@@ -177,7 +177,7 @@ class NodeRenderingExtensionManager
         string $extensionInterfaceName,
         string $classNameKey = 'className',
         ?string $optionsKey = null,
-        bool $preserveKey = false
+        bool $preserveKey = false,
     ): array {
         $instantiatedExtensions = [];
         foreach ($configuration as $k => $extensionConfig) {
@@ -192,7 +192,7 @@ class NodeRenderingExtensionManager
             }
             if (!$instance instanceof $extensionInterfaceName) {
                 throw new \RuntimeException(
-                    'Extension ' . get_class($instance) . ' does not implement ' . $extensionInterfaceName
+                    'Extension ' . get_class($instance) . ' does not implement ' . $extensionInterfaceName,
                 );
             }
 

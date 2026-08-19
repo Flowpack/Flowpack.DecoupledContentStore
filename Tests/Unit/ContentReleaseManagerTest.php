@@ -94,8 +94,8 @@ class ContentReleaseManagerTest extends UnitTestCase
                     static fn(array $variables): bool => (
                         $variables['currentContentReleaseId'] === '5'
                         && $variables['quickPublishNodeIdentifiers'] === self::NODE_IDENTIFIER
-                    )
-                )
+                    ),
+                ),
             );
 
         $this->buildContentReleaseManager()->startQuickContentRelease($this->nodeIdentifiers());
@@ -169,7 +169,7 @@ class ContentReleaseManagerTest extends UnitTestCase
     private function jobsResponse(
         string $pipeline,
         bool $started,
-        bool $canceled = false
+        bool $canceled = false,
     ): PipelinesAndJobsResponse {
         return PipelinesAndJobsResponse::fromJsonArray([
             'pipelines' => [],
@@ -183,9 +183,9 @@ class ContentReleaseManagerTest extends UnitTestCase
                     'errored' => false,
                     'created' => '2026-08-17T10:00:00+02:00',
                     'start' => $started ? '2026-08-17T10:00:01+02:00' : null,
-                    'user' => 'test'
-                ]
-            ]
+                    'user' => 'test',
+                ],
+            ],
         ]);
     }
 

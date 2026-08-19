@@ -50,7 +50,7 @@ class ConcurrentBuildLockService
         $this->redisClientManager->getPrimaryRedis()->hSet(
             self::CONTENT_STORE_CONCURRENT_BUILD_LOCK,
             $metadata->getWorkspaceName(),
-            (string) $contentReleaseIdentifier
+            (string) $contentReleaseIdentifier,
         );
     }
 
