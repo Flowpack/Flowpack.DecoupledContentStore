@@ -1,4 +1,5 @@
 @fixtures
+@flowEntities
 @resetRedis
 Feature: Basic Rendering
 

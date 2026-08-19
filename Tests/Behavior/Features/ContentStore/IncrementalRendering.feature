@@ -1,4 +1,5 @@
 @fixtures
+@flowEntities
 @resetRedis
 Feature: Incremental Rendering
 
@@ -77,11 +78,15 @@ Feature: Incremental Rendering
     BEFOREUnterseite2AFTER
     """
     Then I expect the content release "6" to not contain anything for URI "http://test.de/de/nested"
-    # TODO: right now, a rerendering of the homepage is still needed - would be nice to get rid of this sometime in the future.
-    Then I expect the content release "6" to not contain anything for URI "http://test.de/de"
-    # /sites/test/sub
-    # /sites/test right now (TODO debatable whether this makes sense)
-    And the rendering queue for content release "6" contains 2 documents
+    # The homepage keeps its rendering: the cache entry of a content collection is tagged with the collection node
+    # (Neos.Neos:ContentCollection sets @context.node to the nearest content collection), so a change inside a
+    # document further down the tree flushes neither the homepage nor its collection.
+    Then I expect the content release "6" to contain the following content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
+    """
+    BEFOREHallo - this is rendered.AFTER
+    """
+    # only /sites/test/sub
+    And the rendering queue for content release "6" contains 1 document
 
     # however, when we re-run the rendering (in the next iteration), the rendering should converge and work out.
     And I run the renderer for content release "6" until the queue is empty
