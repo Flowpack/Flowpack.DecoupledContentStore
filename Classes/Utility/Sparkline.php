@@ -21,7 +21,7 @@ class Sparkline
             return round(floatval($height + $diff), 2);
         }
 
-        return round(floatval($height - ( ( $value * $height ) / $max ) + $diff), 2);
+        return round(floatval($height - (($value * $height) / $max) + $diff), 2);
     }
 
     private static function buildElement($tag, $attrs)
@@ -39,7 +39,7 @@ class Sparkline
         $values,
         $lineColor = '#aaa',
         $fillColor = 'none',
-        $options = null
+        $options = null,
     ): string {
         if (count($values) <= 1) {
             return '';
@@ -56,7 +56,7 @@ class Sparkline
         $strokeWidth = $options['strokeWidth'];
         $width = $options['width'];
         $fullHeight = $options['height'];
-        $height = $fullHeight - ( $strokeWidth * 2 );
+        $height = $fullHeight - ($strokeWidth * 2);
         $max = max($values);
         $lastItemIndex = count($values) - 1;
         $offset = $width / $lastItemIndex;
@@ -74,14 +74,14 @@ class Sparkline
             'd' => $pathCoords,
             'fill' => 'none',
             'stroke-width' => $strokeWidth,
-            'stroke' => $lineColor
+            'stroke' => $lineColor,
         ]);
         $fillCoords = "{$pathCoords} V {$fullHeight} L 0 {$fullHeight} Z";
         $fill = self::buildElement('path', [
             'class' => 'sparkline--fill',
             'd' => $fillCoords,
             'stroke' => 'none',
-            'fill' => $fillColor
+            'fill' => $fillColor,
         ]);
         $svg .= $fill;
         $svg .= $path;

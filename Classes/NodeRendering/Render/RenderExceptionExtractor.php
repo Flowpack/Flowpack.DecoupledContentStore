@@ -52,7 +52,7 @@ class RenderExceptionExtractor
             return new ExtractedExceptionDto(
                 $matches['message'],
                 $matches['stackTrace'],
-                $matches['referenceCode'] ?? ''
+                $matches['referenceCode'] ?? '',
             );
         }
         return null;

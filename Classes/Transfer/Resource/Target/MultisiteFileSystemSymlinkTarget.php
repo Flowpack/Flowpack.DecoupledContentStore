@@ -25,7 +25,7 @@ class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
      */
     public static function injectBaseUriIntoRelevantResourcePublishingTargets(
         string $baseUri,
-        ResourceManager $resourceManager
+        ResourceManager $resourceManager,
     ) {
         // Make sure the base URI ends with a slash
         $baseUri = rtrim($baseUri, '/') . '/';

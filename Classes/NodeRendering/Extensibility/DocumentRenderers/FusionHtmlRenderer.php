@@ -31,19 +31,19 @@ class FusionHtmlRenderer implements DocumentRendererInterface
     public function tryToExtractRenderingForEnumeratedNodeFromContentCache(EnumeratedNode $enumeratedNode): RenderedDocumentFromContentCache
     {
         return $this->redisContentCacheReader->tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey::fromEnumeratedNode(
-            $enumeratedNode
+            $enumeratedNode,
         ));
     }
 
     public function renderDocumentNodeVariant(
         NodeInterface $node,
         EnumeratedNode $enumeratedNode,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         $this->documentRenderer->renderDocumentNodeVariant(
             $node,
             $enumeratedNode->getArguments(),
-            $contentReleaseLogger
+            $contentReleaseLogger,
         );
     }
 }

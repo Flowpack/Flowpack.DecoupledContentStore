@@ -69,7 +69,7 @@ class AutomaticReleaseSwitchService
         $this->redisClientManager->getPrimaryRedis()->hMset(self::REDIS_KEY, [
             'pausedAt' => (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
             'accountId' => $this->getAccountId() ?? '',
-            'suppressedReleaseCount' => 0
+            'suppressedReleaseCount' => 0,
         ]);
     }
 
@@ -83,7 +83,7 @@ class AutomaticReleaseSwitchService
         $this->redisClientManager->getPrimaryRedis()->eval(
             self::COUNT_SUPPRESSED_RELEASE_LUA_SCRIPT,
             [self::REDIS_KEY],
-            1
+            1,
         );
     }
 

@@ -6,8 +6,8 @@ namespace Flowpack\DecoupledContentStore\Command;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\RedisPruneService;
-use Neos\Flow\Cli\CommandController;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Cli\CommandController;
 
 class ContentStorePruneCommandController extends CommandController
 {

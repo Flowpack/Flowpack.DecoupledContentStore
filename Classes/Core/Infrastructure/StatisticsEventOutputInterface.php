@@ -12,6 +12,6 @@ interface StatisticsEventOutputInterface
         ContentReleaseIdentifier $contentReleaseIdentifier,
         string $prefix,
         string $event,
-        array $additionalPayload
+        array $additionalPayload,
     ): void;
 }

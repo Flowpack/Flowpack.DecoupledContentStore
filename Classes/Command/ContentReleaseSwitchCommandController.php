@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Neos\Flow\Cli\CommandController;
 
 /**
@@ -31,7 +31,7 @@ class ContentReleaseSwitchCommandController extends CommandController
         $this->redisReleaseSwitchService->switchContentRelease(
             $redisInstanceIdentifier,
             $contentReleaseIdentifier,
-            $logger
+            $logger,
         );
     }
 }

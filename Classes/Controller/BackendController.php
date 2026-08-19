@@ -141,7 +141,7 @@ class BackendController extends ActionController
         $this->view->assign('toggleFromConfigEpoch', $configEpochRedis);
         $this->view->assign(
             'toggleToConfigEpoch',
-            $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch
+            $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch,
         );
         $this->view->assign('showToggleConfigEpochButton', $showToggleConfigEpochButton);
         $automaticReleasePauseState = $this->automaticReleaseSwitchService->getPauseState();
@@ -150,7 +150,7 @@ class BackendController extends ActionController
             'automaticReleasePausedAt',
             $automaticReleasePauseState !== null
                 ? $this->backendDateFormatter->format($automaticReleasePauseState->getPausedAt())
-                : null
+                : null,
         );
     }
 
@@ -159,7 +159,7 @@ class BackendController extends ActionController
         ?string $contentStore = null,
         ?string $detailTaskName = '',
         ?string $prunnerJobId = '',
-        bool $showAllRenderingErrors = false
+        bool $showAllRenderingErrors = false,
     ) {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $contentStore = $contentStore
@@ -178,7 +178,7 @@ class BackendController extends ActionController
             $this->view->assign('detailTaskName', $detailTaskName);
             $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs(
                 $prunnerJobId ? PrunnerJobId::fromString($prunnerJobId)->toJobId() : $detailsData->getJob()->getId(),
-                $detailTaskName
+                $detailTaskName,
             ));
         } elseif ($showAllRenderingErrors && $detailsData->getJob() !== null) {
             $this->view->assign('workerErrorLogs', $this->workerErrorLogAggregator->aggregate($detailsData->getJob()));
@@ -217,7 +217,7 @@ class BackendController extends ActionController
         $this->contentReleaseCleaner->removeRelease(
             $contentReleaseIdentifierToRemove,
             $redisInstanceIdentifier,
-            $logger
+            $logger,
         );
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
@@ -241,7 +241,7 @@ class BackendController extends ActionController
         $this->redisReleaseSwitchService->switchContentRelease(
             $redisInstanceIdentifier,
             $contentReleaseIdentifier,
-            $logger
+            $logger,
         );
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
@@ -249,7 +249,7 @@ class BackendController extends ActionController
 
     public function switchContentReleaseOnOtherInstanceAction(
         string $targetRedisInstanceIdentifier,
-        string $contentReleaseIdentifier
+        string $contentReleaseIdentifier,
     ) {
         $redis = $this->redisClientManager->getPrimaryRedis();
         $currentContentReleaseId = $redis->get('contentStore:current');
@@ -257,7 +257,7 @@ class BackendController extends ActionController
         $this->prunnerApiService->schedulePipeline(PipelineName::create('manually_transfer_content_release'), [
             'contentReleaseId' => $contentReleaseIdentifier,
             'currentContentReleaseId' => $currentContentReleaseId ?: ContentReleaseManager::NO_PREVIOUS_RELEASE,
-            'redisInstanceId' => $targetRedisInstanceIdentifier
+            'redisInstanceId' => $targetRedisInstanceIdentifier,
         ]);
 
         $this->redirect('index', null, null, ['contentStore' => $targetRedisInstanceIdentifier]);
@@ -344,7 +344,7 @@ class BackendController extends ActionController
             $this->addFlashMessage($exception->getMessage(), '', Message::SEVERITY_ERROR);
             $this->redirect('quickPublishForm', null, null, [
                 'contentStore' => $contentStore,
-                'nodeIdentifiers' => $nodeIdentifiers
+                'nodeIdentifiers' => $nodeIdentifiers,
             ]);
 
             return null;
@@ -369,14 +369,14 @@ class BackendController extends ActionController
 
         try {
             $contentReleaseIdentifier = $this->contentReleaseManager->startQuickContentRelease(NodeIdentifiers::fromUserInput(
-                $nodeIdentifiers
+                $nodeIdentifiers,
             ));
         } catch (Exception $exception) {
             // both the identifier check and the manager phrase their messages for the person reading this page
             $this->addFlashMessage($exception->getMessage(), '', Message::SEVERITY_ERROR);
             $this->redirect('quickPublishForm', null, null, [
                 'contentStore' => $contentStore,
-                'nodeIdentifiers' => $nodeIdentifiers
+                'nodeIdentifiers' => $nodeIdentifiers,
             ]);
 
             return null;
@@ -399,7 +399,7 @@ class BackendController extends ActionController
             null,
             null,
             'Main',
-            'Flowpack.DecoupledContentStore'
+            'Flowpack.DecoupledContentStore',
         );
     }
 }

@@ -64,11 +64,11 @@ class ModuleHelper implements ProtectedContextAwareInterface
                 $line = preg_replace(
                     '/(DEBUG|WARNING|ERROR|INFO): (.*)/',
                     '<span class="log-level-$1">$1:</span> <span class="log-content-$1">$2</span>',
-                    htmlSpecialChars($line)
+                    htmlSpecialChars($line),
                 );
 
                 // Add line numbers. The lines are reversed (newest first), so the numbering counts down to 1.
-                $line = ( $lineCount - $index + 1 ) . ': ' . $line;
+                $line = ($lineCount - $index + 1) . ': ' . $line;
 
                 // Insert formatted JSON data
                 if ($jsonData) {
@@ -88,7 +88,7 @@ class ModuleHelper implements ProtectedContextAwareInterface
                 return '<pre>' . $line . '</pre>';
             },
             $lines,
-            range(1, $lineCount)
+            range(1, $lineCount),
         );
 
         return implode("\n", $formattedLines);

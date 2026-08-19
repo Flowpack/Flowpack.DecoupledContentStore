@@ -38,11 +38,11 @@ class ContentReleaseSynchronizer
     public function syncToTarget(
         RedisInstanceIdentifier $targetRedisIdentifier,
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         $contentReleaseLogger->info(
             'Syncing Content Release ' . $contentReleaseIdentifier->getIdentifier() . ' to target '
-                . $targetRedisIdentifier->getIdentifier()
+                . $targetRedisIdentifier->getIdentifier(),
         );
 
         if ($targetRedisIdentifier->isPrimary()) {
@@ -58,7 +58,7 @@ class ContentReleaseSynchronizer
         foreach ($redisKeyPostfixesForEachRelease->getKeysToTransfer($targetRedisIdentifier) as $redisKeyPostfix) {
             $redisKey = $this->redisKeyService->getRedisKeyForPostfix(
                 $contentReleaseIdentifier,
-                $redisKeyPostfix->getRedisKeyPostfix()
+                $redisKeyPostfix->getRedisKeyPostfix(),
             );
             $contentReleaseLogger->info($redisKey);
             if ($redisKeyPostfix->isRequired() && !$sourceRedis->exists($redisKey)) {
@@ -72,9 +72,9 @@ class ContentReleaseSynchronizer
                     $targetRedis,
                     $this->redisKeyService->getRedisKeyForPostfix(
                         $contentReleaseIdentifier,
-                        $redisKeyPostfix->getRedisKeyPostfix()
+                        $redisKeyPostfix->getRedisKeyPostfix(),
                     ),
-                    $contentReleaseLogger
+                    $contentReleaseLogger,
                 );
             } else {
                 $this->transferKey(
@@ -82,9 +82,9 @@ class ContentReleaseSynchronizer
                     $targetRedis,
                     $this->redisKeyService->getRedisKeyForPostfix(
                         $contentReleaseIdentifier,
-                        $redisKeyPostfix->getRedisKeyPostfix()
+                        $redisKeyPostfix->getRedisKeyPostfix(),
                     ),
-                    $contentReleaseLogger
+                    $contentReleaseLogger,
                 );
             }
         }
@@ -101,20 +101,20 @@ class ContentReleaseSynchronizer
         \Redis $sourceRedis,
         \Redis $targetRedis,
         string $keyToTransfer,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ) {
         $contentReleaseLogger->debug('SYNC: Attempting to transfer ' . $keyToTransfer);
 
         if (!$sourceRedis->exists($keyToTransfer)) {
             $contentReleaseLogger->info(
-                'SYNC: Skipping ' . $keyToTransfer . ', as it does not exist on the source side'
+                'SYNC: Skipping ' . $keyToTransfer . ', as it does not exist on the source side',
             );
             return;
         }
 
         if ($targetRedis->exists($keyToTransfer)) {
             $contentReleaseLogger->warn(
-                'SYNC: Skipping ' . $keyToTransfer . ', as it DOES exist on the target side (and we do not override!)'
+                'SYNC: Skipping ' . $keyToTransfer . ', as it DOES exist on the target side (and we do not override!)',
             );
             return;
         }
@@ -130,7 +130,7 @@ class ContentReleaseSynchronizer
             $keyToTransfer,
             strlen($serializedValue),
             $exportTime - $startTime,
-            $importTime - $exportTime
+            $importTime - $exportTime,
         ));
     }
 
@@ -138,13 +138,13 @@ class ContentReleaseSynchronizer
         \Redis $sourceRedis,
         \Redis $targetRedis,
         string $keyToTransfer,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ) {
         $contentReleaseLogger->debug('SYNC: (INCREMENTAL) Attempting to transfer ' . $keyToTransfer);
 
         if (!$sourceRedis->exists($keyToTransfer)) {
             $contentReleaseLogger->info(
-                'SYNC: (INCREMENTAL) Skipping ' . $keyToTransfer . ', as it does not exist on the source side'
+                'SYNC: (INCREMENTAL) Skipping ' . $keyToTransfer . ', as it does not exist on the source side',
             );
             return;
         }
@@ -152,7 +152,7 @@ class ContentReleaseSynchronizer
             $contentReleaseLogger->warn(
                 'SYNC: (INCREMENTAL) WARNING: '
                 . $keyToTransfer
-                . ', exists on the target side; we try to copy all values into it.'
+                . ', exists on the target side; we try to copy all values into it.',
             );
         }
 
@@ -161,13 +161,13 @@ class ContentReleaseSynchronizer
                 'SYNC: (INCREMENTAL) !!! transferHashKeyIncrementally should only be used with hashes, but '
                     . $keyToTransfer
                     . ' is of type '
-                    . $sourceRedis->type($keyToTransfer)
+                    . $sourceRedis->type($keyToTransfer),
             );
             throw new \RuntimeException(
                 '!!! transferHashKeyIncrementally should only be used with hashes, but '
                     . $keyToTransfer
                     . ' is of type '
-                    . $sourceRedis->type($keyToTransfer)
+                    . $sourceRedis->type($keyToTransfer),
             );
         }
 
@@ -203,7 +203,7 @@ class ContentReleaseSynchronizer
                 . ' - expected '
                 . $expectedNumberOfHashItems
                 . ', actual: '
-                . $actualNumberOfHashItems
+                . $actualNumberOfHashItems,
             );
             throw new \RuntimeException(
                 '!!!! Number of hash items mismatch for key '
@@ -211,7 +211,7 @@ class ContentReleaseSynchronizer
                 . ' - expected '
                 . $expectedNumberOfHashItems
                 . ', actual: '
-                . $actualNumberOfHashItems
+                . $actualNumberOfHashItems,
             );
         }
 
@@ -220,7 +220,7 @@ class ContentReleaseSynchronizer
             $keyToTransfer,
             $actualNumberOfHashItems,
             $numberOfBatches,
-            $endTime - $startTime
+            $endTime - $startTime,
         ));
     }
 }

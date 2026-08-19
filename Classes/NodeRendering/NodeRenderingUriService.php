@@ -65,9 +65,9 @@ final class NodeRenderingUriService
                 sprintf(
                     'Domain %s for site %s has no scheme defined',
                     $primaryDomain->getHostname(),
-                    $currentSite->getNodeName()
+                    $currentSite->getNodeName(),
                 ),
-                1666684523
+                1666684523,
             );
         }
 
@@ -77,7 +77,7 @@ final class NodeRenderingUriService
         $baseControllerContext = $this->buildControllerContextAndSetBaseUri(
             $primaryDomain->__toString(),
             $node,
-            $arguments
+            $arguments,
         );
         $format = $arguments['@format'] ?? 'html';
         $uri = $this->linkingService->createNodeUri(
@@ -90,7 +90,7 @@ final class NodeRenderingUriService
             '',
             false,
             [],
-            false
+            false,
         );
         return self::removeQueryPartFromUri($uri);
     }
@@ -127,7 +127,7 @@ final class NodeRenderingUriService
         $httpRequest = new ServerRequest('GET', $uri);
         $routingParameters = RouteParameters::createEmpty()->withParameter(
             'requestUriHost',
-            $httpRequest->getUri()->getHost()
+            $httpRequest->getUri()->getHost(),
         );
         $httpRequest = $httpRequest->withAttribute(ServerRequestAttributes::ROUTING_PARAMETERS, $routingParameters);
 

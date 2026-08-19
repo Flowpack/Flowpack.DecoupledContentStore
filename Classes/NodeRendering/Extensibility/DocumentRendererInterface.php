@@ -25,6 +25,6 @@ interface DocumentRendererInterface
     public function renderDocumentNodeVariant(
         NodeInterface $node,
         EnumeratedNode $enumeratedNode,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void;
 }

@@ -34,20 +34,20 @@ class RedisEnumerationRepository
     {
         $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix(
             $releaseIdentifier,
-            'enumeration:documentNodes'
+            'enumeration:documentNodes',
         ));
     }
 
     public function addDocumentNodesToEnumeration(
         ContentReleaseIdentifier $releaseIdentifier,
-        EnumeratedNode ...$enumeration
+        EnumeratedNode ...$enumeration,
     ) {
         $convertedEnumeration = array_map(function (EnumeratedNode $node) {
             return json_encode($node);
         }, $enumeration);
         $this->redisClientManager->getPrimaryRedis()->rPush(
             $this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'),
-            ...$convertedEnumeration
+            ...$convertedEnumeration,
         );
     }
 
@@ -59,7 +59,7 @@ class RedisEnumerationRepository
         foreach ($this->redisClientManager->getPrimaryRedis()->lRange(
             $this->redisKeyService->getRedisKeyForPostfix($releaseIdentifier, 'enumeration:documentNodes'),
             0,
-            -1
+            -1,
         ) as $enumeratedNodeString) {
             yield EnumeratedNode::fromJsonString($enumeratedNodeString);
         }
@@ -70,7 +70,7 @@ class RedisEnumerationRepository
         $redis = $this->redisClientManager->getPrimaryRedis();
         $res = $redis->lLen($this->redisKeyService->getRedisKeyForPostfix(
             $releaseIdentifier,
-            'enumeration:documentNodes'
+            'enumeration:documentNodes',
         ));
         if (is_int($res)) {
             return $res;
@@ -80,7 +80,7 @@ class RedisEnumerationRepository
 
     public function countMultiple(
         RedisInstanceIdentifier $redisInstanceIdentifier,
-        ContentReleaseIdentifier ...$releaseIdentifiers
+        ContentReleaseIdentifier ...$releaseIdentifiers,
     ): ContentReleaseBatchResult {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == enumerated count
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
@@ -89,7 +89,7 @@ class RedisEnumerationRepository
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->lLen($this->redisKeyService->getRedisKeyForPostfix(
                     $releaseIdentifier,
-                    'enumeration:documentNodes'
+                    'enumeration:documentNodes',
                 ));
             }
             $res = $redisPipeline->exec();

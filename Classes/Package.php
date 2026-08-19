@@ -23,7 +23,7 @@ class Package extends BasePackage
             Workspace::class,
             'afterNodePublishing',
             IncrementalContentReleaseHandler::class,
-            'nodePublished'
+            'nodePublished',
         );
 
         // NASTY WORKAROUND - explanation follows.
@@ -38,11 +38,10 @@ class Package extends BasePackage
         $dispatcher->connect('Neos\Flow\Mvc\Dispatcher', 'afterControllerInvocation', function (
             $request,
             $response,
-            $controller
+            $controller,
         ) use ($bootstrap) {
             if ($controller instanceof ControllerInterface) {
-                $bootstrap
-                    ->getObjectManager()
+                $bootstrap->getObjectManager()
                     ->get(IncrementalContentReleaseHandler::class)
                     ->startContentReleaseIfNodesWerePublishedBefore();
             }

@@ -142,7 +142,7 @@ class CacheUrlMappingAspect
                 . (
                     $extractedExceptionDto !== null ? "\nException extracted from output: {$extractedExceptionDto}" : ''
                 ),
-                1539156004
+                1539156004,
             );
         }
 
@@ -165,7 +165,7 @@ class CacheUrlMappingAspect
             $logger->info(sprintf(
                 'Skipping URL %s, because it matches the blacklist %s',
                 $url,
-                $this->urlExcludelistRegex
+                $this->urlExcludelistRegex,
             ));
 
             return;
@@ -174,7 +174,7 @@ class CacheUrlMappingAspect
         if ($rootIdentifier === null) {
             throw new Exception(
                 'Could not find root cache identifier for ' . $url . ', possible rendering error?',
-                1491394849
+                1491394849,
             );
         }
 
@@ -185,19 +185,19 @@ class CacheUrlMappingAspect
         $rootKey = DocumentNodeCacheKey::fromNodeAndArguments($node, $arguments);
         $rootCacheValues = DocumentNodeCacheValues::create($rootIdentifier, $url)->withMetadata(
             'renderTime',
-            (int) ( microtime(true) * 1000 ) - $this->renderTimestamp
+            (int) (microtime(true) * 1000) - $this->renderTimestamp,
         );
         // allow other document metadata generators here
         $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators(
             $node,
             $arguments,
             $this->controllerContext,
-            $rootCacheValues
+            $rootCacheValues,
         );
         $this->contentCacheFrontend->set(
             $rootKey->redisKeyName(),
             json_encode($rootCacheValues, JSON_THROW_ON_ERROR),
-            $rootTags
+            $rootTags,
         );
         $this->mappingWasWrittenForCurrentDocument = true;
     }
@@ -253,7 +253,7 @@ class CacheUrlMappingAspect
     {
         $this->isActive = true;
         $this->contentReleaseLogger = $contentReleaseLogger;
-        $this->renderTimestamp = (int) ( microtime(true) * 1000 );
+        $this->renderTimestamp = (int) (microtime(true) * 1000);
         $this->mappingWasWrittenForCurrentDocument = false;
     }
 
@@ -265,7 +265,7 @@ class CacheUrlMappingAspect
         // about the reason. {@see storeRootCacheIdentifier()}
         if (!$this->mappingWasWrittenForCurrentDocument && $this->contentReleaseLogger !== null) {
             $this->contentReleaseLogger->warn(
-                'No "doc--..." mapping entry was written for this rendering, so it can never be added to the content release. Either the rendering was fully served from the content cache (then the content cache entries of this node need to be flushed before re-rendering), or its URL is excluded via nodeRendering.urlExcludelistRegex while the node is still part of the enumeration.'
+                'No "doc--..." mapping entry was written for this rendering, so it can never be added to the content release. Either the rendering was fully served from the content cache (then the content cache entries of this node need to be flushed before re-rendering), or its URL is excluded via nodeRendering.urlExcludelistRegex while the node is still part of the enumeration.',
             );
         }
 

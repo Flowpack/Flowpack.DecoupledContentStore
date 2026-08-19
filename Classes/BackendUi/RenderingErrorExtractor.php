@@ -94,7 +94,7 @@ class RenderingErrorExtractor
             '/"node"\s*:\s*"((?:\\\\.|[^"\\\\])*)"(?:\s*,\s*"nodeUri"\s*:\s*"((?:\\\\.|[^"\\\\])*)")?/',
             $log,
             $matches,
-            PREG_SET_ORDER
+            PREG_SET_ORDER,
         )) {
             return null;
         }

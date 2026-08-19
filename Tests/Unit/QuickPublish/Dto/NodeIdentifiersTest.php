@@ -30,7 +30,7 @@ final class NodeIdentifiersTest extends UnitTestCase
     {
         // the identifiers arrive from a textarea, one per line
         $nodeIdentifiers = NodeIdentifiers::fromCommaSeparatedString(
-            ' ' . self::IDENTIFIER . " ,\n,\t" . self::OTHER_IDENTIFIER . ','
+            ' ' . self::IDENTIFIER . " ,\n,\t" . self::OTHER_IDENTIFIER . ',',
         );
 
         self::assertSame([self::IDENTIFIER, self::OTHER_IDENTIFIER], $nodeIdentifiers->jsonSerialize());
@@ -71,7 +71,7 @@ final class NodeIdentifiersTest extends UnitTestCase
             'a node path' => ['/sites/test/products'],
             'too short' => ['3239baee-3e7f-785c-0853-f4302ef325'],
             'no hyphens' => ['3239baee3e7f785c0853f4302ef32570'],
-            'a quoted identifier' => ['"' . self::IDENTIFIER . '"']
+            'a quoted identifier' => ['"' . self::IDENTIFIER . '"'],
         ];
     }
 
@@ -86,7 +86,7 @@ final class NodeIdentifiersTest extends UnitTestCase
     public function testTheBackendFormAcceptsOneIdentifierPerLine(): void
     {
         $nodeIdentifiers = NodeIdentifiers::fromUserInput(
-            '  ' . self::IDENTIFIER . "\r\n\n" . self::OTHER_IDENTIFIER . "  \n"
+            '  ' . self::IDENTIFIER . "\r\n\n" . self::OTHER_IDENTIFIER . "  \n",
         );
 
         self::assertSame([self::IDENTIFIER, self::OTHER_IDENTIFIER], $nodeIdentifiers->jsonSerialize());
@@ -113,7 +113,7 @@ final class NodeIdentifiersTest extends UnitTestCase
         // the pipeline passes it on as a prunner variable
         self::assertSame(
             self::IDENTIFIER . ',' . self::OTHER_IDENTIFIER,
-            (string) NodeIdentifiers::fromCommaSeparatedString(self::IDENTIFIER . ' , ' . self::OTHER_IDENTIFIER)
+            (string) NodeIdentifiers::fromCommaSeparatedString(self::IDENTIFIER . ' , ' . self::OTHER_IDENTIFIER),
         );
     }
 }

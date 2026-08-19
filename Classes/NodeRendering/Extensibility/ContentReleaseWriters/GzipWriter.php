@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriters;
 
-use Flowpack\DecoupledContentStore\Core\RedisKeyService;
-use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\ContentReleaseWriterInterface;
+use Neos\Flow\Annotations as Flow;
 
 /**
  * Takes the fully rendered document and writes it to the content release.
@@ -34,14 +34,14 @@ class GzipWriter implements ContentReleaseWriterInterface
     public function processRenderedDocument(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
-        ContentReleaseLogger $logger
+        ContentReleaseLogger $logger,
     ): void {
         $compressedContent = gzencode($renderedDocumentFromContentCache->getFullContent(), 9);
         $redis = $this->redisClientManager->getPrimaryRedis();
         $redis->hSet(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedDocuments'),
             $renderedDocumentFromContentCache->getUrl(),
-            $compressedContent
+            $compressedContent,
         );
 
         // Published URLs, lexicographically sorted
@@ -50,7 +50,7 @@ class GzipWriter implements ContentReleaseWriterInterface
         $redis->zAdd(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'meta:urls'),
             0,
-            $renderedDocumentFromContentCache->getUrl()
+            $renderedDocumentFromContentCache->getUrl(),
         );
     }
 }

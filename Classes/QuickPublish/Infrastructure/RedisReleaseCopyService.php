@@ -53,15 +53,15 @@ final class RedisReleaseCopyService
         RedisInstanceIdentifier $redisInstanceIdentifier,
         ContentReleaseIdentifier $sourceContentReleaseIdentifier,
         ContentReleaseIdentifier $targetContentReleaseIdentifier,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         if ($sourceContentReleaseIdentifier->equals($targetContentReleaseIdentifier)) {
             throw new InvalidReleaseException(
                 sprintf(
                     'Cannot copy content release %s onto itself.',
-                    $sourceContentReleaseIdentifier->getIdentifier()
+                    $sourceContentReleaseIdentifier->getIdentifier(),
                 ),
-                1786953585
+                1786953585,
             );
         }
 
@@ -73,7 +73,7 @@ final class RedisReleaseCopyService
             'Copying content release %s to %s within redis %s',
             $sourceContentReleaseIdentifier->getIdentifier(),
             $targetContentReleaseIdentifier->getIdentifier(),
-            $redisInstanceIdentifier->getIdentifier()
+            $redisInstanceIdentifier->getIdentifier(),
         ));
 
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
@@ -83,11 +83,11 @@ final class RedisReleaseCopyService
         foreach ($redisKeyPostfixesForEachRelease->getKeysToCopyOnQuickRelease() as $redisKeyPostfix) {
             $sourceKey = $this->redisKeyService->getRedisKeyForPostfix(
                 $sourceContentReleaseIdentifier,
-                $redisKeyPostfix->getRedisKeyPostfix()
+                $redisKeyPostfix->getRedisKeyPostfix(),
             );
             $targetKey = $this->redisKeyService->getRedisKeyForPostfix(
                 $targetContentReleaseIdentifier,
-                $redisKeyPostfix->getRedisKeyPostfix()
+                $redisKeyPostfix->getRedisKeyPostfix(),
             );
 
             if (!$redis->exists($sourceKey)) {
@@ -100,7 +100,7 @@ final class RedisReleaseCopyService
                     'COPY: '
                     . $targetKey
                     . ' already exists and is replaced - '
-                    . 'the release was copied into after something already wrote to it.'
+                    . 'the release was copied into after something already wrote to it.',
                 );
             }
 
@@ -108,7 +108,7 @@ final class RedisReleaseCopyService
             if ($redis->copy($sourceKey, $targetKey, ['replace' => true]) !== true) {
                 throw new InvalidReleaseException(
                     'COPY: Could not copy ' . $sourceKey . ' to ' . $targetKey . '.',
-                    1786953586
+                    1786953586,
                 );
             }
             $copiedKeyCount++;
@@ -116,7 +116,7 @@ final class RedisReleaseCopyService
             $contentReleaseLogger->info(sprintf(
                 'COPY: Copied key %s (time: %2.3f)',
                 $targetKey,
-                microtime(true) - $keyStartTime
+                microtime(true) - $keyStartTime,
             ));
         }
 
@@ -124,7 +124,7 @@ final class RedisReleaseCopyService
             'COPY: Copied %d keys from content release %s (total time: %2.3f)',
             $copiedKeyCount,
             $sourceContentReleaseIdentifier->getIdentifier(),
-            microtime(true) - $startTime
+            microtime(true) - $startTime,
         ));
     }
 
@@ -144,9 +144,9 @@ final class RedisReleaseCopyService
                     'Copying a content release needs the redis COPY command, which requires redis %s or newer. '
                     . 'This server reports version "%s".',
                     self::MINIMUM_REDIS_VERSION,
-                    $redisVersion
+                    $redisVersion,
                 ),
-                1786953587
+                1786953587,
             );
         }
     }
@@ -161,11 +161,11 @@ final class RedisReleaseCopyService
     private function assertSourceReleaseCanBeBuiltUpon(
         Redis $redis,
         RedisInstanceIdentifier $redisInstanceIdentifier,
-        ContentReleaseIdentifier $sourceContentReleaseIdentifier
+        ContentReleaseIdentifier $sourceContentReleaseIdentifier,
     ): void {
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentRelease(
             $sourceContentReleaseIdentifier,
-            $redisInstanceIdentifier
+            $redisInstanceIdentifier,
         );
 
         if ($metadata === null) {
@@ -174,9 +174,9 @@ final class RedisReleaseCopyService
                     'Content release %s does not exist in redis %s, so it cannot be copied. Run a full content release '
                     . 'instead.',
                     $sourceContentReleaseIdentifier->getIdentifier(),
-                    $redisInstanceIdentifier->getIdentifier()
+                    $redisInstanceIdentifier->getIdentifier(),
                 ),
-                1786953588
+                1786953588,
             );
         }
 
@@ -186,9 +186,9 @@ final class RedisReleaseCopyService
                     'Content release %s has the status "%s" instead of "success", so it cannot be copied. Run a full '
                     . 'content release instead.',
                     $sourceContentReleaseIdentifier->getIdentifier(),
-                    $metadata->getStatus()->getStatus()
+                    $metadata->getStatus()->getStatus(),
                 ),
-                1786953589
+                1786953589,
             );
         }
 
@@ -204,7 +204,7 @@ final class RedisReleaseCopyService
 
             $requiredKey = $this->redisKeyService->getRedisKeyForPostfix(
                 $sourceContentReleaseIdentifier,
-                $requiredPostfix->getRedisKeyPostfix()
+                $requiredPostfix->getRedisKeyPostfix(),
             );
             if (!$redis->exists($requiredKey)) {
                 throw new InvalidReleaseException(
@@ -212,9 +212,9 @@ final class RedisReleaseCopyService
                         'Required redis key %s does not exist, so content release %s cannot be copied. Run a full '
                         . 'content release instead.',
                         $requiredKey,
-                        $sourceContentReleaseIdentifier->getIdentifier()
+                        $sourceContentReleaseIdentifier->getIdentifier(),
                     ),
-                    1786953590
+                    1786953590,
                 );
             }
         }

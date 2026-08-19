@@ -35,18 +35,18 @@ class RedisClientManager
             $connected =
                 $redis->connect(
                     $instanceConfig['hostname'],
-                    (int) ( $instanceConfig['port'] ?? 6379 ),
-                    $instanceConfig['timeout'] ?? 0
+                    (int) ($instanceConfig['port'] ?? 6379),
+                    $instanceConfig['timeout'] ?? 0,
                 ) && $redis->select($instanceConfig['database'] ?? 0);
         } catch (\Exception $exception) {
             throw new Exception(
                 sprintf(
                     'Could not connect to Redis server %s:%d. Detailed reason: see nested exception.',
                     $instanceConfig['hostname'],
-                    $instanceConfig['port']
+                    $instanceConfig['port'],
                 ),
                 1630323312,
-                $exception
+                $exception,
             );
         }
         if (!$connected) {
@@ -54,9 +54,9 @@ class RedisClientManager
                 sprintf(
                     'Could not connect to Redis server %s:%d',
                     $instanceConfig['hostname'],
-                    $instanceConfig['port']
+                    $instanceConfig['port'],
                 ),
-                1467385687
+                1467385687,
             );
         }
 
@@ -99,7 +99,7 @@ class RedisClientManager
         if (!isset($this->configuration[$redisInstanceIdentifier->getIdentifier()]['contentReleaseRetentionCount'])) {
             throw new \RuntimeException(
                 'Did not find a configured contentReleaseRetentionCount for Redis '
-                    . $redisInstanceIdentifier->getIdentifier()
+                    . $redisInstanceIdentifier->getIdentifier(),
             );
         }
         return $this->configuration[$redisInstanceIdentifier->getIdentifier()]['contentReleaseRetentionCount'];

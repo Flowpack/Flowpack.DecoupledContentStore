@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisStatisticsEventService;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Neos\Flow\Cli\CommandController;
 
 /**
@@ -38,7 +38,7 @@ class ContentReleaseEventsCommandController extends CommandController
     public function countStatisticsEventCommand(
         string $contentReleaseIdentifier,
         string $where = '',
-        string $groupBy = ''
+        string $groupBy = '',
     ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         // split every string in $where by the first '=' and use the left part as key and the right part as value

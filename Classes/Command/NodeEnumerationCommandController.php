@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
-use Neos\Flow\Annotations as Flow;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
 /**

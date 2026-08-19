@@ -63,7 +63,7 @@ class NodeContextCombinator
         if (!$nodeFound) {
             throw new NodeNotFoundException(
                 'Could not find node by identifier ' . $nodeIdentifier . ' in any context',
-                1467285561
+                1467285561,
             );
         }
     }
@@ -121,7 +121,7 @@ class NodeContextCombinator
         $nodePath = $node->findNodePath();
         $siteNodePath = $siteNode->findNodePath();
 
-        return $nodePath->equals($siteNodePath) || str_starts_with((string)$nodePath, $siteNodePath . '/');
+        return $nodePath->equals($siteNodePath) || str_starts_with((string) $nodePath, $siteNodePath . '/');
     }
 
     /**
@@ -147,9 +147,8 @@ class NodeContextCombinator
     public function siteNodeInContexts(
         Site $site,
         string $workspaceName = 'live',
-        ?bool $invisibleContentShown = null
-    ): Generator
-    {
+        ?bool $invisibleContentShown = null,
+    ): Generator {
         $allowedContextCombinations = $this->contentDimensionCombinator->getAllAllowedCombinations();
 
         foreach ($allowedContextCombinations as $dimensionContextCombination) {
@@ -158,7 +157,7 @@ class NodeContextCombinator
                 'workspaceName' => $workspaceName,
                 'dimensions' => $dimensionContextCombination,
                 'targetDimensions' => [],
-                'invisibleContentShown' => $invisibleContentShown ?? $this->recurseHiddenContent
+                'invisibleContentShown' => $invisibleContentShown ?? $this->recurseHiddenContent,
             ));
 
             $siteNode = $contentContext->getNode('/sites/' . $site->getNodeName());

@@ -31,10 +31,10 @@ class ConsoleStatisticsEventOutput implements StatisticsEventOutputInterface
         ContentReleaseIdentifier $contentReleaseIdentifier,
         string $prefix,
         string $event,
-        array $additionalPayload
+        array $additionalPayload,
     ): void {
         $this->output->writeln(
-            $prefix . 'STATISTICS EVENT ' . $event . ( $additionalPayload ? ' ' . json_encode($additionalPayload) : '' )
+            $prefix . 'STATISTICS EVENT ' . $event . ($additionalPayload ? ' ' . json_encode($additionalPayload) : ''),
         );
     }
 }

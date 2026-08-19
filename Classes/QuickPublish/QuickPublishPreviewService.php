@@ -44,11 +44,11 @@ final class QuickPublishPreviewService
                 $rows[] = QuickPublishPreviewRow::forNode(
                     $nodeIdentifier,
                     $node->getLabel(),
-                    $node instanceof TraversableNodeInterface ? (string)$node->findNodePath() : '',
+                    $node instanceof TraversableNodeInterface ? (string) $node->findNodePath() : '',
                     self::describeDimensions($node),
                     $node->getNodeType()->getName(),
                     $this->backendUri($node, $controllerContext),
-                    $this->documentNodeFilter->skipReasonForNamedNode($node, $siteNode)
+                    $this->documentNodeFilter->skipReasonForNamedNode($node, $siteNode),
                 );
             }
 
@@ -70,8 +70,7 @@ final class QuickPublishPreviewService
 
     private function backendUri(NodeInterface $node, ControllerContext $controllerContext): string
     {
-        return $controllerContext
-            ->getUriBuilder()
+        return $controllerContext->getUriBuilder()
             ->reset()
             ->uriFor('index', ['node' => $node->getContextPath()], 'Backend', 'Neos.Neos.Ui');
     }

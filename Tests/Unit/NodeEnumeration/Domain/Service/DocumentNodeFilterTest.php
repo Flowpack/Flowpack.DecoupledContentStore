@@ -42,7 +42,7 @@ class DocumentNodeFilterTest extends TestCase
     {
         self::assertSame(
             '[instanceof Neos.Neos:Document][!instanceof Neos.Neos:Shortcut]',
-            self::buildNodeTypeFilter(['Neos.Neos:Document', '!Neos.Neos:Shortcut'])
+            self::buildNodeTypeFilter(['Neos.Neos:Document', '!Neos.Neos:Shortcut']),
         );
     }
 
@@ -55,7 +55,7 @@ class DocumentNodeFilterTest extends TestCase
             'Neos.Neos:Document',
             '!Neos.Neos:Shortcut',
             '!My.Package:Bar',
-            '!My.Package:Baz'
+            '!My.Package:Baz',
         ]);
 
         self::assertStringNotContainsString(',', $filter);
@@ -64,7 +64,7 @@ class DocumentNodeFilterTest extends TestCase
             . '[!instanceof Neos.Neos:Shortcut]'
             . '[!instanceof My.Package:Bar]'
             . '[!instanceof My.Package:Baz]',
-            $filter
+            $filter,
         );
     }
 
@@ -74,7 +74,7 @@ class DocumentNodeFilterTest extends TestCase
         // so positive filters must be ordered first regardless of the configured order.
         self::assertSame(
             '[instanceof Neos.Neos:Document][!instanceof Neos.Neos:Shortcut]',
-            self::buildNodeTypeFilter(['!Neos.Neos:Shortcut', 'Neos.Neos:Document'])
+            self::buildNodeTypeFilter(['!Neos.Neos:Shortcut', 'Neos.Neos:Document']),
         );
     }
 
@@ -83,7 +83,7 @@ class DocumentNodeFilterTest extends TestCase
         // The "!" is detected after trimming, so a padded exclusion still excludes.
         self::assertSame(
             '[instanceof Neos.Neos:Document][!instanceof Neos.Neos:Shortcut]',
-            self::buildNodeTypeFilter([' Neos.Neos:Document ', "\t!Neos.Neos:Shortcut\n"])
+            self::buildNodeTypeFilter([' Neos.Neos:Document ', "\t!Neos.Neos:Shortcut\n"]),
         );
     }
 
@@ -91,7 +91,7 @@ class DocumentNodeFilterTest extends TestCase
     {
         self::assertSame(
             '[instanceof Neos.Neos:Document]',
-            self::buildNodeTypeFilter(['Neos.Neos:Document', '', '   '])
+            self::buildNodeTypeFilter(['Neos.Neos:Document', '', '   ']),
         );
     }
 
@@ -100,7 +100,7 @@ class DocumentNodeFilterTest extends TestCase
         // Without a positive filter, find() would throw exception 1436884196.
         self::assertSame(
             '[instanceof Neos.Neos:Document][!instanceof Neos.Neos:Shortcut]',
-            self::buildNodeTypeFilter(['!Neos.Neos:Shortcut'])
+            self::buildNodeTypeFilter(['!Neos.Neos:Shortcut']),
         );
     }
 
@@ -119,7 +119,7 @@ class DocumentNodeFilterTest extends TestCase
 
         self::assertSame(
             'below a hidden page',
-            $this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode)
+            $this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode),
         );
     }
 
@@ -143,7 +143,7 @@ class DocumentNodeFilterTest extends TestCase
 
         self::assertSame(
             'below a hidden page',
-            $this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode)
+            $this->buildDocumentNodeFilter()->skipReasonForNamedNode($node, $siteNode),
         );
     }
 

@@ -32,17 +32,17 @@ class RedisRenderingErrorManager
     public function registerRenderingError(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         array $additionalData,
-        \Exception $exception
+        \Exception $exception,
     ): void {
         $this->redisClientManager->getPrimaryRedis()->sAdd(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingErrors'),
-            $exception->getMessage() . ' - ' . json_encode($additionalData)
+            $exception->getMessage() . ' - ' . json_encode($additionalData),
         );
     }
 
     public function getRenderingErrors(
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        ?RedisInstanceIdentifier $redisInstanceIdentifier = null
+        ?RedisInstanceIdentifier $redisInstanceIdentifier = null,
     ): array {
         $redisInstanceIdentifier = $redisInstanceIdentifier ?: RedisInstanceIdentifier::primary();
         return $this->redisClientManager
@@ -54,13 +54,13 @@ class RedisRenderingErrorManager
     {
         $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix(
             $contentReleaseIdentifier,
-            'renderingErrors'
+            'renderingErrors',
         ));
     }
 
     public function countMultipleErrors(
         RedisInstanceIdentifier $redisInstanceIdentifier,
-        ContentReleaseIdentifier ...$releaseIdentifiers
+        ContentReleaseIdentifier ...$releaseIdentifiers,
     ): ContentReleaseBatchResult {
         $result = []; // KEY == contentReleaseIdentifier. VALUE == count of error entries
         $redis = $this->redisClientManager->getRedis($redisInstanceIdentifier);
@@ -69,7 +69,7 @@ class RedisRenderingErrorManager
             foreach ($batchedReleaseIdentifiers as $releaseIdentifier) {
                 $redisPipeline->scard($this->redisKeyService->getRedisKeyForPostfix(
                     $releaseIdentifier,
-                    'renderingErrors'
+                    'renderingErrors',
                 ));
             }
             $res = $redisPipeline->exec();

@@ -23,6 +23,6 @@ interface DocumentMetadataGeneratorInterface
         NodeInterface $node,
         array $arguments,
         ControllerContext $controllerContext,
-        DocumentNodeCacheValues $cacheValues
+        DocumentNodeCacheValues $cacheValues,
     ): DocumentNodeCacheValues;
 }

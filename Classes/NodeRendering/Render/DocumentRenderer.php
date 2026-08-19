@@ -77,7 +77,7 @@ class DocumentRenderer
     public function renderDocumentNodeVariant(
         NodeInterface $node,
         array $arguments,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): string {
         $this->cacheUrlMappingAspect->beforeDocumentRendering($contentReleaseLogger);
         $nodeUri = $this->nodeRenderingUriService->buildNodeUri($node, $arguments);
@@ -91,7 +91,7 @@ class DocumentRenderer
                 $node,
                 $nodeUri,
                 1491378709,
-                $exception
+                $exception,
             );
         } finally {
             $this->cacheUrlMappingAspect->afterDocumentRendering();
@@ -114,7 +114,7 @@ class DocumentRenderer
         NodeInterface $node,
         $uri,
         array $requestArguments,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): string {
         $this->isRendering = true;
 
@@ -127,7 +127,7 @@ class DocumentRenderer
             if ($baseUri === '') {
                 throw new Exception\InvalidSiteConfigurationException(
                     'Cannot render content without active domain for site "' . $site->getName() . '"',
-                    1467289645
+                    1467289645,
                 );
             }
 
@@ -136,7 +136,7 @@ class DocumentRenderer
             $controllerContext = $this->nodeRenderingUriService->buildControllerContextAndSetBaseUri(
                 $uri,
                 $node,
-                $requestArguments
+                $requestArguments,
             );
             /** @var ActionRequest $request */
             $request = $controllerContext->getRequest();
@@ -146,7 +146,7 @@ class DocumentRenderer
 
             MultisiteFileSystemSymlinkTarget::injectBaseUriIntoRelevantResourcePublishingTargets(
                 $resourceBaseUri,
-                $this->resourceManager
+                $this->resourceManager,
             );
 
             $this->fusionView->setFusionPath('documentRendering');
@@ -191,7 +191,7 @@ class DocumentRenderer
         }
 
         // Finally, we build the HTTP response.
-        return 'HTTP/1.1' . ( empty($headerLines) ? "\r\n" : implode("\r\n", $headerLines) ) . "\r\n" . $output;
+        return 'HTTP/1.1' . (empty($headerLines) ? "\r\n" : implode("\r\n", $headerLines)) . "\r\n" . $output;
     }
 
     /**

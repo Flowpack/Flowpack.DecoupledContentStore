@@ -20,7 +20,7 @@ class LimitEnumerator implements DocumentEnumeratorInterface
     private ?string $nodePathSegmentFilter = null;
 
     public function __construct(
-        array $options = []
+        array $options = [],
     ) {
         $this->limit = $options['limit'] ?? null;
         $this->uriPathSegmentFilter = $options['uriPathSegmentFilter'] ?? null;
@@ -52,7 +52,7 @@ class LimitEnumerator implements DocumentEnumeratorInterface
         }
 
         return [
-            EnumeratedNode::fromNode($documentNode)
+            EnumeratedNode::fromNode($documentNode),
         ];
     }
 }

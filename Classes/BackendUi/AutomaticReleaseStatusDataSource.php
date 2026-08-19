@@ -57,13 +57,13 @@ final class AutomaticReleaseStatusDataSource extends AbstractDataSource
                 'automaticReleases.paused.contentModuleWarning',
                 [
                     $this->backendDateFormatter->format($pauseState->getPausedAt()),
-                    $pauseState->getSuppressedReleaseCount()
+                    $pauseState->getSuppressedReleaseCount(),
                 ],
                 null,
                 null,
                 'Main',
-                'Flowpack.DecoupledContentStore'
-            )
+                'Flowpack.DecoupledContentStore',
+            ),
         ];
     }
 }

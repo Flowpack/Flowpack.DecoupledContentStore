@@ -24,7 +24,7 @@ final class WorkerErrorLog
         public int $exitCode,
         public ?string $taskError,
         public array $errorBlocks,
-        public ?string $lastAttemptedNode = null
+        public ?string $lastAttemptedNode = null,
     ) {
         $this->wasKilledByOrchestrator = $this->exitCode === WorkerErrorLogAggregator::EXIT_CODE_SIGTERM;
     }

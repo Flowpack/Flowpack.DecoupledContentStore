@@ -56,8 +56,8 @@ class ExtractedExceptionDto
     {
         return (
             $this->getMessage()
-            . ( !empty($this->getStackTrace()) ? "\n{$this->getStackTrace()}" : '' )
-            . ( !empty($this->getReferenceCode()) ? "\n(reference code {$this->getReferenceCode()})" : '' )
+            . (!empty($this->getStackTrace()) ? "\n{$this->getStackTrace()}" : '')
+            . (!empty($this->getReferenceCode()) ? "\n(reference code {$this->getReferenceCode()})" : '')
         );
     }
 }

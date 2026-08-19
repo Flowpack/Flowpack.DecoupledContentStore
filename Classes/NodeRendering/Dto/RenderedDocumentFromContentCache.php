@@ -35,7 +35,7 @@ final class RenderedDocumentFromContentCache
         string $fullContent,
         DocumentNodeCacheValues $documentNodeCacheValues,
         bool $isComplete,
-        string $incompleteReason
+        string $incompleteReason,
     ) {
         $this->fullContent = $fullContent;
         $this->documentNodeCacheValues = $documentNodeCacheValues;
@@ -50,7 +50,7 @@ final class RenderedDocumentFromContentCache
 
     public static function createWithFullContent(
         string $fullContent,
-        DocumentNodeCacheValues $documentNodeCacheValues
+        DocumentNodeCacheValues $documentNodeCacheValues,
     ): self {
         return new self($fullContent, $documentNodeCacheValues, true, '');
     }

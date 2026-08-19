@@ -19,7 +19,7 @@ class GeneratorUtility
         foreach ($iterable as $item) {
             $i++;
             $accumulator[] = $item;
-            if (( $i % $chunkSize ) === 0) {
+            if (($i % $chunkSize) === 0) {
                 yield $accumulator;
 
                 $accumulator = [];

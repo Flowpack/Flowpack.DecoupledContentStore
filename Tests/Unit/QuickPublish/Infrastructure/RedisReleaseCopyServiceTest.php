@@ -30,7 +30,7 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
     private const SOURCE_KEYS = [
         'contentStore:5:data',
         'contentStore:5:meta:urls',
-        'contentStore:5:renderingJobQueue'
+        'contentStore:5:renderingJobQueue',
     ];
 
     /**
@@ -46,9 +46,9 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
         self::assertSame(
             [
                 ['contentStore:5:data',      'contentStore:6:data'],
-                ['contentStore:5:meta:urls', 'contentStore:6:meta:urls']
+                ['contentStore:5:meta:urls', 'contentStore:6:meta:urls'],
             ],
-            $this->copiedKeys
+            $this->copiedKeys,
         );
     }
 
@@ -123,7 +123,7 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
     private function copyRelease(
         \Redis $redis,
         RedisContentReleaseService $redisContentReleaseService,
-        string $targetContentReleaseIdentifier = '6'
+        string $targetContentReleaseIdentifier = '6',
     ): void {
         $redisClientManager = $this->createMock(RedisClientManager::class);
         $redisClientManager->method('getRedis')->willReturn($redis);
@@ -141,7 +141,7 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
             RedisInstanceIdentifier::primary(),
             ContentReleaseIdentifier::fromString('5'),
             ContentReleaseIdentifier::fromString($targetContentReleaseIdentifier),
-            ContentReleaseLogger::fromSymfonyOutput(new BufferedOutput(), ContentReleaseIdentifier::fromString('6'))
+            ContentReleaseLogger::fromSymfonyOutput(new BufferedOutput(), ContentReleaseIdentifier::fromString('6')),
         );
     }
 
@@ -156,8 +156,7 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
         $redis->method('exists')->willReturnCallback(static fn(string $key): int => in_array($key, $existingKeys, true)
             ? 1
             : 0);
-        $redis
-            ->method('copy')
+        $redis->method('copy')
             ->willReturnCallback(function (string $sourceKey, string $targetKey): bool {
                 $this->copiedKeys[] = [$sourceKey, $targetKey];
                 return true;
@@ -170,11 +169,11 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
      * @return RedisContentReleaseService&MockObject
      */
     private function buildRedisContentReleaseService(
-        ?NodeRenderingCompletionStatus $status = null
+        ?NodeRenderingCompletionStatus $status = null,
     ): RedisContentReleaseService {
         $metadata = ContentReleaseMetadata::create(
             PrunnerJobId::fromString('job'),
-            new \DateTimeImmutable()
+            new \DateTimeImmutable(),
         )->withStatus($status ?? NodeRenderingCompletionStatus::success());
 
         $redisContentReleaseService = $this->createMock(RedisContentReleaseService::class);
@@ -194,29 +193,29 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
                 'transfer' => true,
                 'transferMode' => 'hash_incremental',
                 'isRequired' => true,
-                'copyOnQuickRelease' => true
+                'copyOnQuickRelease' => true,
             ],
             'metaUrls' => [
                 'redisKeyPostfix' => 'meta:urls',
                 'transfer' => true,
                 'transferMode' => 'dump',
                 'isRequired' => true,
-                'copyOnQuickRelease' => true
+                'copyOnQuickRelease' => true,
             ],
             'renderingJobQueue' => [
                 'redisKeyPostfix' => 'renderingJobQueue',
                 'transfer' => false,
                 'transferMode' => 'dump',
                 'isRequired' => false,
-                'copyOnQuickRelease' => false
+                'copyOnQuickRelease' => false,
             ],
             'enumerationDocumentNodes' => [
                 'redisKeyPostfix' => 'enumeration:documentNodes',
                 'transfer' => true,
                 'transferMode' => 'dump',
                 'isRequired' => true,
-                'copyOnQuickRelease' => false
-            ]
+                'copyOnQuickRelease' => false,
+            ],
         ];
     }
 }

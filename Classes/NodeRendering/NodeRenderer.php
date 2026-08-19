@@ -136,7 +136,7 @@ class NodeRenderer
     public function render(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-        RendererIdentifier $rendererIdentifier
+        RendererIdentifier $rendererIdentifier,
     ) {
         $contentReleaseLogger = $contentReleaseLogger->withRenderer($rendererIdentifier);
 
@@ -153,14 +153,14 @@ class NodeRenderer
 
             $enumeratedNode = $this->redisRenderingQueue->fetchAndReserveNextRenderingJob(
                 $contentReleaseIdentifier,
-                $rendererIdentifier
+                $rendererIdentifier,
             );
             if ($enumeratedNode === null) {
                 yield QueueEmptyEvent::create();
                 // the queue is currently empty, but this does not necessarily mean that rendering is finished. Maybe the NodeRenderOrchestrator is still
                 // determining what needs to be done. We just need to wait a bit and retry.
                 $contentReleaseLogger->debug(
-                    'Rendering queue currently empty; we wait a bit see if there is work for us.'
+                    'Rendering queue currently empty; we wait a bit see if there is work for us.',
                 );
                 sleep(2);
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
@@ -169,7 +169,7 @@ class NodeRenderer
 
             $renderingAttempt = $this->redisRenderingQueue->registerRenderingAttempt(
                 $contentReleaseIdentifier,
-                $enumeratedNode
+                $enumeratedNode,
             );
 
             try {
@@ -177,7 +177,7 @@ class NodeRenderer
                     $enumeratedNode,
                     $contentReleaseIdentifier,
                     $contentReleaseLogger,
-                    $renderingAttempt
+                    $renderingAttempt,
                 );
                 // BUGFIX: Because rendering a document node can update Thumbnails and their connected Persistent Resource
                 // objects (= Doctrine Entities), we need to *persist* these changes. Otherwise, we will have broken
@@ -188,14 +188,14 @@ class NodeRenderer
                 $removalSuccess = $this->redisRenderingQueue->removeRenderingJobFromReservedList(
                     $contentReleaseIdentifier,
                     $enumeratedNode,
-                    $rendererIdentifier
+                    $rendererIdentifier,
                 );
                 if ($removalSuccess === false) {
                     $contentReleaseLogger->warn(
                         'Node could not be removed from reserved-list, because it was claimed by some other worker in the meantime. We don not know yet how this case might happen.',
                         [
-                            'node' => $enumeratedNode->debugString()
-                        ]
+                            'node' => $enumeratedNode->debugString(),
+                        ],
                     );
                 }
             }
@@ -205,15 +205,15 @@ class NodeRenderer
 
             if (
                 static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0
-                && ( $i % static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT ) === 0
+                && ($i % static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT) === 0
             ) {
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
             }
 
-            if (( $i % static::RESTART_AFTER_RENDER_COUNT ) === 0) {
+            if (($i % static::RESTART_AFTER_RENDER_COUNT) === 0) {
                 $contentReleaseLogger->info(sprintf(
                     'Restarting after %d renders.',
-                    static::RESTART_AFTER_RENDER_COUNT
+                    static::RESTART_AFTER_RENDER_COUNT,
                 ));
                 yield ExitEvent::createWithStatusCode(193);
                 return;
@@ -244,7 +244,7 @@ class NodeRenderer
         EnumeratedNode $enumeratedNode,
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-        int $renderingAttempt = 1
+        int $renderingAttempt = 1,
     ) {
         $nodeWasFound = false;
         try {
@@ -265,13 +265,13 @@ class NodeRenderer
                     'nodeIdentifier' => $node->getIdentifier(),
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
-                    'arguments' => $enumeratedNode->getArguments()
+                    'arguments' => $enumeratedNode->getArguments(),
                 ]);
 
                 $this->nodeRenderingExtensionManager->renderDocumentNodeVariant(
                     $node,
                     $enumeratedNode,
-                    $contentReleaseLogger
+                    $contentReleaseLogger,
                 );
             }
 
@@ -284,14 +284,14 @@ class NodeRenderer
                 $exception->getPrevious(),
                 'Exception getting document node variant for rendering',
                 array(
-                    'node' => $enumeratedNode->debugString()
-                )
+                    'node' => $enumeratedNode->debugString(),
+                ),
             );
 
             $this->redisRenderingErrorManager->registerRenderingError(
                 $contentReleaseIdentifier,
                 ['node' => $enumeratedNode->debugString()],
-                $exception->getPrevious()
+                $exception->getPrevious(),
             );
         } catch (RenderingException $exception) {
             $contentReleaseLogger->logException(
@@ -299,24 +299,24 @@ class NodeRenderer
                 'Exception while rendering document node variant',
                 array(
                     'node' => $enumeratedNode->debugString(),
-                    'nodeUri' => $exception->getNodeUri()
-                )
+                    'nodeUri' => $exception->getNodeUri(),
+                ),
             );
 
             $this->redisRenderingErrorManager->registerRenderingError(
                 $contentReleaseIdentifier,
                 ['node' => $enumeratedNode->debugString(), 'nodeUri' => $exception->getNodeUri()],
-                $exception->getPrevious()
+                $exception->getPrevious(),
             );
         } catch (\Exception $exception) {
             $contentReleaseLogger->logException($exception, 'Exception while rendering document node variant', array(
-                'node' => $enumeratedNode->debugString()
+                'node' => $enumeratedNode->debugString(),
             ));
 
             $this->redisRenderingErrorManager->registerRenderingError(
                 $contentReleaseIdentifier,
                 ['node' => $enumeratedNode->debugString()],
-                $exception
+                $exception,
             );
         }
 
@@ -331,8 +331,8 @@ class NodeRenderer
                 $contentReleaseIdentifier,
                 ['node' => $enumeratedNode->debugString()],
                 new \Exception(
-                    'We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error'
-                )
+                    'We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error',
+                ),
             );
             $this->contentReleaseManager->startIncrementalContentRelease();
         }
@@ -353,7 +353,7 @@ class NodeRenderer
         NodeInterface $node,
         EnumeratedNode $enumeratedNode,
         int $renderingAttempt,
-        ContentReleaseLogger $contentReleaseLogger
+        ContentReleaseLogger $contentReleaseLogger,
     ): void {
         if (!$this->flushDocumentCacheOnRetry) {
             return;
@@ -368,11 +368,11 @@ class NodeRenderer
             sprintf(
                 'Rendering attempt %d for this node; flushed %d content cache entries before re-rendering it.',
                 $renderingAttempt,
-                $flushedEntriesCount
+                $flushedEntriesCount,
             ),
             [
-                'node' => $enumeratedNode->debugString()
-            ]
+                'node' => $enumeratedNode->debugString(),
+            ],
         );
     }
 
@@ -389,7 +389,7 @@ class NodeRenderer
             'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
             'currentSite' => $site,
             'currentDomain' => $site->getFirstActiveDomain(),
-            'dimensions' => $enumeratedNode->getDimensionsFromContextPath()
+            'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
         ]);
         return $context->getNodeByIdentifier($enumeratedNode->getNodeIdentifier());
     }

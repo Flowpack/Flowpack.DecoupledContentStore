@@ -34,7 +34,7 @@ class ContentReleaseLogger
         OutputInterface $output,
         ContentReleaseIdentifier $contentReleaseIdentifier,
         StatisticsEventOutputInterface $statisticsEventOutput,
-        ?RendererIdentifier $rendererIdentifier
+        ?RendererIdentifier $rendererIdentifier,
     ) {
         $this->output = $output;
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
@@ -50,7 +50,7 @@ class ContentReleaseLogger
     public static function fromConsoleOutput(
         ConsoleOutput $output,
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        StatisticsEventOutputInterface $statisticsEventOutput = new RedisStatisticsEventOutput()
+        StatisticsEventOutputInterface $statisticsEventOutput = new RedisStatisticsEventOutput(),
     ): self {
         return new static($output->getOutput(), $contentReleaseIdentifier, $statisticsEventOutput, null);
     }
@@ -58,7 +58,7 @@ class ContentReleaseLogger
     public static function fromSymfonyOutput(
         OutputInterface $output,
         ContentReleaseIdentifier $contentReleaseIdentifier,
-        StatisticsEventOutputInterface $statisticsEventOutput = new RedisStatisticsEventOutput()
+        StatisticsEventOutputInterface $statisticsEventOutput = new RedisStatisticsEventOutput(),
     ): self {
         return new static($output, $contentReleaseIdentifier, $statisticsEventOutput, null);
     }
@@ -100,7 +100,7 @@ class ContentReleaseLogger
                 . "\n\n"
                 . $exception->getTraceAsString()
                 . "\n\n"
-                . json_encode($additionalPayload)
+                . json_encode($additionalPayload),
         );
     }
 
@@ -119,7 +119,7 @@ class ContentReleaseLogger
             $this->contentReleaseIdentifier,
             $this->logPrefix,
             $event,
-            $additionalPayload
+            $additionalPayload,
         );
     }
 
@@ -129,7 +129,7 @@ class ContentReleaseLogger
             $this->output,
             $this->contentReleaseIdentifier,
             $this->statisticsEventOutput,
-            $rendererIdentifier
+            $rendererIdentifier,
         );
     }
 }

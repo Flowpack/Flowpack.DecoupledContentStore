@@ -23,7 +23,7 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
     {
         self::assertSame(
             'flowpack-decoupledcontentstore-automatic-release-status',
-            AutomaticReleaseStatusDataSource::getIdentifier()
+            AutomaticReleaseStatusDataSource::getIdentifier(),
         );
     }
 
@@ -38,15 +38,15 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
         $pauseState = AutomaticReleasePauseState::fromRedisHash([
             'pausedAt' => '2026-08-13T09:15:00+02:00',
             'accountId' => 'admin',
-            'suppressedReleaseCount' => '4'
+            'suppressedReleaseCount' => '4',
         ]);
 
         self::assertSame(
             [
                 'paused' => true,
-                'message' => 'translated: automaticReleases.paused.contentModuleWarning'
+                'message' => 'translated: automaticReleases.paused.contentModuleWarning',
             ],
-            $this->buildDataSource($pauseState)->getData()
+            $this->buildDataSource($pauseState)->getData(),
         );
     }
 
@@ -54,12 +54,11 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
     {
         $pauseState = AutomaticReleasePauseState::fromRedisHash([
             'pausedAt' => '2026-08-13T09:15:00+02:00',
-            'suppressedReleaseCount' => '4'
+            'suppressedReleaseCount' => '4',
         ]);
 
         $translator = $this->createMock(Translator::class);
-        $translator
-            ->expects(self::once())
+        $translator->expects(self::once())
             ->method('translateById')
             ->with(
                 'automaticReleases.paused.contentModuleWarning',
@@ -67,7 +66,7 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
                 null,
                 null,
                 'Main',
-                'Flowpack.DecoupledContentStore'
+                'Flowpack.DecoupledContentStore',
             );
 
         $this->buildDataSource($pauseState, $translator)->getData();
@@ -75,15 +74,14 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
 
     private function buildDataSource(
         ?AutomaticReleasePauseState $pauseState,
-        ?Translator $translator = null
+        ?Translator $translator = null,
     ): AutomaticReleaseStatusDataSource {
         $automaticReleaseSwitchService = $this->createMock(AutomaticReleaseSwitchService::class);
         $automaticReleaseSwitchService->method('getPauseState')->willReturn($pauseState);
 
         if ($translator === null) {
             $translator = $this->createMock(Translator::class);
-            $translator
-                ->method('translateById')
+            $translator->method('translateById')
                 ->willReturnCallback(static fn(string $labelId): string => 'translated: ' . $labelId);
         }
 

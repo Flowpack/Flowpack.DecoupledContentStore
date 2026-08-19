@@ -54,7 +54,7 @@ class RedisContentCacheReader
         $serializedCacheValues = $redis->get($documentNodeCacheKey->fullyQualifiedRedisKeyName($identifierPrefix));
         if ($serializedCacheValues === false) {
             return RenderedDocumentFromContentCache::createIncomplete(
-                'No Redis Key "' . $documentNodeCacheKey->redisKeyName() . '" found.'
+                'No Redis Key "' . $documentNodeCacheKey->redisKeyName() . '" found.',
             );
         }
         $documentNodeCacheValues = DocumentNodeCacheValues::fromJsonString($serializedCacheValues);
@@ -180,7 +180,7 @@ class RedisContentCacheReader
         $packageManager = $this->objectManager->get(PackageManager::class);
         $flowPackage = $packageManager->getPackage('Neos.Flow');
         preg_match('/^(\d+\.\d+)/', $flowPackage->getInstalledVersion(), $versionMatches);
-        $flowMajorVersion = (int) ( $versionMatches[1] ?? '0' );
+        $flowMajorVersion = (int) ($versionMatches[1] ?? '0');
 
         $backend = $this->contentCache->getBackend();
 
@@ -194,7 +194,7 @@ class RedisContentCacheReader
         if (get_class($backend) === 'Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend') {
             $reflProp = new \ReflectionProperty(
                 \Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend::class,
-                'redis'
+                'redis',
             );
             $reflProp->setAccessible(true);
             $this->redis = $reflProp->getValue($backend);
@@ -204,7 +204,7 @@ class RedisContentCacheReader
         throw new \RuntimeException(
             'The cache backend for "Neos_Fusion_Content" must be an OptimizedRedisCacheBackend, but is '
                 . get_class($backend),
-            1622570000
+            1622570000,
         );
     }
 }

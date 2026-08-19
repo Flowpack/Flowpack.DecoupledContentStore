@@ -26,6 +26,6 @@ interface ContentReleaseWriterInterface
     public function processRenderedDocument(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
-        ContentReleaseLogger $logger
+        ContentReleaseLogger $logger,
     ): void;
 }
