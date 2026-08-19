@@ -16,6 +16,7 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Exception as DecoupledContentStoreException;
 use Flowpack\DecoupledContentStore\IncrementalContentReleaseHandler;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
@@ -407,6 +408,33 @@ class FeatureContext implements Context
         );
 
         Assert::assertCount((int) $expectedCount, $enumerationAsArray);
+    }
+
+    /**
+     * The enumeration is written per document *and renderer*, so a second document renderer doubles it while the
+     * release still publishes one URL per document. That is the one setup in which the length of the enumeration and
+     * the number of published URLs differ for an ordinary release, and rendering a page twice - as HTML and as JSON,
+     * say - is a common enough reason to configure one.
+     *
+     * @Given the enumeration of content release :contentReleaseIdentifier is duplicated for a second document renderer
+     */
+    public function theEnumerationIsDuplicatedForASecondDocumentRenderer($contentReleaseIdentifier)
+    {
+        $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
+        $redisEnumerationRepository = $this->getObjectManager()->get(RedisEnumerationRepository::class);
+
+        $enumerationOfSecondRenderer = [];
+        foreach ($redisEnumerationRepository->findAll($contentReleaseIdentifier) as $enumeratedNode) {
+            $enumerationOfSecondRenderer[] = EnumeratedNode::fromJsonString((string) json_encode(array_merge(
+                $enumeratedNode->jsonSerialize(),
+                ['rendererId' => 'secondRenderer'],
+            )));
+        }
+
+        $redisEnumerationRepository->addDocumentNodesToEnumeration(
+            $contentReleaseIdentifier,
+            ...$enumerationOfSecondRenderer,
+        );
     }
 
     /**

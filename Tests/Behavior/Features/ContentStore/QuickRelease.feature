@@ -66,8 +66,19 @@ Feature: Quick Release
 
   Scenario: A quick release is not rejected for enumerating only what it changed
     # the URL count check compares the new release against the live one, and the enumeration of a quick release is
-    # smaller than that by design - it has to be measured by the URLs it publishes instead
+    # smaller than that by design - both sides are therefore measured by the URLs they publish
     Given the currently live content release is "5"
+    When I create a content release "6"
+    And I copy the content release "5" to the content release "6"
+    And I enumerate the node at path "/sites/test/sub" for content release "6"
+    Then validating content release "6" succeeds
+
+  Scenario: A quick release is not rejected for the size of a release rendered by two renderers
+    # the enumeration counts documents per renderer, the released URLs count documents - so the two measures must not
+    # be compared against each other. A live release enumerated by two renderers is twice its own URL count, which
+    # puts the threshold above what any quick release publishes, and it refuses one which holds the whole site.
+    Given the currently live content release is "5"
+    And the enumeration of content release "5" is duplicated for a second document renderer
     When I create a content release "6"
     And I copy the content release "5" to the content release "6"
     And I enumerate the node at path "/sites/test/sub" for content release "6"

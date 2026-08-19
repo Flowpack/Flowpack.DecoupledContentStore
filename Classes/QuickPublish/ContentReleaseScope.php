@@ -70,8 +70,9 @@ final class ContentReleaseScope
     /**
      * How many URLs the release holds.
      *
-     * This is what makes two releases comparable in size: the enumeration of a quick release only covers what it
-     * re-rendered, while every release - copied or rendered - carries the full list of URLs it publishes.
+     * This is what makes two releases comparable in size, and the only measure which does: every release - copied or
+     * rendered - carries the full list of URLs it publishes, while the enumeration of a quick release covers only
+     * what it re-rendered, and the enumeration of any release counts documents per renderer rather than URLs.
      */
     public function countPublishedUrls(ContentReleaseIdentifier $contentReleaseIdentifier): int
     {
