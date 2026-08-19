@@ -48,6 +48,20 @@ class RedisKeyPostfixesForEachRelease
     }
 
     /**
+     * The keys a quick content release takes over from the release it is built on.
+     *
+     * @return iterable|RedisKeyPostfixForEachRelease[]
+     */
+    public function getKeysToCopyOnQuickRelease(): iterable
+    {
+        foreach ($this->redisKeyPostfixes as $redisKeyPostfix) {
+            if ($redisKeyPostfix->shouldCopyOnQuickRelease()) {
+                yield $redisKeyPostfix;
+            }
+        }
+    }
+
+    /**
      * @return iterable|RedisKeyPostfixForEachRelease[]
      */
     public function getRequiredKeys(): iterable

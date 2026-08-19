@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Command;
 
-use Flowpack\DecoupledContentStore\Exception;
+use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
+use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
+use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
+use Flowpack\DecoupledContentStore\QuickPublish\ContentReleaseScope;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Neos\Flow\Annotations as Flow;
-use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
-use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Neos\Flow\Cli\CommandController;
 
 /**
@@ -37,12 +38,13 @@ class ContentReleaseValidationCommandController extends CommandController
      */
     protected $redisEnumerationRepository;
 
+    #[Flow\Inject]
+    protected ContentReleaseScope $contentReleaseScope;
+
     /**
      * Factor between 0 and 1 for the amount of URLs a new release needs to include to be valid
-     *
-     * @var float
      */
-    protected $validReleaseUrlCountThreshold = 0.7;
+    protected float $validReleaseUrlCountThreshold = 0.7;
 
     public function validateCommand(string $contentReleaseIdentifier)
     {
@@ -66,8 +68,8 @@ class ContentReleaseValidationCommandController extends CommandController
         }
         $logger->info('Previous Content Release: ' . $currentlyLiveReleaseIdentifier->getIdentifier());
 
-        $currentUrlsCount = $this->redisEnumerationRepository->count($currentlyLiveReleaseIdentifier);
-        $newUrlsCount = $this->redisEnumerationRepository->count($contentReleaseIdentifier);
+        $currentUrlsCount = $this->countUrls($currentlyLiveReleaseIdentifier, $logger, 'Currently live release');
+        $newUrlsCount = $this->countUrls($contentReleaseIdentifier, $logger, 'Content release');
         $minimumUrlsCount = (int) ceil($this->validReleaseUrlCountThreshold * $currentUrlsCount);
 
         $logger->info('Previous URL Count: ' . $currentUrlsCount);
@@ -108,6 +110,29 @@ class ContentReleaseValidationCommandController extends CommandController
         }
 
         $this->logCompletion($logger, $startedAt);
+    }
+
+    /**
+     * How many URLs a content release covers, measured so that two releases are comparable.
+     *
+     * A quick release enumerates only the handful of documents it re-renders and copies the rest, so its enumeration
+     * describes neither what it publishes nor what a later release has to live up to - taken as the baseline it would
+     * put the threshold at a handful of URLs and wave through any release which lost most of the site. Its published
+     * URLs are the comparable number: after the copy they equal the release it was built on. Each release is
+     * therefore measured on its own terms, whichever side of the comparison it is on.
+     */
+    private function countUrls(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        ContentReleaseLogger $logger,
+        string $label
+    ): int {
+        if ($this->contentReleaseScope->getChangedUrls($contentReleaseIdentifier) === null) {
+            return $this->redisEnumerationRepository->count($contentReleaseIdentifier);
+        }
+
+        $logger->info($label . ' is a quick release, so its published URLs are counted instead of its enumeration.');
+
+        return $this->contentReleaseScope->countPublishedUrls($contentReleaseIdentifier);
     }
 
     /**

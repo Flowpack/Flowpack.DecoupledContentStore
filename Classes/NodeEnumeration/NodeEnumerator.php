@@ -10,6 +10,7 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\DocumentNodeFilter;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
@@ -23,10 +24,8 @@ use Neos\Neos\Domain\Model\Site;
 
 class NodeEnumerator
 {
-    /**
-     * Used when "nodeRendering.nodeTypeWhitelist" configures no node type to include.
-     */
-    private const DEFAULT_NODE_TYPE = 'Neos.Neos:Document';
+    #[Flow\Inject]
+    protected DocumentNodeFilter $documentNodeFilter;
 
     /**
      * @Flow\Inject
@@ -51,12 +50,6 @@ class NodeEnumerator
      * @var NodeRenderingExtensionManager
      */
     protected $nodeRenderingExtensionManager;
-
-    /**
-     * @Flow\InjectConfiguration("nodeRendering.nodeTypeWhitelist")
-     * @var array
-     */
-    protected $nodeTypeWhitelist;
 
     public function enumerateAndStoreInRedis(
         ?Site $site,
@@ -86,45 +79,30 @@ class NodeEnumerator
 
             $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeration);
 
-            // DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
-            foreach ($enumeration as $enumeratedNode) {
-                $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
-            }
+            $this->emitNodesEnumerated($enumeration, $releaseIdentifier, $contentReleaseLogger);
         }
     }
 
     /**
-     * Builds a FlowQuery filter string from the node type whitelist,
-     * where entries prefixed with "!" are excluded.
+     * Emit {@see emitNodeEnumerated()} for a batch of nodes, including one another enumerator wrote.
      *
-     * The filter parts must be concatenated without a separator: FlowQuery parses
-     * comma-separated filter groups independently, and a group consisting only of
-     * "[!instanceof ...]" makes find() throw "find() needs an identifier, path or
-     * instanceof filter for the first filter part" (exception 1436884196). For the same
-     * reason, the positive "[instanceof ...]" filters are put first.
+     * A signal is identified by the class which declares it, so a slot connected to this one hears nothing about the
+     * nodes a quick release enumerates unless that release emits it from here as well - and the extra variants such
+     * a slot adds for a document (pagination, filter arguments) would keep the rendering of the release which was
+     * copied while the document itself is re-rendered.
      *
-     * If the whitelist configures exclusions only, the default node type is used as the
-     * positive filter - otherwise find() would run into the very same exception.
+     * DEPRECATED: use extensions.documentRenderers.[...].enumeratorClassName instead
+     *
+     * @param array<int, EnumeratedNode> $enumeration
      */
-    private static function buildNodeTypeFilter(array $nodeTypeWhitelist): string
-    {
-        $includes = [];
-        $excludes = [];
-        foreach ($nodeTypeWhitelist as $nodeType) {
-            $nodeType = trim($nodeType);
-            if ($nodeType === '') {
-                continue;
-            }
-            if ($nodeType[0] === '!') {
-                $excludes[] = '[!instanceof ' . substr($nodeType, 1) . ']';
-                continue;
-            }
-            $includes[] = '[instanceof ' . $nodeType . ']';
+    public function emitNodesEnumerated(
+        array $enumeration,
+        ContentReleaseIdentifier $releaseIdentifier,
+        ContentReleaseLogger $contentReleaseLogger
+    ): void {
+        foreach ($enumeration as $enumeratedNode) {
+            $this->emitNodeEnumerated($enumeratedNode, $releaseIdentifier, $contentReleaseLogger);
         }
-        if ($includes === []) {
-            $includes[] = '[instanceof ' . self::DEFAULT_NODE_TYPE . ']';
-        }
-        return implode('', array_merge($includes, $excludes));
     }
 
     /**
@@ -138,8 +116,7 @@ class NodeEnumerator
     ): iterable {
         $combinator = new NodeContextCombinator();
 
-        // an empty whitelist falls back to the default node type in buildNodeTypeFilter()
-        $nodeTypeFilter = self::buildNodeTypeFilter($this->nodeTypeWhitelist);
+        $nodeTypeFilter = $this->documentNodeFilter->flowQueryNodeTypeFilter();
 
         $queueSite = function (Site $site) use ($combinator, $nodeTypeFilter, $contentReleaseLogger, $workspaceName) {
             $contentReleaseLogger->debug('Publishing site', [
@@ -162,36 +139,22 @@ class NodeEnumerator
                 foreach ($matchingNodes as $nodeToEnumerate) {
                     $contextPath = $nodeToEnumerate->getContextPath();
 
-                    // BUGFIX: the site node has no parent but must NOT be recognized as orphaned
-                    if ($nodeToEnumerate !== $siteNode) {
-                        // Verify that the node is not orphaned
-                        $parentNode = $nodeToEnumerate->getParent();
-                        while ($parentNode !== $siteNode) {
-                            if ($parentNode === null) {
-                                $contentReleaseLogger->debug('Skipping node from publishing, because it is orphaned', [
-                                    'node' => $contextPath
-                                ]);
-                                // Continue with the next document
-                                continue 2;
-                            }
-                            $parentNode = $parentNode->getParent();
-                        }
+                    $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate, $siteNode);
+                    if ($skipReason !== null) {
+                        $contentReleaseLogger->debug('Skipping node from publishing, because it is ' . $skipReason, [
+                            'node' => $contextPath
+                        ]);
+                        continue;
                     }
 
-                    if ($nodeToEnumerate->isHidden()) {
-                        $contentReleaseLogger->debug('Skipping node from publishing, because it is hidden', [
-                            'node' => $contextPath
-                        ]);
-                    } else {
-                        $contentReleaseLogger->debug('Registering node for publishing', [
-                            'node' => $contextPath
-                        ]);
+                    $contentReleaseLogger->debug('Registering node for publishing', [
+                        'node' => $contextPath
+                    ]);
 
-                        foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode(
-                            $nodeToEnumerate
-                        ) as $enumeratedNode) {
-                            yield $enumeratedNode;
-                        }
+                    foreach ($this->nodeRenderingExtensionManager->enumerateDocumentNode(
+                        $nodeToEnumerate
+                    ) as $enumeratedNode) {
+                        yield $enumeratedNode;
                     }
                 }
             }

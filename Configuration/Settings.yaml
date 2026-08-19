@@ -104,66 +104,93 @@ Flowpack:
       #        transfer:
       #          target_live: false
       #          '*': true
+      #
+      # copyOnQuickRelease decides whether a quick content release takes this key over from the release it is built
+      # on, instead of producing it again. Set it for everything which carries content the consuming side reads, and
+      # leave it off for keys which describe the build of a single release - a quick release enumerates and renders
+      # only the documents which changed, so its own enumeration, queue and statistics have to stay its own.
+      # It defaults to `false`, so keys registered by a site package are never copied unless they opt in.
       data:
         redisKeyPostfix: 'data'
         transfer: true
         transferMode: 'hash_incremental'
         isRequired: true
+        copyOnQuickRelease: true
       enumerationDocumentNodes:
         redisKeyPostfix: 'enumeration:documentNodes'
         transfer: true
         transferMode: 'dump'
         isRequired: true
+        copyOnQuickRelease: false
       inProgressRenderings:
         redisKeyPostfix: 'inProgressRenderings'
         transfer: false
         transferMode: 'dump'
         isRequired: false
+        copyOnQuickRelease: false
       metainfo:
         redisKeyPostfix: 'meta:info'
         transfer: true
         transferMode: 'dump'
         isRequired: true
+        # written when the release is created, and it describes this release - never the one it was copied from
+        copyOnQuickRelease: false
       metaUrls:
         redisKeyPostfix: 'meta:urls'
         transfer: true
         transferMode: 'dump'
         isRequired: true
+        copyOnQuickRelease: true
+      quickPublishChangedUrls:
+        redisKeyPostfix: 'quickPublish:changedUrls'
+        transfer: false
+        transferMode: 'dump'
+        isRequired: false
+        # the key exists for a quick release only, and says which URLs it re-rendered - validators use it to check
+        # those instead of the whole release. It describes this release, so it is not copied and not transferred.
+        copyOnQuickRelease: false
       renderedDocuments:
         redisKeyPostfix: 'renderedDocuments'
         transfer: true
         transferMode: 'hash_incremental'
         isRequired: true
+        copyOnQuickRelease: true
       renderingErrors:
         redisKeyPostfix: 'renderingErrors'
         transfer: true
         transferMode: 'dump'
         isRequired: false
+        copyOnQuickRelease: false
       renderingJobQueue:
         redisKeyPostfix: 'renderingJobQueue'
         transfer: false
         transferMode: 'dump'
         isRequired: false
+        copyOnQuickRelease: false
       renderAttempts:
         redisKeyPostfix: 'renderAttempts'
         transfer: false
         transferMode: 'dump'
         isRequired: false
+        copyOnQuickRelease: false
       renderedMetadata:
         redisKeyPostfix: 'renderedMetadata'
         transfer: true
         transferMode: 'hash_incremental'
         isRequired: true
+        copyOnQuickRelease: true
       renderingStatistics:
         redisKeyPostfix: 'renderingStatistics'
         transfer: true
         transferMode: 'dump'
         isRequired: true
+        copyOnQuickRelease: false
       statisticsEvents:
         redisKeyPostfix: 'statisticsEvents'
         transfer: false
         transferMode: 'dump'
         isRequired: false
+        copyOnQuickRelease: false
 
     # can be used on the consuming site to ensure non-breaking deployments for changes in the config
     configEpoch:
@@ -195,6 +222,21 @@ Neos:
             description: 'Decoupled Content Publishing'
             icon: 'fas fa-exchange-alt'
             mainStylesheet: 'Lite'
+
+    Ui:
+      resources:
+        # Warns editors that publishing does not reach the live site while automatic releases are paused. Both files
+        # are served as they are, so registering them here needs no build step.
+        javascript:
+          'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':
+            resource: 'resource://Flowpack.DecoupledContentStore/Public/ContentModule/AutomaticReleaseWarning.js'
+            # Before the UI host and without "defer", because the host reads the inlined _NEOS_UI_* globals once and
+            # deletes them - the script has to capture the route table before that happens.
+            position: 'before Neos.Neos.UI:Host'
+        stylesheets:
+          'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':
+            resource: 'resource://Flowpack.DecoupledContentStore/Public/ContentModule/AutomaticReleaseWarning.css'
+            position: 'end'
 
   Flow:
     resource:

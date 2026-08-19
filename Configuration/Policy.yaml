@@ -3,9 +3,20 @@ privilegeTargets:
     'Flowpack.DecoupledContentStore:BackendModule':
       matcher: 'administration/contentstore'
 
+  'Neos\Flow\Security\Authorization\Privilege\Method\MethodPrivilege':
+    # Operating the switch which suppresses automatically triggered content releases, and publishing single
+    # documents while it is off. Separate from the module privilege above, so an installation which lets editors
+    # watch the module can still restrict who may pause releases and thereby stop everybody's publishes from going
+    # live. Quick publish sits behind the same target because it is the other half of that workflow.
+    'Flowpack.DecoupledContentStore:ReleaseControl':
+      matcher: 'method(Flowpack\DecoupledContentStore\Controller\BackendController->(pauseAutomaticReleases|resumeAutomaticReleases|quickPublishForm|quickPublishPreview|quickPublish)Action())'
+
 roles:
   'Neos.Neos:Administrator':
     privileges:
       -
         privilegeTarget: 'Flowpack.DecoupledContentStore:BackendModule'
+        permission: GRANT
+      -
+        privilegeTarget: 'Flowpack.DecoupledContentStore:ReleaseControl'
         permission: GRANT

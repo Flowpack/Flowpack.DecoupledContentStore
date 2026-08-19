@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Controller;
 
+use Flowpack\DecoupledContentStore\BackendUi\BackendDateFormatter;
 use Flowpack\DecoupledContentStore\BackendUi\BackendUiDataService;
 use Flowpack\DecoupledContentStore\BackendUi\WorkerErrorLogAggregator;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
+use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
@@ -14,17 +16,26 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Core\RedisPruneService;
+use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
+use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
+use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishPreviewService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
+use Neos\Error\Messages\Message;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\I18n\Translator;
+use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Fusion\View\FusionView;
+use Neos\Neos\Controller\BackendUserTranslationTrait;
 use Symfony\Component\Console\Output\BufferedOutput;
 
-class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
+class BackendController extends ActionController
 {
+    use BackendUserTranslationTrait;
+
     /**
      * @Flow\Inject
      * @var PrunnerApiService
@@ -85,6 +96,18 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
      */
     protected $redisPruneService;
 
+    #[Flow\Inject]
+    protected AutomaticReleaseSwitchService $automaticReleaseSwitchService;
+
+    #[Flow\Inject]
+    protected Translator $translator;
+
+    #[Flow\Inject]
+    protected BackendDateFormatter $backendDateFormatter;
+
+    #[Flow\Inject]
+    protected QuickPublishPreviewService $quickPublishPreviewService;
+
     /**
      * @Flow\InjectConfiguration("redisContentStores")
      * @var array
@@ -121,6 +144,14 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
             $configEpochRedis === $currentConfigEpoch ? $previousConfigEpoch : $currentConfigEpoch
         );
         $this->view->assign('showToggleConfigEpochButton', $showToggleConfigEpochButton);
+        $automaticReleasePauseState = $this->automaticReleaseSwitchService->getPauseState();
+        $this->view->assign('automaticReleasePauseState', $automaticReleasePauseState);
+        $this->view->assign(
+            'automaticReleasePausedAt',
+            $automaticReleasePauseState !== null
+                ? $this->backendDateFormatter->format($automaticReleasePauseState->getPausedAt())
+                : null
+        );
     }
 
     public function detailsAction(
@@ -248,11 +279,127 @@ class BackendController extends \Neos\Flow\Mvc\Controller\ActionController
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
 
+    public function pauseAutomaticReleasesAction(?string $contentStore = null): ?string
+    {
+        if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
+            $this->response->setStatusCode(405);
+            return 'Method not allowed';
+        }
+
+        $this->automaticReleaseSwitchService->pause();
+        $this->addFlashMessage($this->translateById('automaticReleases.paused.flashMessage'));
+
+        $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
+
+        return null;
+    }
+
+    public function resumeAutomaticReleasesAction(?string $contentStore = null): ?string
+    {
+        if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
+            $this->response->setStatusCode(405);
+            return 'Method not allowed';
+        }
+
+        $this->automaticReleaseSwitchService->resume();
+        $this->addFlashMessage($this->translateById('automaticReleases.resumed.flashMessage'));
+
+        $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
+
+        return null;
+    }
+
     public function toggleConfigEpochAction(string $redisInstanceIdentifier)
     {
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
         $this->contentReleaseManager->toggleConfigEpoch($redisInstanceIdentifier);
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
+    }
+
+    /**
+     * Where the documents of a quick release are named. The index page offers it only while automatic releases are
+     * paused, which is the situation a quick release exists for.
+     */
+    public function quickPublishFormAction(?string $contentStore = null, string $nodeIdentifiers = ''): void
+    {
+        $this->view->assign('contentStore', $contentStore);
+        $this->view->assign('nodeIdentifiers', $nodeIdentifiers);
+    }
+
+    /**
+     * What the given identifiers resolve to, before anything is published. The identifiers end up in a shell command
+     * in the pipeline, so this is also where anything which is not a node identifier is rejected.
+     */
+    public function quickPublishPreviewAction(string $nodeIdentifiers, ?string $contentStore = null): ?string
+    {
+        if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
+            $this->response->setStatusCode(405);
+            return 'Method not allowed';
+        }
+
+        try {
+            $identifiers = NodeIdentifiers::fromUserInput($nodeIdentifiers);
+        } catch (Exception $exception) {
+            $this->addFlashMessage($exception->getMessage(), '', Message::SEVERITY_ERROR);
+            $this->redirect('quickPublishForm', null, null, [
+                'contentStore' => $contentStore,
+                'nodeIdentifiers' => $nodeIdentifiers
+            ]);
+
+            return null;
+        }
+
+        $previewRows = $this->quickPublishPreviewService->preview($identifiers, $this->controllerContext);
+
+        $this->view->assign('contentStore', $contentStore);
+        $this->view->assign('nodeIdentifiers', (string) $identifiers);
+        $this->view->assign('previewRows', $previewRows);
+        $this->view->assign('publishedRowCount', $this->quickPublishPreviewService->countPublishedRows($previewRows));
+
+        return null;
+    }
+
+    public function quickPublishAction(string $nodeIdentifiers, ?string $contentStore = null): ?string
+    {
+        if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
+            $this->response->setStatusCode(405);
+            return 'Method not allowed';
+        }
+
+        try {
+            $contentReleaseIdentifier = $this->contentReleaseManager->startQuickContentRelease(NodeIdentifiers::fromUserInput(
+                $nodeIdentifiers
+            ));
+        } catch (Exception $exception) {
+            // both the identifier check and the manager phrase their messages for the person reading this page
+            $this->addFlashMessage($exception->getMessage(), '', Message::SEVERITY_ERROR);
+            $this->redirect('quickPublishForm', null, null, [
+                'contentStore' => $contentStore,
+                'nodeIdentifiers' => $nodeIdentifiers
+            ]);
+
+            return null;
+        }
+
+        $this->addFlashMessage($this->translateById('quickPublish.scheduled.flashMessage', [$contentReleaseIdentifier->getIdentifier()]));
+        $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
+
+        return null;
+    }
+
+    /**
+     * @param array<int, mixed> $arguments
+     */
+    private function translateById(string $labelId, array $arguments = []): string
+    {
+        return (string) $this->translator->translateById(
+            $labelId,
+            $arguments,
+            null,
+            null,
+            'Main',
+            'Flowpack.DecoupledContentStore'
+        );
     }
 }

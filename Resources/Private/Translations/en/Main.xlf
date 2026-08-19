@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file original="" product-name="Flowpack.DecoupledContentStore" source-language="en" datatype="plaintext">
+		<body>
+			<!-- The switch which suppresses automatically triggered content releases -->
+			<trans-unit id="automaticReleases.pause" xml:space="preserve">
+				<source>Pause automatic releases</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.resume" xml:space="preserve">
+				<source>Resume automatic releases</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.paused.flashMessage" xml:space="preserve">
+				<source>Automatic content releases are paused. Editor publishes will not go live until you resume them.</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.resumed.flashMessage" xml:space="preserve">
+				<source>Automatic content releases are enabled again. Changes published while they were paused go live with the next release.</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.paused.title" xml:space="preserve">
+				<source>Automatic content releases are paused</source>
+			</trans-unit>
+			<trans-unit id="automaticReleases.paused.description" xml:space="preserve">
+				<source>Nothing editors publish goes live until an administrator resumes the releases.</source>
+			</trans-unit>
+			<!-- {0}: date and time, {1}: account, {2}: number of suppressed releases -->
+			<trans-unit id="automaticReleases.paused.details" xml:space="preserve">
+				<source>Paused on {0} by {1}, {2} release(s) suppressed since then.</source>
+			</trans-unit>
+			<!-- {0}: date and time, {1}: number of suppressed releases -->
+			<trans-unit id="automaticReleases.paused.detailsWithoutAccount" xml:space="preserve">
+				<source>Paused on {0}, {1} release(s) suppressed since then.</source>
+			</trans-unit>
+			<!-- Shown to editors in the content module. {0}: date and time, {1}: number of suppressed releases -->
+			<trans-unit id="automaticReleases.paused.contentModuleWarning" xml:space="preserve">
+				<source>Automatic content releases have been paused on {0}, so your changes do not go live yet. {1} release(s) are waiting. An administrator has to resume them in the Content Store module.</source>
+			</trans-unit>
+            <!-- Publishing single documents into a copy of the release which is live -->
+            <trans-unit id="quickPublish.button" xml:space="preserve">
+				<source>Quick publish pages</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.title" xml:space="preserve">
+				<source>Quick publish pages</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.description" xml:space="preserve">
+				<source>A quick release takes the content release which is live now, re-renders the pages you name here into a copy of it and publishes that. Everything else goes live exactly as it is now: pages which embed the ones you publish keep their old teasers, titles and navigation entries until the next full release.</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.label" xml:space="preserve">
+				<source>Node identifiers, one per line or comma separated list:</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.form.submit" xml:space="preserve">
+				<source>Show what would be published</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.title" xml:space="preserve">
+				<source>These pages would be published</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.description" xml:space="preserve">
+				<source>One row per dimension. Rows marked in red are not published - check them before you continue, because a page you meant to fix would stay as it is.</source>
+			</trans-unit>
+            <!-- {0}: number of pages which would be published -->
+            <trans-unit id="quickPublish.preview.submit" xml:space="preserve">
+				<source>Publish {0} page(s) now</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.change" xml:space="preserve">
+				<source>Change the list</source>
+			</trans-unit>
+            <trans-unit id="quickPublish.preview.nothingToPublish" xml:space="preserve">
+				<source>None of these pages can be published, so there is nothing a quick release would change.</source>
+			</trans-unit>
+            <!-- {0}: the content release identifier -->
+            <trans-unit id="quickPublish.scheduled.flashMessage" xml:space="preserve">
+				<source>Content release {0} was started and publishes the pages you named.</source>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

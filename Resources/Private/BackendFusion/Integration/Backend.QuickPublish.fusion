@@ -1,0 +1,157 @@
+// A backend module is dispatched as a sub-request whose arguments Neos reads from "moduleArguments" alone (see
+// Neos\Neos\Controller\Backend\ModuleController::indexAction), so every form field an action expects has to be
+// named inside that namespace - a field posted at the top level never reaches the action. __csrfToken is a Flow
+// argument of the outer request and stays where it is. The other buttons in this module do not run into this,
+// because they carry their parameters in the formaction URI, which the UriBuilder namespaces already.
+
+Flowpack.DecoupledContentStore.BackendController.quickPublishForm = Neos.Fusion:Component {
+
+    // Context Variables:
+    // - contentStore: string content store identifier, or NULL
+    // - nodeIdentifiers: what was typed in before, when the form is shown again after an error
+
+    _previewUri = Neos.Fusion:UriBuilder {
+        action = 'quickPublishPreview'
+    }
+
+    renderer = afx`
+        <div id="app">
+            <Flowpack.DecoupledContentStore:FlashMessages id="neos-notifications-inline" class="flashmessages" />
+            <div class="neos-content neos-container-fluid">
+                <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
+                <legend><Flowpack.DecoupledContentStore:Translate id="quickPublish.form.title" /></legend>
+                <div class="neos-row-fluid">
+                    <p><Flowpack.DecoupledContentStore:Translate id="quickPublish.form.description" /></p>
+                    <form method="post" action={props._previewUri}>
+                        <input type="hidden" name="__csrfToken" value={Security.csrfToken()} />
+                        <input type="hidden" name="moduleArguments[contentStore]" value={contentStore} />
+                        <label for="nodeIdentifiers">
+                            <Flowpack.DecoupledContentStore:Translate id="quickPublish.form.label" />
+                        </label>
+                        <textarea
+                            id="nodeIdentifiers"
+                            name="moduleArguments[nodeIdentifiers]"
+                            rows="8"
+                            style="width: 100%; max-width: 40rem; display: block; margin: .5rem 0 1rem;"
+                        >{nodeIdentifiers}</textarea>
+                        <button type="submit" class="neos-button neos-button-primary">
+                            <Flowpack.DecoupledContentStore:Translate id="quickPublish.form.submit" />
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="neos-footer">
+            <Flowpack.DecoupledContentStore:QuickPublishBackLink />
+        </div>
+    `
+}
+
+Flowpack.DecoupledContentStore.BackendController.quickPublishPreview = Neos.Fusion:Component {
+
+    // Context Variables:
+    // - contentStore: string content store identifier, or NULL
+    // - nodeIdentifiers: the validated identifiers, comma separated
+    // - previewRows: list of QuickPublishPreviewRow objects, one per dimension variant
+    // - publishedRowCount: how many of them a quick release would actually render
+
+    renderer = Neos.Fusion:Component {
+        _quickPublishUri = Neos.Fusion:UriBuilder {
+            action = 'quickPublish'
+        }
+
+        _renderedTableBody = Neos.Fusion:Loop {
+            items = ${previewRows}
+            itemRenderer = afx`
+                <tr>
+                    <td>
+                        <a @if.hasBackendUri={item.backendUri} href={item.backendUri} target="_blank">{item.title}</a>
+                        <span @if.hasNoBackendUri={!item.backendUri}>{item.title}</span>
+                        {' '}
+                        <span
+                            @if.isNotPublished={!item.published}
+                            class="neos-badge neos-badge-important"
+                            title="not published"
+                            data-neos-toggle="tooltip"
+                        >{item.skipReason}</span>
+                    </td>
+                    <td>{item.nodePath}</td>
+                    <td>{item.dimensions}</td>
+                    <td>{item.nodeTypeName}</td>
+                    <td>{item.nodeIdentifier}</td>
+                </tr>
+            `
+        }
+
+        renderer = afx`
+            <div id="app">
+                <Flowpack.DecoupledContentStore:FlashMessages id="neos-notifications-inline" class="flashmessages" />
+                <div class="neos-content neos-container-fluid">
+                    <Flowpack.DecoupledContentStore:Integration.StylesAndScripts/>
+                    <legend><Flowpack.DecoupledContentStore:Translate id="quickPublish.preview.title" /></legend>
+                    <div class="neos-row-fluid">
+                        <p><Flowpack.DecoupledContentStore:Translate id="quickPublish.preview.description" /></p>
+                        <table class="neos-table">
+                            <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Path</th>
+                                <th>Dimensions</th>
+                                <th>Node Type</th>
+                                <th>Identifier</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                {props._renderedTableBody}
+                            </tbody>
+                        </table>
+
+                        <p @if.publishesNothing={publishedRowCount == 0}>
+                            <Flowpack.DecoupledContentStore:Translate id="quickPublish.preview.nothingToPublish" />
+                        </p>
+                        <form
+                            @if.publishesSomething={publishedRowCount > 0}
+                            method="post"
+                            action={props._quickPublishUri}
+                            style="margin-top: 2rem;"
+                        >
+                            <input type="hidden" name="__csrfToken" value={Security.csrfToken()} />
+                            <input type="hidden" name="moduleArguments[contentStore]" value={contentStore} />
+                            <input type="hidden" name="moduleArguments[nodeIdentifiers]" value={nodeIdentifiers} />
+                            <button type="submit" class="neos-button neos-button-warning">
+                                <Flowpack.DecoupledContentStore:Translate
+                                    id="quickPublish.preview.submit"
+                                    arguments={[publishedRowCount]}
+                                />
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="neos-footer">
+                <Flowpack.DecoupledContentStore:QuickPublishBackLink />
+                <Neos.Fusion:Link.Action
+                    href.action="quickPublishForm"
+                    href.arguments={{contentStore: contentStore, nodeIdentifiers: nodeIdentifiers}}
+                    class="neos-button"
+                >
+                    <Flowpack.DecoupledContentStore:Translate id="quickPublish.preview.change" />
+                </Neos.Fusion:Link.Action>
+            </div>
+        `
+    }
+}
+
+prototype(Flowpack.DecoupledContentStore:QuickPublishBackLink) < prototype(Neos.Fusion:Component) {
+    renderer = afx`
+        <Neos.Fusion:Link.Action
+            href.action="index"
+            href.arguments={{contentStore: contentStore}}
+            class="neos-button"
+        >
+            <i class="fa fa-arrow-left"></i> Content Store
+        </Neos.Fusion:Link.Action>
+    `
+}
