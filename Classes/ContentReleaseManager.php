@@ -165,7 +165,12 @@ class ContentReleaseManager
         // quick releases consume - so without the isCompleted() guard one cancelled job blocks them all until then.
         $queuedQuickReleaseJobs = $quickReleaseJobs->waiting()
             ->filter(static fn(Job $job): bool => !$job->isCompleted());
-        if ($quickReleaseJobs->running()->getArray() !== [] || $queuedQuickReleaseJobs->getArray() !== []) {
+        // Jobs::running() means "started but not ended". A job that was running when prunner stopped
+        // is flagged cancelled on its next boot but never gets an end timestamp, and cancelling it
+        // again is a no-op for prunner - so it reads as running for the rest of its retention window.
+        $runningQuickReleaseJobs = $quickReleaseJobs->running()
+            ->filter(static fn(Job $job): bool => !$job->isCanceled());
+        if ($runningQuickReleaseJobs->getArray() !== [] || $queuedQuickReleaseJobs->getArray() !== []) {
             throw new QuickContentReleaseNotPossibleException(
                 'Another quick content release is still on its way. Wait for it to go live, then publish these nodes.',
                 1786963711,
