@@ -147,6 +147,19 @@ class ContentReleaseManagerTest extends UnitTestCase
         $this->buildContentReleaseManager()->startQuickContentRelease($this->nodeIdentifiers());
     }
 
+    public function testAQuickReleaseIsScheduledAfterAnEarlierOneWasCancelledByAPrunnerRestart(): void
+    {
+        // prunner flags a job it finds running on boot as cancelled, but never gives it an end time, so it stays
+        // "started but not ended" - and cancelling it again does nothing - for the rest of its retention window
+        $this->currentContentReleaseId = '5';
+        $this->prunnerApiService
+            ->method('loadPipelinesAndJobs')
+            ->willReturn($this->jobsResponse('do_quick_content_release', true, true, false));
+        $this->prunnerApiService->expects(self::once())->method('schedulePipeline');
+
+        $this->buildContentReleaseManager()->startQuickContentRelease($this->nodeIdentifiers());
+    }
+
     public function testARunningQuickReleaseIsCancelledAlongWithTheOtherContentReleases(): void
     {
         // it ends up being switched live just like a full release does, so "cancel" has to reach it
@@ -164,12 +177,15 @@ class ContentReleaseManagerTest extends UnitTestCase
     }
 
     /**
-     * @param bool $canceled a cancelled job is a completed one as well, whether or not it ever started
+     * @param bool $canceled a job cancelled through prunner's API is a completed one as well, whether or not it
+     *                       ever started - pass $completed explicitly for the one case where it is not: a job
+     *                       prunner found running on boot and flagged cancelled without ever ending it
      */
     private function jobsResponse(
         string $pipeline,
         bool $started,
         bool $canceled = false,
+        ?bool $completed = null,
     ): PipelinesAndJobsResponse {
         return PipelinesAndJobsResponse::fromJsonArray([
             'pipelines' => [],
@@ -178,7 +194,7 @@ class ContentReleaseManagerTest extends UnitTestCase
                     'id' => 'job-id',
                     'pipeline' => $pipeline,
                     'tasks' => [],
-                    'completed' => $canceled,
+                    'completed' => $completed ?? $canceled,
                     'canceled' => $canceled,
                     'errored' => false,
                     'created' => '2026-08-17T10:00:00+02:00',
