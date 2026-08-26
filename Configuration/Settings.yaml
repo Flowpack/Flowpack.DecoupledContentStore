@@ -62,6 +62,16 @@ Flowpack:
       # Recurse to child nodes of hidden nodes
       recurseHiddenContent: false
 
+      # PERFORMANCE TRACING (Local Debugging)
+      # Records how long every single document takes to render, so you can see which page is slow.
+      # Needs sandstorm/plumber (see the composer "suggest" section and the README).
+      # To enable tracing of the rendering, comment-in the following lines:
+      # performanceTracer:
+      #   factoryObjectName: Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory
+      #   options:
+      #     # how long must a document take to be recorded? if 0, everything is recorded.
+      #     minimumDocumentDurationMs: 0
+
 
 
     extensions:

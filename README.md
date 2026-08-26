@@ -729,6 +729,42 @@ so out loud. If you hit it on an older version, flush the affected documents fro
 The orchestrator's exit codes: `1` release already completed, `2` empty enumeration, `3` retry limit reached,
 `4` rendering errors.
 
+#### Finding out which document is slow
+
+The rendering has a tracer slot at
+`Flowpack.DecoupledContentStore.nodeRendering.performanceTracer`. There is no on/off flag: the setting either
+names a factory or it is absent, and absent means nothing is recorded. Comment it in:
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    nodeRendering:
+      performanceTracer:
+        factoryObjectName: Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory
+        options:
+          # how long must a document take to be recorded? if 0, everything is recorded.
+          minimumDocumentDurationMs: 0
+```
+
+The shipped implementation needs [sandstorm/plumber](https://github.com/sandstorm/Plumber)
+(`composer require --dev sandstorm/plumber`), which must have profiling switched on itself
+(`Sandstorm.Plumber.enabled: true`). The factory throws if the package is missing - the setting is only ever
+reachable when somebody configured it on purpose, so it fails loudly rather than silently doing nothing.
+
+Two spans are recorded per document: `Content Release: Render Document`, same name for every document so a
+profiler can sum it into one figure, and `Content Release Document: <contextPath>`, one distinct name per page.
+
+What the resulting profiles look like:
+
+* **One profile per render worker run, not per release, and not per document.** A worker restarts itself after 20
+  documents (`RESTART_AFTER_RENDER_COUNT`), and every restart writes its own profile. A release rendered by four
+  workers therefore leaves `ceil(documents / 20)` profiles behind.
+* All of them carry the tag `contentRelease:<releaseId>` and the run options `Content Release` and `Renderer`,
+  which is how you collect the profiles belonging to one release.
+
+To write your own tracer - e.g. one that just appends `duration<TAB>url` lines and needs no Plumber at all -
+implement `RenderTracerInterface` plus `RenderTracerFactoryInterface` and point `factoryObjectName` at it.
+
 ### Testing the Rendering
 
 The behavioral tests need the `neos/behat` package (`composer require --dev neos/behat`), which brings Behat itself

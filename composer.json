@@ -9,6 +9,9 @@
     "albertofem/rsync-lib": "~1.0",
     "flowpack/prunner": "*"
   },
+  "suggest": {
+    "sandstorm/plumber": "Profiles the rendering of a content release, so you can see which document is slow. Comment in Flowpack.DecoupledContentStore.nodeRendering.performanceTracer to use it."
+  },
   "require-dev": {
     "phpstan/phpstan": "^2.2",
     "phpstan/phpstan-phpunit": "^2.0",

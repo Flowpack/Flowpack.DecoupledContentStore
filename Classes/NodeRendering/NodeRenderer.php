@@ -18,6 +18,8 @@ use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\DocumentRenderedE
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
+use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
+use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerProvider;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
@@ -54,6 +56,18 @@ class NodeRenderer
 {
     protected const RESTART_AFTER_RENDER_COUNT = 20;
     protected const CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT = 5;
+
+    /**
+     * Name of the span around every document rendering. It is the same for all documents on purpose, so that a
+     * profiler can sum it up into a single "time spent rendering documents" figure.
+     */
+    public const SPAN_RENDER_DOCUMENT = 'Content Release: Render Document';
+
+    /**
+     * Prefix of the per-document span. Distinct name per document, which is what makes a timeline view and
+     * "group by span name" useful.
+     */
+    public const SPAN_DOCUMENT_PREFIX = 'Content Release Document: ';
 
     /**
      * @Flow\Inject
@@ -133,12 +147,20 @@ class NodeRenderer
      */
     protected $nodeRenderingExtensionManager;
 
+    #[Flow\Inject]
+    protected RenderTracerProvider $renderTracerProvider;
+
     public function render(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
         RendererIdentifier $rendererIdentifier,
     ) {
         $contentReleaseLogger = $contentReleaseLogger->withRenderer($rendererIdentifier);
+
+        $this->renderTracerProvider->getTracer()->describeRun([
+            RenderTracerInterface::META_CONTENT_RELEASE => $contentReleaseIdentifier->getIdentifier(),
+            RenderTracerInterface::META_RENDERER => $rendererIdentifier->string(),
+        ]);
 
         $i = 0;
         while (true) {
@@ -268,11 +290,25 @@ class NodeRenderer
                     'arguments' => $enumeratedNode->getArguments(),
                 ]);
 
-                $this->nodeRenderingExtensionManager->renderDocumentNodeVariant(
-                    $node,
-                    $enumeratedNode,
-                    $contentReleaseLogger,
-                );
+                $tracer = $this->renderTracerProvider->getTracer();
+                $spanParams = [
+                    'node' => $node->getContextPath(),
+                    'site' => $enumeratedNode->getSiteNodeNameFromContextPath(),
+                    'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
+                    'arguments' => $enumeratedNode->getArguments(),
+                ];
+                $tracer->openSpan(self::SPAN_RENDER_DOCUMENT, $spanParams);
+                $tracer->openSpan(self::SPAN_DOCUMENT_PREFIX . $node->getContextPath(), $spanParams);
+                try {
+                    $this->nodeRenderingExtensionManager->renderDocumentNodeVariant(
+                        $node,
+                        $enumeratedNode,
+                        $contentReleaseLogger,
+                    );
+                } finally {
+                    $tracer->closeSpan();
+                    $tracer->closeSpan();
+                }
             }
 
             // NOTE: we do not abort rendering directly, when we encounter any error, but we try to render
