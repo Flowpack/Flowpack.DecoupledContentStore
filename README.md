@@ -746,6 +746,12 @@ Flowpack:
           minimumDocumentDurationMs: 0
 ```
 
+**Set `minimumDocumentDurationMs` for a full release.** With `0` every render batch writes a profile; one
+measured full release of ~36.000 document renders wrote 1817 of them totalling 17 GB - which `/plumber` cannot
+list. Above `0` the threshold decides twice: a document faster than it is not recorded, and a batch of 20
+documents in which *nothing* crossed it is not written at all. At 5000 ms that same release would have left
+roughly 20 profiles behind, and those are the ones worth opening. A quick release is small enough for `0`.
+
 The shipped implementation needs [sandstorm/plumber](https://github.com/sandstorm/Plumber)
 (`composer require --dev sandstorm/plumber`) to be installed, but **not** to be switched on. Leave
 `Sandstorm.Plumber.enabled` at `false`: the factory calls `Profiler::startIfNotRunning()`, so a profiling run
@@ -763,7 +769,8 @@ What the resulting profiles look like:
 
 * **One profile per render worker run, not per release, and not per document.** A worker restarts itself after 20
   documents (`RESTART_AFTER_RENDER_COUNT`), and every restart writes its own profile. A release rendered by four
-  workers therefore leaves `ceil(documents / 20)` profiles behind.
+  workers therefore leaves `ceil(documents / 20)` profiles behind - unless `minimumDocumentDurationMs` is set, in
+  which case only the batches containing a document above the threshold are kept.
 * All of them carry the tag `contentRelease:<releaseId>` and the run options `Content Release` and `Renderer`,
   which is how you collect the profiles belonging to one release.
 * The profile starts with the first document, not with the process, because that is where the run is started.

@@ -50,6 +50,10 @@ final class PlumberTracer implements RenderTracerInterface
             return;
         }
 
+        // A worker restarts every RESTART_AFTER_RENDER_COUNT documents, so a full release produces ~1800
+        // profiles. With a threshold set, the factory armed the run to be thrown away unless something crossed
+        // it - this is that something, so the profile is worth writing.
+        $this->profilingRun->markAsRelevant();
         $this->profilingRun->manualTimer($name, $params, $startTimestamp, $stopTimestamp);
     }
 

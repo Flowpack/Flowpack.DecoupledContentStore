@@ -19,6 +19,11 @@ use Sandstorm\Plumber\Core\Profiler;
  */
 final class PlumberTracerTest extends UnitTestCase
 {
+    /**
+     * @var list<string>
+     */
+    private array $temporaryProfilePaths = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -40,7 +45,23 @@ final class PlumberTracerTest extends UnitTestCase
             Profiler::getInstance()->stop();
             $instance->setValue(null, null);
         }
+
+        foreach ($this->temporaryProfilePaths as $path) {
+            array_map('unlink', glob($path . '/*') ?: []);
+            rmdir($path);
+        }
+        $this->temporaryProfilePaths = [];
+
         parent::tearDown();
+    }
+
+    private function temporaryProfilePath(): string
+    {
+        $path = sys_get_temp_dir() . '/plumber-tracer-test-' . bin2hex(random_bytes(6));
+        mkdir($path);
+        $this->temporaryProfilePaths[] = $path;
+
+        return $path;
     }
 
     public function testNothingConfiguredMeansNoTracer(): void
@@ -112,6 +133,61 @@ final class PlumberTracerTest extends UnitTestCase
         $timers = $this->timersByName($run);
         self::assertArrayNotHasKey('fast', $timers);
         self::assertArrayHasKey('slow', $timers);
+    }
+
+    public function testABatchWithoutASurvivingSpanIsNotWrittenAtAll(): void
+    {
+        $profilePath = $this->temporaryProfilePath();
+
+        $run = new ProfilingRun();
+        $run->start();
+        $run->discardUnlessMarkedRelevant();
+        $tracer = new PlumberTracer($run, 50.0);
+        $tracer->openSpan('fast');
+        $tracer->closeSpan();
+        $run->stop();
+        $run->save(['profilePath' => $profilePath]);
+
+        self::assertSame([], glob($profilePath . '/*.profile'));
+    }
+
+    public function testABatchWithASlowDocumentIsWritten(): void
+    {
+        $profilePath = $this->temporaryProfilePath();
+
+        $run = new ProfilingRun();
+        $run->start();
+        $run->discardUnlessMarkedRelevant();
+        $tracer = new PlumberTracer($run, 50.0);
+        $tracer->openSpan('slow');
+        usleep(60000);
+        $tracer->closeSpan();
+        $run->stop();
+        $run->save(['profilePath' => $profilePath]);
+
+        self::assertCount(1, glob($profilePath . '/*.profile'));
+        self::assertCount(1, glob($profilePath . '/*.meta.json'));
+    }
+
+    /**
+     * Without a threshold every batch is interesting, so the run must not be armed - otherwise a release
+     * configured to record everything would write nothing.
+     */
+    public function testTheFactoryOnlyArmsTheDiscardWhenAThresholdIsConfigured(): void
+    {
+        $profilePath = $this->temporaryProfilePath();
+
+        $profiler = Profiler::getInstance();
+        $profiler->stop();
+        $profiler->setConfigurationProvider(static fn(): array => ['profilePath' => $profilePath]);
+
+        $tracer = (new PlumberTracerFactory())->build(['minimumDocumentDurationMs' => 0]);
+        $tracer->openSpan('anything');
+        $tracer->closeSpan();
+
+        $profiler->stopAndSave();
+
+        self::assertCount(1, glob($profilePath . '/*.profile'));
     }
 
     public function testClosingMoreSpansThanWereOpenedIsAnError(): void
