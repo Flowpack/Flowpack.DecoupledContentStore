@@ -22,8 +22,11 @@ final class PlumberTracerFactory implements RenderTracerFactoryInterface
             );
         }
 
+        // startIfNotRunning() instead of getRun(): Sandstorm.Plumber is normally switched off, so that a
+        // backend click does not end up in the profile list next to the content release. Starting the run
+        // here means the process which renders documents is the only one which produces a profile at all.
         return new PlumberTracer(
-            Profiler::getInstance()->getRun(),
+            Profiler::getInstance()->startIfNotRunning(),
             (float)($options['minimumDocumentDurationMs'] ?? 0),
         );
     }

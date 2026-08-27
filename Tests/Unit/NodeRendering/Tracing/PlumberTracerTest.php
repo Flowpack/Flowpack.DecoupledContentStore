@@ -8,8 +8,10 @@ use Flowpack\DecoupledContentStore\NodeRendering\Tracing\NullTracer;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracer;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerProvider;
+use Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory;
 use Neos\Flow\Tests\UnitTestCase;
 use Sandstorm\Plumber\Core\Domain\Model\ProfilingRun;
+use Sandstorm\Plumber\Core\Profiler;
 
 /**
  * Tests the tracer slot of the rendering against a real Plumber ProfilingRun, because what matters is the shape of
@@ -23,6 +25,22 @@ final class PlumberTracerTest extends UnitTestCase
         if (!class_exists(ProfilingRun::class)) {
             self::markTestSkipped('sandstorm/plumber is an optional dependency and is not installed.');
         }
+    }
+
+    /**
+     * The factory starts a profiling run, and the Profiler is a singleton for the whole process - so a test
+     * which builds a tracer would otherwise leave a run recording, which the shutdown function of
+     * Sandstorm.Plumber writes to disk when the test suite ends.
+     */
+    protected function tearDown(): void
+    {
+        if (class_exists(Profiler::class)) {
+            $instance = new \ReflectionProperty(Profiler::class, 'instance');
+            $instance->setAccessible(true);
+            Profiler::getInstance()->stop();
+            $instance->setValue(null, null);
+        }
+        parent::tearDown();
     }
 
     public function testNothingConfiguredMeansNoTracer(): void
@@ -39,6 +57,20 @@ final class PlumberTracerTest extends UnitTestCase
         ]);
 
         self::assertInstanceOf(PlumberTracer::class, $provider->getTracer());
+    }
+
+    public function testTheFactoryStartsAProfilingRunSoThatOnlyTheRenderingIsProfiled(): void
+    {
+        $profiler = Profiler::getInstance();
+        $profiler->stop();
+        $profiler->setConfigurationProvider(static fn() => ['profilePath' => 'php://memory']);
+
+        $tracer = (new PlumberTracerFactory())->build([]);
+        $tracer->mark('rendering started');
+
+        $run = $profiler->stop();
+        self::assertInstanceOf(ProfilingRun::class, $run);
+        self::assertSame(['rendering started'], array_column($run->getTimestamps(), 'name'));
     }
 
     public function testAFactoryWhichDoesNotImplementTheInterfaceIsRejected(): void
