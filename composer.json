@@ -18,7 +18,8 @@
     "phpunit/phpunit": "^10.0",
     "phpstan/extension-installer": "^1.4",
     "phpstan/phpstan-strict-rules": "^2.0",
-    "ergebnis/phpstan-rules": "^2.13"
+    "ergebnis/phpstan-rules": "^2.13",
+    "sandstorm/plumber": "^4.1"
   },
   "autoload": {
     "psr-4": {
