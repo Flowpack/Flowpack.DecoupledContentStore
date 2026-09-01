@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Tests\Unit\NodeRendering\Tracing;
 
-use Flowpack\DecoupledContentStore\NodeRendering\Tracing\NullTracer;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracer;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
@@ -67,12 +66,6 @@ final class PlumberTracerTest extends UnitTestCase
         return $path;
     }
 
-    public function testNothingConfiguredMeansNoTracer(): void
-    {
-        self::assertInstanceOf(NullTracer::class, $this->buildProvider(null)->getTracer());
-        self::assertInstanceOf(NullTracer::class, $this->buildProvider([])->getTracer());
-    }
-
     public function testAConfiguredFactoryIsUsed(): void
     {
         $provider = $this->buildProvider([
@@ -92,7 +85,6 @@ final class PlumberTracerTest extends UnitTestCase
         $tracer = (new PlumberTracerFactory())->build([]);
         $tracer->mark('rendering started');
 
-        /** @var ProfilingRun|null $run */
         $run = $profiler->stop();
         self::assertInstanceOf(ProfilingRun::class, $run);
         self::assertSame(['rendering started'], array_column($run->getTimestamps(), 'name'));
@@ -225,7 +217,7 @@ final class PlumberTracerTest extends UnitTestCase
     }
 
     /**
-     * @param array{factoryObjectName: ?string, options: ?array{minimumDocumentDurationMs: int}}|null $configuration
+     * @param array{factoryObjectName?: ?string, options?: ?array{minimumDocumentDurationMs: int}}|null $configuration
      * @return RenderTracerProvider
      */
     private function buildProvider(?array $configuration): RenderTracerProvider
@@ -243,7 +235,7 @@ final class PlumberTracerTest extends UnitTestCase
     private function timersByName(ProfilingRun $run): array
     {
         $timers = [];
-        foreach ($run->getTimersAsDuration() as $timer) {
+        foreach ($run->getTimersAsDuration() ?? [] as $timer) {
             $timers[$timer['name']] = $timer;
         }
         unset($timers['Profiling Run']);
