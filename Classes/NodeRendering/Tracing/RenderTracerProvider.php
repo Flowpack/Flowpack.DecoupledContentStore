@@ -15,6 +15,9 @@ use Neos\Flow\Annotations as Flow;
 #[Flow\Scope('singleton')]
 class RenderTracerProvider
 {
+    /**
+     * @var array{factoryObjectName: ?string, options: ?array{minimumDocumentDurationMs: int}}|null
+     */
     #[Flow\InjectConfiguration('nodeRendering.performanceTracer')]
     protected ?array $configuration = null;
 
@@ -29,7 +32,7 @@ class RenderTracerProvider
         return $this->tracer;
     }
 
-    protected function buildTracer(): RenderTracerInterface
+    private function buildTracer(): RenderTracerInterface
     {
         $factoryObjectName = $this->configuration['factoryObjectName'] ?? null;
         if (!is_string($factoryObjectName) || $factoryObjectName === '') {

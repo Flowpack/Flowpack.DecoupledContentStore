@@ -6,10 +6,11 @@ namespace Flowpack\DecoupledContentStore\Tests\Unit\NodeRendering\Tracing;
 
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\NullTracer;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracer;
+use Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerProvider;
-use Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory;
 use Neos\Flow\Tests\UnitTestCase;
+use ReflectionProperty;
 use Sandstorm\Plumber\Core\Domain\Model\ProfilingRun;
 use Sandstorm\Plumber\Core\Profiler;
 
@@ -40,14 +41,16 @@ final class PlumberTracerTest extends UnitTestCase
     protected function tearDown(): void
     {
         if (class_exists(Profiler::class)) {
-            $instance = new \ReflectionProperty(Profiler::class, 'instance');
-            $instance->setAccessible(true);
+            $instance = new ReflectionProperty(Profiler::class, 'instance');
             Profiler::getInstance()->stop();
             $instance->setValue(null, null);
         }
 
         foreach ($this->temporaryProfilePaths as $path) {
-            array_map('unlink', glob($path . '/*') ?: []);
+            $fileNames = glob($path . '/*');
+            if (is_array($fileNames)) {
+                array_map('unlink', $fileNames);
+            }
             rmdir($path);
         }
         $this->temporaryProfilePaths = [];
@@ -73,7 +76,7 @@ final class PlumberTracerTest extends UnitTestCase
     public function testAConfiguredFactoryIsUsed(): void
     {
         $provider = $this->buildProvider([
-            'factoryObjectName' => \Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory::class,
+            'factoryObjectName' => PlumberTracerFactory::class,
             'options' => ['minimumDocumentDurationMs' => 0],
         ]);
 
@@ -89,6 +92,7 @@ final class PlumberTracerTest extends UnitTestCase
         $tracer = (new PlumberTracerFactory())->build([]);
         $tracer->mark('rendering started');
 
+        /** @var ProfilingRun|null $run */
         $run = $profiler->stop();
         self::assertInstanceOf(ProfilingRun::class, $run);
         self::assertSame(['rendering started'], array_column($run->getTimestamps(), 'name'));
@@ -165,8 +169,12 @@ final class PlumberTracerTest extends UnitTestCase
         $run->stop();
         $run->save(['profilePath' => $profilePath]);
 
-        self::assertCount(1, glob($profilePath . '/*.profile'));
-        self::assertCount(1, glob($profilePath . '/*.meta.json'));
+        $profileFiles = glob($profilePath . '/*.profile');
+        self::assertIsArray($profileFiles);
+        self::assertCount(1, $profileFiles);
+        $metaFiles = glob($profilePath . '/*.meta.json');
+        self::assertIsArray($metaFiles);
+        self::assertCount(1, $metaFiles);
     }
 
     /**
@@ -187,7 +195,9 @@ final class PlumberTracerTest extends UnitTestCase
 
         $profiler->stopAndSave();
 
-        self::assertCount(1, glob($profilePath . '/*.profile'));
+        $profileFiles = glob($profilePath . '/*.profile');
+        self::assertIsArray($profileFiles);
+        self::assertCount(1, $profileFiles);
     }
 
     public function testClosingMoreSpansThanWereOpenedIsAnError(): void
@@ -214,18 +224,21 @@ final class PlumberTracerTest extends UnitTestCase
         );
     }
 
+    /**
+     * @param array{factoryObjectName: ?string, options: ?array{minimumDocumentDurationMs: int}}|null $configuration
+     * @return RenderTracerProvider
+     */
     private function buildProvider(?array $configuration): RenderTracerProvider
     {
         $provider = new RenderTracerProvider();
-        $reflection = new \ReflectionProperty(RenderTracerProvider::class, 'configuration');
-        $reflection->setAccessible(true);
+        $reflection = new ReflectionProperty(RenderTracerProvider::class, 'configuration');
         $reflection->setValue($provider, $configuration);
 
         return $provider;
     }
 
     /**
-     * @return array<string, array{start: float, stop: float, name: string, data: array}>
+     * @return array<string, array{start: float, stop: float, name: string, data: mixed[]}>
      */
     private function timersByName(ProfilingRun $run): array
     {
