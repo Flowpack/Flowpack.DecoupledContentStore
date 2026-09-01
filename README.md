@@ -729,6 +729,57 @@ so out loud. If you hit it on an older version, flush the affected documents fro
 The orchestrator's exit codes: `1` release already completed, `2` empty enumeration, `3` retry limit reached,
 `4` rendering errors.
 
+#### Finding out which document is slow
+
+The rendering has a tracer slot at
+`Flowpack.DecoupledContentStore.nodeRendering.performanceTracer`. There is no on/off flag: the setting either
+names a factory or it is absent, and absent means nothing is recorded. Comment it in:
+
+```yaml
+Flowpack:
+  DecoupledContentStore:
+    nodeRendering:
+      performanceTracer:
+        factoryObjectName: Flowpack\DecoupledContentStore\NodeRendering\Tracing\PlumberTracerFactory
+        options:
+          # how long must a document take to be recorded? if 0, everything is recorded.
+          minimumDocumentDurationMs: 0
+```
+
+**Set `minimumDocumentDurationMs` for a full release.** With `0` every render batch writes a profile; one
+measured full release of ~36.000 document renders wrote 1817 of them totalling 17 GB - which `/plumber` cannot
+list. Above `0` the threshold decides twice: a document faster than it is not recorded, and a batch of 20
+documents in which *nothing* crossed it is not written at all. At 5000 ms that same release would have left
+roughly 20 profiles behind, and those are the ones worth opening. A quick release is small enough for `0`.
+
+The shipped implementation needs [sandstorm/plumber](https://github.com/sandstorm/Plumber)
+(`composer require --dev sandstorm/plumber`) to be installed, but **not** to be switched on. Leave
+`Sandstorm.Plumber.enabled` at `false`: the factory calls `Profiler::startIfNotRunning()`, so a profiling run
+begins in the process which renders documents and nowhere else. That keeps the profile list free of the runs
+every backend click would otherwise produce, which is what makes the list usable - each entry is one render
+worker of one content release. `PLUMBER_ENABLED=0` still switches everything off, including this.
+
+The factory throws if the package is missing - the setting is only ever reachable when somebody configured it on
+purpose, so it fails loudly rather than silently doing nothing.
+
+Two spans are recorded per document: `Content Release: Render Document`, same name for every document so a
+profiler can sum it into one figure, and `Content Release Document: <contextPath>`, one distinct name per page.
+
+What the resulting profiles look like:
+
+* **One profile per render worker run, not per release, and not per document.** A worker restarts itself after 20
+  documents (`RESTART_AFTER_RENDER_COUNT`), and every restart writes its own profile. A release rendered by four
+  workers therefore leaves `ceil(documents / 20)` profiles behind - unless `minimumDocumentDurationMs` is set, in
+  which case only the batches containing a document above the threshold are kept.
+* All of them carry the tag `contentRelease:<releaseId>` and the run options `Content Release` and `Renderer`,
+  which is how you collect the profiles belonging to one release.
+* The profile starts with the first document, not with the process, because that is where the run is started.
+  Bootstrap and command startup are therefore not in it. Use `PLUMBER_ENABLED=1` on a single
+  `./flow nodeRendering:renderWorker` call if you need those too.
+
+To write your own tracer - e.g. one that just appends `duration<TAB>url` lines and needs no Plumber at all -
+implement `RenderTracerInterface` plus `RenderTracerFactoryInterface` and point `factoryObjectName` at it.
+
 ### Testing the Rendering
 
 The behavioral tests need the `neos/behat` package (`composer require --dev neos/behat`), which brings Behat itself
