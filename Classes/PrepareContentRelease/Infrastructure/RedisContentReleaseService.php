@@ -133,6 +133,18 @@ class RedisContentReleaseService
         return $result;
     }
 
+    public function isRegistered(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        RedisInstanceIdentifier $redisInstanceIdentifier,
+    ): bool {
+        return (
+            $this->redisClientManager->getRedis($redisInstanceIdentifier)->zScore(
+                'contentStore:registeredReleases',
+                $contentReleaseIdentifier->getIdentifier(),
+            ) !== false
+        );
+    }
+
     public function fetchMetadataForContentRelease(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ?RedisInstanceIdentifier $redisInstanceIdentifier = null,

@@ -354,6 +354,21 @@ Where those numbers go is up to the site package: write a command which calls th
 whatever collects logs in your setup, then run it as a task at the end of your `pipelines.yml` and from its
 `on_error` hook, so an aborted release is measured too.
 
+### Removed releases in the Backend UI
+
+Prunner keeps the logs of a release independently of Redis - its pipeline's `retention_count` and
+`retention_period` decide how long. The Backend UI therefore lists, below the releases Redis still holds, every
+started job of `do_content_release` and `do_quick_content_release` whose release has been removed, and links to its
+logs. This only happens for the primary content store, the one releases are built in.
+
+To keep the status, author, rendering errors and rendering statistics next to those logs, the keys flagged with
+`keepAfterRemoval` in `redisKeyPostfixesForEachRelease` (by default `meta:info`, `renderingErrors` and
+`renderingStatistics`) are not deleted with their release. Redis expires them after `removedReleaseRetentionSeconds`
+of the content store instead (5 days on the primary one, unset - so deleted right away - everywhere else). The release
+itself leaves `contentStore:registeredReleases` as before, so it can neither be switched to nor built upon, and
+*Prune content store* leaves keys alone which expire on their own. Set `removedReleaseRetentionSeconds` to about the
+prunner `retention_period` of your release pipelines; once both have run out, the release is gone from the UI.
+
 ## Quick Content Releases
 
 Rendering dominates the runtime of a content release: on a big site, a release which changes a single page still

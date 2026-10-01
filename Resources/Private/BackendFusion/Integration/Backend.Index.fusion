@@ -2,6 +2,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
 
     // Context Variables:
     // - overviewData: list of ContentReleaseOverviewRow objects
+    // - removedReleases: list of RemovedContentReleaseOverviewRow objects, or NULL if prunner could not be reached
     // - contentStore: contains string content store identifier
     // - redisContentStores: array of all configured content store identifiers
     // - storeSize: string of content store size
@@ -89,6 +90,8 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                             <span class="neos-badge neos-badge-info">{storeSize}</span>
                         </div>
 
+                        <Flowpack.DecoupledContentStore:RemovedReleases />
+
                         <Flowpack.DecoupledContentStore:ContentStoreActions />
                     </div>
                 </div>
@@ -99,6 +102,66 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
             </div>
         `
     }
+}
+
+// Releases which Redis has dropped, but whose prunner logs are still there. The keys a removed release keeps carry the
+// status, author and errors for a while; once they have expired, the prunner job is all that is shown.
+prototype(Flowpack.DecoupledContentStore:RemovedReleases) < prototype(Neos.Fusion:Component) {
+    removedReleases = ${removedReleases}
+
+    _renderedTableBody = Neos.Fusion:Loop {
+        items = ${removedReleases}
+        itemRenderer = Neos.Fusion:Component {
+            // item instanceof RemovedContentReleaseOverviewRow
+            start = ${Date.format(item.job.start, 'd.m.Y H:i:s')}
+            end = ${item.job.end ? Date.format(item.job.end, 'd.m.Y H:i:s') : ''}
+            switch = ${item.metadata.switchTime ? Date.format(item.metadata.switchTime, 'd.m.Y H:i:s') : ''}
+
+            renderer = afx`
+                <tr>
+                    <td>
+                        <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: item.contentReleaseIdentifier.identifier, contentStore: contentStore, prunnerJobId: item.job.id.id}}>
+                            {item.contentReleaseIdentifier.identifier}
+                        </Neos.Fusion:Link.Action>
+                        {" "}
+                        <span class="neos-badge" title="status" data-neos-toggle="tooltip">{item.status}</span>
+                        <span @if.errors={item.errorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
+                    </td>
+                    <td>{item.job.pipeline}</td>
+                    <td>{item.job.variables.accountId}</td>
+                    <td>{props.start}</td>
+                    <td>{props.end}</td>
+                    <td>{props.switch}</td>
+                    <td>{item.metadata.contentReleaseSize ? item.metadata.contentReleaseSize + " MB" : "-"}</td>
+                </tr>
+            `
+        }
+    }
+
+    renderer = afx`
+        <p @if.prunnerUnreachable={props.removedReleases == null} style="margin-top: 2rem;">
+            Removed releases cannot be listed: the prunner API could not be reached.
+        </p>
+        <Neos.Fusion:Fragment @if.hasRemovedReleases={props.removedReleases && Array.length(props.removedReleases) > 0}>
+            <legend style="margin-top: 3rem;">Removed Releases (logs only)</legend>
+            <table class="neos-table cs-releases-table">
+                <thead>
+                <tr>
+                    <th style="width: 240px">Identifier</th>
+                    <th>Pipeline</th>
+                    <th>Author</th>
+                    <th>Start</th>
+                    <th>Stop</th>
+                    <th>Switch</th>
+                    <th>Release Size</th>
+                </tr>
+                </thead>
+                <tbody>
+                    {props._renderedTableBody}
+                </tbody>
+            </table>
+        </Neos.Fusion:Fragment>
+    `
 }
 
 // Rendered whenever automatic releases are paused, for everybody who can see the module - the pause stops all editor

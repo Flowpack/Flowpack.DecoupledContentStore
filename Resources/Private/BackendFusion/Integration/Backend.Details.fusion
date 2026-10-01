@@ -7,6 +7,7 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
     // - contentStore: string, currently active content store / redis instance
     // - redisContentStores: array of all configured content store identifiers
     // - isPrimary: bool
+    // - removedReleaseJob: Job, only for a removed release whose kept keys have already expired
 
     stdOutLines = ${Flowpack.DecoupledContentStore.formatStdOutput(jobLogs.stdout)}
 
@@ -23,12 +24,24 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
             <h1 class="text-3xl py-5 inline">
               Content Release {contentReleaseIdentifier.identifier}
             </h1>
-            <Neos.Fusion:Fragment @if.hasData={detailsData}>
+            <Neos.Fusion:Fragment @if.hasData={detailsData || removedReleaseJob}>
               {" "}
               <span class="neos-badge" style="vertical-align: super;" title="content store" data-neos-toggle="tooltip">{contentStore}</span>
+              <span @if.isRemoved={detailsData.removed || removedReleaseJob} class="neos-badge neos-badge-warning" style="vertical-align: super;">removed</span>
+              <p @if.onlyJobIsLeft={removedReleaseJob} class="mt-4">
+                This release has been removed, and the details it kept in Redis have expired as well. Only its prunner job and logs are left.
+              </p>
               <Flowpack.DecoupledContentStore:ContentReleaseSteps
+                  @if.hasData={detailsData}
                   _taskResults={detailsData.job.taskResults}
                   prunnerStart={detailsData.job.created}
+              />
+              <Flowpack.DecoupledContentStore:ContentReleaseSteps
+                  @if.onlyJobIsLeft={removedReleaseJob}
+                  _taskResults={removedReleaseJob.taskResults}
+                  prunnerJobId={removedReleaseJob.id.id}
+                  prunnerStart={removedReleaseJob.created}
+                  showStats={false}
               />
               <Neos.Fusion:Loop items={detailsData.manualTransferJobs}>
                   <Flowpack.DecoupledContentStore:ContentReleaseSteps
@@ -52,7 +65,7 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
                    grid supports tracks, and the surplus lines then all end up stacked in the last row. -->
               <div title="stdout" class="stdout flex flex-col gap-2 overflow-x-auto">{props.stdOutLines}</div>
             </Neos.Fusion:Fragment>
-            <p @if.notData={!detailsData}>
+            <p @if.notData={!detailsData && !removedReleaseJob}>
               No data exists for this release in Redis.
             </p>
             <Flowpack.DecoupledContentStore:AggregatedRenderingErrors
@@ -72,6 +85,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
     prunnerStart = ''
     prunnerStart.@process.date = ${value ? Date.format(value, 'd.m.Y H:i:s') : ''}
     manualSwitchTarget = ''
+    showStats = ${!this.isManualTransferPipeline}
 
     renderer = afx`
         <span class="inline-block mt-4" @if.isManualTransferPipeline={props.isManualTransferPipeline}>Start: {props.prunnerStart}, Transfer to: {props.manualSwitchTarget}</span>
@@ -238,13 +252,13 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
         </ol>
 
 
-        <dl @if.isNotManualTransferPipeline={!props.isManualTransferPipeline} class="md:flex md:divide-y-0 divide-y">
+        <dl @if.showStats={props.showStats} class="md:flex md:divide-y-0 divide-y">
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title={"Start: " + props.prunnerStart} />
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Enumerated Pages">
-                    {detailsData.enumeratedDocumentNodesCount}
+                    {detailsData.removed ? '-' : detailsData.enumeratedDocumentNodesCount}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
@@ -489,18 +503,20 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
               Back
             </Neos.Fusion:Link.Action>
 
-            <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: detailsData.contentReleaseIdentifier.identifier}} class="neos-button">
+            <Neos.Fusion:Link.Action href.action="details" href.arguments={{contentReleaseIdentifier: contentReleaseIdentifier.identifier, prunnerJobId: removedReleaseJob.id.id}} class="neos-button">
                 <i class="fa fa-sync"></i> Reload
             </Neos.Fusion:Link.Action>
 
-            <button form="postHelper" formaction={props._removeUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
-                Remove release
-            </button>
-            <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
-                Switch to release
-            </button>
+            <Neos.Fusion:Fragment @if.isRegistered={detailsData && !detailsData.removed}>
+                <button form="postHelper" formaction={props._removeUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
+                    Remove release
+                </button>
+                <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
+                    Switch to release
+                </button>
 
-            {isPrimary ? props._renderedSwitchButtons : ''}
+                {isPrimary ? props._renderedSwitchButtons : ''}
+            </Neos.Fusion:Fragment>
 
         </div>
     `

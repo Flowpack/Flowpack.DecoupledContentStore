@@ -20,6 +20,7 @@ class ContentReleaseDetails
     private int $renderingErrorCount;
     private bool $isActive;
     private ?float $contentReleaseSize;
+    private bool $isRemoved;
 
     /**
      * @var Job[]
@@ -40,6 +41,7 @@ class ContentReleaseDetails
         bool $isActive,
         array $manualTransferJobIds,
         ?float $contentReleaseSize = null,
+        bool $isRemoved = false,
     ) {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->job = $job;
@@ -49,6 +51,7 @@ class ContentReleaseDetails
         $this->isActive = $isActive;
         $this->manualTransferJobs = $manualTransferJobIds;
         $this->contentReleaseSize = $contentReleaseSize;
+        $this->isRemoved = $isRemoved;
     }
 
     /**
@@ -113,5 +116,14 @@ class ContentReleaseDetails
     public function getManualTransferJobs(): array
     {
         return $this->manualTransferJobs;
+    }
+
+    /**
+     * A removed release is no longer registered, so it can neither be switched to nor transferred - only the keys it
+     * keeps after removal are left, and its enumeration is gone.
+     */
+    public function isRemoved(): bool
+    {
+        return $this->isRemoved;
     }
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
-use DateMalformedStringException;
 use DateTimeImmutable;
+use Exception;
 use InvalidArgumentException;
 use Neos\Flow\Annotations as Flow;
 
@@ -34,7 +34,7 @@ final class AutomaticReleasePauseState
      * hide the inconsistency behind a banner claiming the pause started just now.
      *
      * @param array<string, string> $redisHash
-     * @throws DateMalformedStringException
+     * @throws Exception
      */
     public static function fromRedisHash(array $redisHash): self
     {

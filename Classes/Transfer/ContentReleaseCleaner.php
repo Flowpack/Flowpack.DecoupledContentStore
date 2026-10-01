@@ -155,12 +155,20 @@ class ContentReleaseCleaner
         }
 
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
+        $retentionSeconds = $this->redisClientManager->getRemovedReleaseRetentionSeconds($redisIdentifier);
 
         foreach ($redisKeyPostfixesForEachRelease->getRedisKeyPostfixes() as $redisKeyPostfix) {
             $redisKey = $this->redisKeyService->getRedisKeyForPostfix(
                 $contentReleaseIdentifierToRemove,
                 $redisKeyPostfix->getRedisKeyPostfix(),
             );
+            // the release leaves registeredReleases below, so nothing can switch to it or build on it anymore -
+            // what is left only feeds the Backend UI, and Redis drops it once the retention is over
+            if ($retentionSeconds > 0 && $redisKeyPostfix->shouldKeepAfterRemoval()) {
+                $contentReleaseLogger->debug('  - Keeping ' . $redisKey . ' for ' . $retentionSeconds . 's');
+                $redis->expire($redisKey, $retentionSeconds);
+                continue;
+            }
             $contentReleaseLogger->debug('  - Removing ' . $redisKey);
             $redis->del($redisKey);
         }

@@ -149,6 +149,7 @@ final class ContentReleaseMetricsTest extends UnitTestCase
 
         $metrics = $this->createMetrics([], [], null, [$workerErrorLog]);
 
+        self::assertNotNull($metrics->workerErrors);
         self::assertCount(1, $metrics->workerErrors);
         self::assertSame('render_3', $metrics->workerErrors[0]->workerName);
         self::assertFalse($metrics->workerErrors[0]->wasKilledByOrchestrator);
@@ -163,6 +164,7 @@ final class ContentReleaseMetricsTest extends UnitTestCase
 
         $metrics = $this->createMetrics([], [], null, [$workerErrorLog]);
 
+        self::assertNotNull($metrics->workerErrors);
         self::assertTrue($metrics->workerErrors[0]->wasKilledByOrchestrator);
         self::assertNull($metrics->workerErrors[0]->lastAttemptedNodeIdentifier);
     }
@@ -183,6 +185,7 @@ final class ContentReleaseMetricsTest extends UnitTestCase
 
         $metrics = $this->createMetrics([], [], null, $workerErrorLogs);
 
+        self::assertNotNull($metrics->workerErrors);
         self::assertCount(10, $metrics->workerErrors);
     }
 

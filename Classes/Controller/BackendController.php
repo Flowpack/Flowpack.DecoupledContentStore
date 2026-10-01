@@ -136,6 +136,10 @@ class BackendController extends ActionController
 
         $this->view->assign('contentStore', $contentStore->getIdentifier());
         $this->view->assign('overviewData', $this->backendUiDataService->loadBackendOverviewData($contentStore));
+        $this->view->assign(
+            'removedReleases',
+            $this->backendUiDataService->loadRemovedReleasesOverviewData($contentStore),
+        );
         $this->view->assign('redisContentStores', array_keys($this->redisContentStores));
         $this->view->assign('storeSize', $storeSize);
         $this->view->assign('toggleFromConfigEpoch', $configEpochRedis);
@@ -174,14 +178,24 @@ class BackendController extends ActionController
         $this->view->assign('redisContentStores', array_keys($this->redisContentStores));
         $this->view->assign('isPrimary', $contentStore->isPrimary());
 
+        // once the keys a removed release keeps have expired, its prunner job is all that is left of it
+        $removedReleaseJob = null;
+        if (is_string($prunnerJobId) && $prunnerJobId !== '' && $detailsData === null) {
+            $removedReleaseJob = $this->prunnerApiService->loadJobDetail(
+                PrunnerJobId::fromString($prunnerJobId)->toJobId(),
+            );
+        }
+        $this->view->assign('removedReleaseJob', $removedReleaseJob);
+        $job = $detailsData?->getJob() ?? $removedReleaseJob;
+
         if ($detailTaskName !== '') {
             $this->view->assign('detailTaskName', $detailTaskName);
             $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs(
                 $prunnerJobId ? PrunnerJobId::fromString($prunnerJobId)->toJobId() : $detailsData->getJob()->getId(),
                 $detailTaskName,
             ));
-        } elseif ($showAllRenderingErrors && $detailsData->getJob() !== null) {
-            $this->view->assign('workerErrorLogs', $this->workerErrorLogAggregator->aggregate($detailsData->getJob()));
+        } elseif ($showAllRenderingErrors && $job !== null) {
+            $this->view->assign('workerErrorLogs', $this->workerErrorLogAggregator->aggregate($job));
         }
     }
 

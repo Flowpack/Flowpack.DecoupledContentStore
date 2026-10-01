@@ -6,6 +6,8 @@ namespace Flowpack\DecoupledContentStore\BackendUi;
 
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseDetails;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
+use Flowpack\DecoupledContentStore\BackendUi\Dto\RemovedContentReleaseOverviewRow;
+use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
@@ -16,6 +18,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingTi
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
+use Flowpack\Prunner\Dto\Job;
 use Flowpack\Prunner\PrunnerApiService;
 use Neos\Flow\Annotations as Flow;
 
@@ -121,6 +124,80 @@ class BackendUiDataService
         return $result;
     }
 
+    /**
+     * The releases which Redis no longer holds but whose prunner job - and so its logs - is still there, newest first.
+     *
+     * Only the primary content store builds releases, so on any other one a job without a registered release is just
+     * a release which was never transferred there. Jobs which never started are left out: with queue_strategy
+     * "replace", most of them were replaced while waiting and have no logs at all.
+     *
+     * @return RemovedContentReleaseOverviewRow[]|null NULL when the prunner API could not be reached
+     */
+    public function loadRemovedReleasesOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier): ?array
+    {
+        if (!$redisInstanceIdentifier->isPrimary()) {
+            return [];
+        }
+
+        try {
+            $jobs = $this->prunnerApiService->loadPipelinesAndJobs()->getJobs();
+        } catch (\Throwable $throwable) {
+            // the overview also holds the controls to pause releases, which must keep working while prunner is down
+            return null;
+        }
+
+        $registeredReleaseIds = array_map(
+            static fn(ContentReleaseIdentifier $id): string => $id->getIdentifier(),
+            $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier),
+        );
+        $releasePipelines = [
+            ContentReleaseManager::CONTENT_RELEASE_PIPELINE_NAME,
+            ContentReleaseManager::QUICK_CONTENT_RELEASE_PIPELINE_NAME,
+        ];
+        $removedReleaseJobs = $jobs->filter(
+            static function (Job $job) use ($releasePipelines, $registeredReleaseIds): bool {
+                $contentReleaseId = $job->getVariables()['contentReleaseId'] ?? null;
+                return (
+                    in_array($job->getPipeline(), $releasePipelines, true)
+                    && $job->getStart() !== null
+                    && is_string($contentReleaseId)
+                    && !in_array($contentReleaseId, $registeredReleaseIds, true)
+                );
+            },
+        )->getArray();
+        usort($removedReleaseJobs, static fn(Job $a, Job $b): int => $b->getStart() <=> $a->getStart());
+
+        $contentReleaseIds = array_map(
+            static fn(Job $job): ContentReleaseIdentifier => ContentReleaseIdentifier::fromString(
+                $job->getVariables()['contentReleaseId'],
+            ),
+            $removedReleaseJobs,
+        );
+        $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(
+            $redisInstanceIdentifier,
+            ...$contentReleaseIds,
+        );
+        $errorCounts = $this->redisRenderingErrorManager->countMultipleErrors(
+            $redisInstanceIdentifier,
+            ...$contentReleaseIds,
+        );
+
+        $result = [];
+        foreach ($removedReleaseJobs as $index => $job) {
+            $contentReleaseId = $contentReleaseIds[$index];
+            $metadataForContentRelease = $metadata->getResultForContentRelease($contentReleaseId);
+            $errorCountForContentRelease = $errorCounts->getResultForContentRelease($contentReleaseId);
+            $result[] = new RemovedContentReleaseOverviewRow(
+                $contentReleaseId,
+                $job,
+                $metadataForContentRelease instanceof ContentReleaseMetadata ? $metadataForContentRelease : null,
+                is_int($errorCountForContentRelease) ? $errorCountForContentRelease : 0,
+            );
+        }
+
+        return $result;
+    }
+
     public function loadDetailsData(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         RedisInstanceIdentifier $redisInstanceIdentifier,
@@ -170,6 +247,7 @@ class BackendUiDataService
             $contentReleaseIdentifier->equals($currentReleaseIdentifier),
             $manualTransferJobs,
             $contentReleaseMetadata->getContentReleaseSize(),
+            !$this->redisContentReleaseService->isRegistered($contentReleaseIdentifier, $redisInstanceIdentifier),
         );
     }
 }

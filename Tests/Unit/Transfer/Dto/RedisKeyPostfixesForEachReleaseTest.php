@@ -8,7 +8,8 @@ use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Neos\Flow\Tests\UnitTestCase;
 
 /**
- * Tests which registered redis keys a quick content release takes over from the release it is built on.
+ * Tests which registered redis keys a quick content release takes over from the release it is built on, and which
+ * ones outlive their release once it is removed.
  */
 final class RedisKeyPostfixesForEachReleaseTest extends UnitTestCase
 {
@@ -34,6 +35,22 @@ final class RedisKeyPostfixesForEachReleaseTest extends UnitTestCase
         ]);
 
         self::assertSame([], self::copiedPostfixes($redisKeyPostfixes));
+    }
+
+    public function testAKeyIsOnlyKeptAfterRemovalWhenItOptsIn(): void
+    {
+        // a site package key can be of any size, and keeping it costs memory on the primary content store
+        $redisKeyPostfixes = RedisKeyPostfixesForEachRelease::fromArray([
+            'metaInfo' => ['keepAfterRemoval' => true] + self::keyConfiguration('meta:info', false),
+            'data' => self::keyConfiguration('data', true),
+        ]);
+
+        $keptAfterRemoval = [];
+        foreach ($redisKeyPostfixes->getRedisKeyPostfixes() as $redisKeyPostfix) {
+            $keptAfterRemoval[$redisKeyPostfix->getRedisKeyPostfix()] = $redisKeyPostfix->shouldKeepAfterRemoval();
+        }
+
+        self::assertSame(['meta:info' => true, 'data' => false], $keptAfterRemoval);
     }
 
     /**
