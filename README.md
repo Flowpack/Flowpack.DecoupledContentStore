@@ -322,6 +322,53 @@ rendering task.
 the wait-list waiting to be rendered.** Additionally, we can be sure that scheduled content releases will be eventually
 executed, because that's prunner's job.
 
+## Content Release Metrics
+
+Redis keeps only the last `contentReleaseRetentionCount` releases, so everything a release recorded about itself -
+its timings, its size, its rendering errors - disappears with it. That is usually before somebody gets around to
+looking at a release which failed.
+
+`ContentReleaseMetricsService::collectMetrics()` reads those numbers back out of Redis as a
+`ContentReleaseMetrics` object, which is `JsonSerializable` and carries:
+
+- `startTime`, `endTime` and `durationSeconds` (measured up to the reporting time for a release which was aborted
+  and therefore never got an end time)
+- `sizeMegabytes`, as determined by the orchestrator when the release finished (`null` when it never did)
+- `documentCount` (the enumeration) and `newlyRenderedDocumentCount` (what the first rendering iteration had to
+  schedule, i.e. what was not still usable in the content cache)
+- `iterationCount`, `renderingCount` and the individual `iterations` with their scheduled/completed renderings
+- `renderingErrorCount` and the `renderingErrors` themselves, each split into message, node, node identifier and
+  node URI (the list is capped at 50 entries, the count is not)
+- `workerErrors`: for every render worker which failed, the error blocks of its prunner log and the node it was
+  rendering when it died (the same data the Backend UI shows, via `WorkerErrorLogAggregator`). Those logs fall out
+  of the pipeline's `retention_count` quickly, so this is what keeps the stacktrace readable afterwards. It is
+  `null` rather than `[]` when the prunner API could not be reached, so "no worker failed" stays distinguishable
+  from "could not tell".
+
+Note that `retention_count` counts prunner *jobs*, not releases that produced logs: with `queue_strategy: replace`
+every job which is queued and then replaced is cancelled but still occupies a retention slot, although it never
+ran and wrote no log. A pipeline which is triggered often therefore reaches back far fewer releases than the
+number suggests.
+
+Where those numbers go is up to the site package: write a command which calls the service and hand the JSON to
+whatever collects logs in your setup, then run it as a task at the end of your `pipelines.yml` and from its
+`on_error` hook, so an aborted release is measured too.
+
+### Removed releases in the Backend UI
+
+Prunner keeps the logs of a release independently of Redis - its pipeline's `retention_count` and
+`retention_period` decide how long. The Backend UI therefore lists, below the releases Redis still holds, every
+started job of `do_content_release` and `do_quick_content_release` whose release has been removed, and links to its
+logs. This only happens for the primary content store, the one releases are built in.
+
+To keep the status, author, rendering errors and rendering statistics next to those logs, the keys flagged with
+`keepAfterRemoval` in `redisKeyPostfixesForEachRelease` (by default `meta:info`, `renderingErrors` and
+`renderingStatistics`) are not deleted with their release. Redis expires them after `removedReleaseRetentionSeconds`
+of the content store instead (5 days on the primary one, unset - so deleted right away - everywhere else). The release
+itself leaves `contentStore:registeredReleases` as before, so it can neither be switched to nor built upon, and
+*Prune content store* leaves keys alone which expire on their own. Set `removedReleaseRetentionSeconds` to about the
+prunner `retention_period` of your release pipelines; once both have run out, the release is gone from the UI.
+
 ## Quick Content Releases
 
 Rendering dominates the runtime of a content release: on a big site, a release which changes a single page still

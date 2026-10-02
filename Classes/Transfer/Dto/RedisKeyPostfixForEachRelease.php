@@ -21,6 +21,7 @@ final class RedisKeyPostfixForEachRelease
     protected string $transferMode;
     protected bool $isRequired;
     protected bool $copyOnQuickRelease;
+    protected bool $keepAfterRemoval;
 
     /**
      * @param string $redisKeyPostfix
@@ -28,6 +29,7 @@ final class RedisKeyPostfixForEachRelease
      * @param string $transferMode
      * @param bool $isRequired
      * @param bool $copyOnQuickRelease
+     * @param bool $keepAfterRemoval
      */
     private function __construct(
         string $redisKeyPostfix,
@@ -35,6 +37,7 @@ final class RedisKeyPostfixForEachRelease
         string $transferMode,
         bool $isRequired,
         bool $copyOnQuickRelease,
+        bool $keepAfterRemoval,
     ) {
         if (!in_array($transferMode, [self::TRANSFER_MODE_HASH_INCREMENTAL, self::TRANSFER_MODE_DUMP])) {
             throw new \RuntimeException('TransferMode ' . $transferMode . ' not supported.');
@@ -52,6 +55,7 @@ final class RedisKeyPostfixForEachRelease
         $this->transferMode = $transferMode;
         $this->isRequired = $isRequired;
         $this->copyOnQuickRelease = $copyOnQuickRelease;
+        $this->keepAfterRemoval = $keepAfterRemoval;
     }
 
     public static function fromArray(array $in): self
@@ -65,6 +69,8 @@ final class RedisKeyPostfixForEachRelease
             // default: a key which should have been copied shows up as missing content, a key which should not have
             // been copied describes a different release
             $in['copyOnQuickRelease'] ?? false,
+            // a site package key can be of any size, so it only outlives its release when it opts in
+            $in['keepAfterRemoval'] ?? false,
         );
     }
 
@@ -90,6 +96,11 @@ final class RedisKeyPostfixForEachRelease
     public function shouldCopyOnQuickRelease(): bool
     {
         return $this->copyOnQuickRelease;
+    }
+
+    public function shouldKeepAfterRemoval(): bool
+    {
+        return $this->keepAfterRemoval;
     }
 
     public function getRedisKeyPostfix(): string

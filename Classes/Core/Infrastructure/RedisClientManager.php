@@ -104,4 +104,13 @@ class RedisClientManager
         }
         return $this->configuration[$redisInstanceIdentifier->getIdentifier()]['contentReleaseRetentionCount'];
     }
+
+    /**
+     * 0 when the content store keeps nothing of a removed release.
+     */
+    public function getRemovedReleaseRetentionSeconds(RedisInstanceIdentifier $redisInstanceIdentifier): int
+    {
+        $instanceConfiguration = $this->configuration[$redisInstanceIdentifier->getIdentifier()];
+        return (int) ($instanceConfiguration['removedReleaseRetentionSeconds'] ?? 0);
+    }
 }

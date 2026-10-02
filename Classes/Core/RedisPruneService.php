@@ -15,7 +15,8 @@ class RedisPruneService
 {
     // go through all keys in the selected content store
     // check whether they are reserved keys or currently active or contain one of the currently registered releases ids
-    // if not: delete
+    // if not: delete - unless the key expires on its own, which is how a removed release keeps its details for the
+    // Backend UI (see removedReleaseRetentionSeconds)
     const PRUNE_LUA_SCRIPT = '
         local contentStoreCurrent = redis.call("GET", "contentStore:current")
         local contentStoreAllKeys = redis.call("KEYS", "*")
@@ -36,7 +37,8 @@ class RedisPruneService
             and contentStoreKey ~= "contentStore:registeredReleases"
             and contentStoreKey ~= "contentStore:configEpoch"
             and string.sub(contentStoreKey, 1, string.len(currentContentStoreStart)) ~= currentContentStoreStart
-            and not table_contains_value(contentStoreRegisteredReleases, contentStoreKey) then
+            and not table_contains_value(contentStoreRegisteredReleases, contentStoreKey)
+            and redis.call("TTL", contentStoreKey) < 0 then
                 redis.call("DEL", contentStoreKey)
             end
         end

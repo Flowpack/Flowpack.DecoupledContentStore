@@ -20,6 +20,16 @@ Flowpack:
         # pipelines.do_content_release.retention_count and pipelines.manually_transfer_content_release.retention_count).
         contentReleaseRetentionCount: 20
 
+        # How long, in seconds, the keys flagged with `keepAfterRemoval` (see redisKeyPostfixesForEachRelease) outlive
+        # a removed release, so that the Backend UI can still show its status, rendering errors and statistics next to
+        # the prunner logs. Redis expires them on its own. 0 deletes them together with the rest of the release.
+        #
+        # Match this to the prunner `retention_period` of your release pipelines: the details page of a removed
+        # release is listed through its prunner job, so keys which outlive the job no longer show up in the overview.
+        # It is not set for additional content stores, which then delete everything - there is no rendering scratch
+        # space to look into on those, and they must not run out of memory.
+        removedReleaseRetentionSeconds: 432000 # 5 days
+
       # you can add additional, arbitrarily named, content stores here - they appear in the UI.
       # If you do this, see the hints in the README "Copy Content Releases to a different Redis instance".
 
@@ -120,6 +130,9 @@ Flowpack:
       # leave it off for keys which describe the build of a single release - a quick release enumerates and renders
       # only the documents which changed, so its own enumeration, queue and statistics have to stay its own.
       # It defaults to `false`, so keys registered by a site package are never copied unless they opt in.
+      #
+      # keepAfterRemoval keeps the key for `removedReleaseRetentionSeconds` once its release is removed, instead of
+      # deleting it right away. Set it only for small keys which describe the release - it defaults to `false`.
       data:
         redisKeyPostfix: 'data'
         transfer: true
@@ -145,6 +158,7 @@ Flowpack:
         isRequired: true
         # written when the release is created, and it describes this release - never the one it was copied from
         copyOnQuickRelease: false
+        keepAfterRemoval: true
       metaUrls:
         redisKeyPostfix: 'meta:urls'
         transfer: true
@@ -171,6 +185,7 @@ Flowpack:
         transferMode: 'dump'
         isRequired: false
         copyOnQuickRelease: false
+        keepAfterRemoval: true
       renderingJobQueue:
         redisKeyPostfix: 'renderingJobQueue'
         transfer: false
@@ -195,6 +210,7 @@ Flowpack:
         transferMode: 'dump'
         isRequired: true
         copyOnQuickRelease: false
+        keepAfterRemoval: true
       statisticsEvents:
         redisKeyPostfix: 'statisticsEvents'
         transfer: false

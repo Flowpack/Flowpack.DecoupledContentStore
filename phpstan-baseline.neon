@@ -291,7 +291,7 @@ parameters:
 		-
 			message: '#^Cannot call method getJob\(\) on Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\|null\.$#'
 			identifier: method.nonObject
-			count: 3
+			count: 1
 			path: Classes/Controller/BackendController.php
 
 		-
