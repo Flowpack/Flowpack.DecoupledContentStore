@@ -93,17 +93,24 @@ The following flow chart shows the rendering pipeline for creating a content rel
 - Then, the rendering takes place. In parallel, the **orchestrator** checks if pages are already fully rendered. If no,
   he creates rendering jobs. If yes, the rendered page is added to the in-progress content release.
 
-  The **renderers** simply render the pages as instructed by the orchestrator.
+  The **renderers** simply render the pages as instructed by the orchestrator, and report every rendered page back to
+  it. The orchestrator copies a reported page to the content release right away instead of waiting for the whole
+  rendering queue - a page which waits in the content cache for long is likely to be flushed again by an editor
+  publishing in the meantime. This makes the release eventually consistent: a page can go live in a state that is a
+  few minutes older or newer than a page it links to. The publish which made it outdated schedules the next
+  incremental release, which renders it again - unless automatic releases are paused.
 
   The **orchestrator** tries to render multiple times: It can happen that after a render, the rendering did not
   successfully work, because an editor has changed pages at the same time; leading to content cache flushes and
   "holes" in the output.
 
-  From the second attempt on, the renderer **flushes the document's content cache entries** (by node tag) before
-  re-rendering it. Without this, a retry can be answered completely from the content cache - then no document-level
+  From the second attempt on, the orchestrator **flushes the document's content cache entries** (by node tag) before
+  scheduling it again. Without this, a retry can be answered completely from the content cache - then no document-level
   cache segment is processed, `CacheUrlMappingAspect` writes no `doc--...` mapping entry, and the orchestrator schedules
   the very same node again in the next iteration. Can be turned off via the setting
-  `nodeRendering.flushDocumentCacheOnRetry`. If the identical set of nodes is scheduled three iterations in a row, the
+  `nodeRendering.flushDocumentCacheOnRetry`. The flush happens once per node and before any of its jobs is queued:
+  the node's cache tag covers all its dimension variants, so a render worker flushing it would wipe the variants other
+  workers have just rendered. If the identical set of nodes is scheduled three iterations in a row, the
   orchestrator gives up early and registers a rendering error per node instead of running into the 10-attempt limit.
 
 - During **validation**, checks can happen to see whether the content release is fully complete; to check whether it

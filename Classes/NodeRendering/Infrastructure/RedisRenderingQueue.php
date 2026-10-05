@@ -124,6 +124,37 @@ class RedisRenderingQueue
     }
 
     /**
+     * Tells the orchestrator that the given node has been rendered, so that it can add the document to the content
+     * release right away - before an editor's publish gets the chance to flush it from the content cache again.
+     *
+     * Call this before {@see removeRenderingJobFromReservedList()}: the orchestrator stops waiting as soon as no
+     * rendering is in progress anymore, and then drains this list a last time.
+     *
+     * @throws \JsonException
+     */
+    public function reportRenderedJob(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+        EnumeratedNode $enumeratedNode,
+    ): void {
+        $this->redisClientManager->getPrimaryRedis()->rPush(
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedJobs'),
+            json_encode($enumeratedNode, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function fetchNextRenderedJob(ContentReleaseIdentifier $contentReleaseIdentifier): ?EnumeratedNode
+    {
+        $nextEntry = $this->redisClientManager
+            ->getPrimaryRedis()
+            ->lPop($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedJobs'));
+        if (!is_string($nextEntry)) {
+            return null;
+        }
+
+        return EnumeratedNode::fromJsonString($nextEntry);
+    }
+
+    /**
      * @param ContentReleaseIdentifier $contentReleaseIdentifier
      * @param EnumeratedNode $enumeratedNode
      * @param RendererIdentifier $rendererIdentifier
@@ -171,6 +202,7 @@ class RedisRenderingQueue
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'),
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'),
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderAttempts'),
+            $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderedJobs'),
         );
     }
 }

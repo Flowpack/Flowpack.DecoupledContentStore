@@ -397,12 +397,6 @@ parameters:
 			path: Classes/Core/ConcurrentBuildLockService.php
 
 		-
-			message: '#^Parameter \#2 \$fields_and_vals of method Redis\:\:hSet\(\) expects string, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: Classes/Core/ConcurrentBuildLockService.php
-
-		-
 			message: '#^Method Flowpack\\DecoupledContentStore\\Core\\Domain\\Dto\\ContentReleaseBatchResult\:\:__construct\(\) has parameter \$results with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1177,18 +1171,6 @@ parameters:
 			path: Classes/NodeRendering/NodeRenderOrchestrator.php
 
 		-
-			message: '#^Cannot call method getStatus\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: Classes/NodeRendering/NodeRenderOrchestrator.php
-
-		-
-			message: '#^Cannot call method withStatus\(\) on Flowpack\\DecoupledContentStore\\PrepareContentRelease\\Dto\\ContentReleaseMetadata\|null\.$#'
-			identifier: method.nonObject
-			count: 5
-			path: Classes/NodeRendering/NodeRenderOrchestrator.php
-
-		-
 			message: '#^Construct empty\(\) is not allowed\. Use more strict comparison\.$#'
 			identifier: empty.notAllowed
 			count: 2
@@ -1197,12 +1179,6 @@ parameters:
 		-
 			message: '#^Instanceof between Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode and Flowpack\\DecoupledContentStore\\NodeEnumeration\\Domain\\Dto\\EnumeratedNode will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
-			count: 1
-			path: Classes/NodeRendering/NodeRenderOrchestrator.php
-
-		-
-			message: '#^Variable \$currentEnumeration in empty\(\) always exists and is not falsy\.$#'
-			identifier: empty.variable
 			count: 1
 			path: Classes/NodeRendering/NodeRenderOrchestrator.php
 
