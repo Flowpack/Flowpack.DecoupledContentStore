@@ -25,9 +25,7 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-use Neos\Fusion\Core\Cache\ContentCache;
 use Neos\Neos\Domain\Repository\SiteRepository;
-use Neos\Neos\Fusion\Helper\CachingHelper;
 
 /**
  * Not called directly, but through Scripts/renderWorker.sh.
@@ -37,18 +35,12 @@ use Neos\Neos\Fusion\Helper\CachingHelper;
  *
  *
  * The NodeRenderer does NOT directly add the rendered document to the Content Release, in order to reduce special
- * cases and complexity. Instead, the NodeRenderer ONLY fills the Content Cache.
+ * cases and complexity. Instead, the NodeRenderer ONLY fills the Content Cache, and reports every rendered node back
+ * to the NodeRenderOrchestrator ({@see RedisRenderingQueue::reportRenderedJob()}), which copies it from the content
+ * cache to the content release within about a second.
  *
- * This leads to unnecessary re-renderings in the following cases:
- * - A page has been rendered by NodeRenderer. Thus, it was added to the content cache.
- * - An editor does a change which flushes some cache tags.
- * - depending on the cache tags, this can lead to our just-rendered page to be deleted from the content cache again.
- * - After the rendering is complete, the NodeRenderOrchestrator again tries to copy the page to the content release from the cache,
- *   and this FAILS because it has been removed in the step before.
- * - Thus, a re-rendering is triggered.
- *
- * If the above happens often, we can add additional code to take care of this. Right now I do not want to
- * implement it to keep complexity low and keep the code paths in case of re-rendering or not re-rendering the same.
+ * If an editor publishes in that window and the publish flushes cache tags of the just-rendered page, the copy finds
+ * holes in the content cache and the page is rendered again in the next iteration.
  *
  * @Flow\Scope("singleton")
  */
@@ -74,24 +66,6 @@ class NodeRenderer
      * @var DocumentRenderer
      */
     protected $documentRenderer;
-
-    /**
-     * @Flow\Inject
-     * @var ContentCache
-     */
-    protected $contentCache;
-
-    /**
-     * @Flow\Inject
-     * @var CachingHelper
-     */
-    protected $cachingHelper;
-
-    /**
-     * @Flow\InjectConfiguration("nodeRendering.flushDocumentCacheOnRetry")
-     * @var bool
-     */
-    protected $flushDocumentCacheOnRetry;
 
     /**
      * @Flow\Inject
@@ -206,6 +180,7 @@ class NodeRenderer
                 // images, which will re-appear once you open the page in the backend (because image URL generation
                 // is fully deterministic). This happened 12/2022 to us.
                 $this->persistenceManager->persistAll();
+                $this->redisRenderingQueue->reportRenderedJob($contentReleaseIdentifier, $enumeratedNode);
             } finally {
                 $removalSuccess = $this->redisRenderingQueue->removeRenderingJobFromReservedList(
                     $contentReleaseIdentifier,
@@ -278,16 +253,13 @@ class NodeRenderer
             } else {
                 $nodeWasFound = true;
 
-                if ($renderingAttempt > 1) {
-                    $this->flushContentCacheForNode($node, $enumeratedNode, $renderingAttempt, $contentReleaseLogger);
-                }
-
                 $contentReleaseLogger->debug('Rendering document node variant', [
                     'node' => $node->getContextPath(),
                     'nodeIdentifier' => $node->getIdentifier(),
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
                     'arguments' => $enumeratedNode->getArguments(),
+                    'renderingAttempt' => $renderingAttempt,
                 ]);
 
                 $tracer = $this->renderTracerProvider->getTracer();
@@ -372,44 +344,6 @@ class NodeRenderer
             );
             $this->contentReleaseManager->startIncrementalContentRelease();
         }
-    }
-
-    /**
-     * A node is handed out for rendering more than once if the previous rendering did not produce a complete content
-     * cache entry for it - see {@see NodeRenderOrchestrator}.
-     *
-     * Simply rendering it again does not necessarily help: if the document's cache entries are still valid, the
-     * rendering is served straight from the content cache. In that case Fusion never processes a document-level cache
-     * segment, so {@see CacheUrlMappingAspect} does not write the "doc--..." mapping entry which the orchestrator is
-     * waiting for - and the node is scheduled again, and again, until the retry limit aborts the whole release.
-     *
-     * Flushing the node's cache entries before the retry turns the re-rendering into a real rendering again.
-     */
-    private function flushContentCacheForNode(
-        NodeInterface $node,
-        EnumeratedNode $enumeratedNode,
-        int $renderingAttempt,
-        ContentReleaseLogger $contentReleaseLogger,
-    ): void {
-        if (!$this->flushDocumentCacheOnRetry) {
-            return;
-        }
-
-        $flushedEntriesCount = 0;
-        foreach ($this->cachingHelper->nodeTag($node) as $tag) {
-            $flushedEntriesCount += $this->contentCache->flushByTag($tag);
-        }
-
-        $contentReleaseLogger->warn(
-            sprintf(
-                'Rendering attempt %d for this node; flushed %d content cache entries before re-rendering it.',
-                $renderingAttempt,
-                $flushedEntriesCount,
-            ),
-            [
-                'node' => $enumeratedNode->debugString(),
-            ],
-        );
     }
 
     /**

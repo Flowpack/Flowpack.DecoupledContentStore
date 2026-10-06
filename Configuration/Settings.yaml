@@ -198,6 +198,12 @@ Flowpack:
         transferMode: 'dump'
         isRequired: false
         copyOnQuickRelease: false
+      renderedJobs:
+        redisKeyPostfix: 'renderedJobs'
+        transfer: false
+        transferMode: 'dump'
+        isRequired: false
+        copyOnQuickRelease: false
       renderedMetadata:
         redisKeyPostfix: 'renderedMetadata'
         transfer: true
