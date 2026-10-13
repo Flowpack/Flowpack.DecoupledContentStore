@@ -368,13 +368,13 @@ Prunner keeps the logs of a release independently of Redis - its pipeline's `ret
 started job of `do_content_release` and `do_quick_content_release` whose release has been removed, and links to its
 logs. This only happens for the primary content store, the one releases are built in.
 
-To keep the status, author, rendering errors and rendering statistics next to those logs, the keys flagged with
-`keepAfterRemoval` in `redisKeyPostfixesForEachRelease` (by default `meta:info`, `renderingErrors` and
-`renderingStatistics`) are not deleted with their release. Redis expires them after `removedReleaseRetentionSeconds`
-of the content store instead (5 days on the primary one, unset - so deleted right away - everywhere else). The release
-itself leaves `contentStore:registeredReleases` as before, so it can neither be switched to nor built upon, and
-*Prune content store* leaves keys alone which expire on their own. Set `removedReleaseRetentionSeconds` to about the
-prunner `retention_period` of your release pipelines; once both have run out, the release is gone from the UI.
+The status badge of a release comes from its prunner job while prunner still has it. Afterwards only the release
+itself is left, and its metadata status is a rendering status: it reads `success` before validation, transfer and
+switch have run. So the pipeline's `on_error` hook has to call
+`./flow contentReleasePrepare:markFailed {{ .contentReleaseId }} {{ .__jobID }}` (see `pipelines_template.yml`);
+the command ignores jobs which did not build the release, so the hook can be shared with other pipelines. A release
+without a job is then shown as `failed` if it was marked so, `success` if it was switched live, and `aborted`
+otherwise - canceled, or killed together with its worker.
 
 ## Quick Content Releases
 
@@ -747,7 +747,7 @@ Example:
 ## Development
 
 - You need [pnpm](https://github.com/pnpm/pnpm) as package panager installed:
-  `curl -f https://get.pnpm.io/v6.js | node - add --global pnpm`
+  `curl -fsSL https://get.pnpm.io | sh -`
 - Run `pnpm install` in this folder
 - Then run `pnpm watch` for development and `pnpm build` for prod build.
 

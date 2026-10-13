@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\BackendUi\Dto;
 
+use Flowpack\DecoupledContentStore\BackendUi\ContentReleaseStatus;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\Prunner\Dto\Job;
@@ -45,17 +46,8 @@ final class RemovedContentReleaseOverviewRow
         return $this->errorCount;
     }
 
-    public function getStatus(): string
+    public function getStatus(): ContentReleaseStatus
     {
-        if ($this->metadata !== null) {
-            return $this->metadata->getStatus()->getDisplayName();
-        }
-        if ($this->job->isCanceled()) {
-            return 'canceled';
-        }
-        if ($this->job->isErrored()) {
-            return 'failed';
-        }
-        return $this->job->isCompleted() ? 'done' : 'running';
+        return ContentReleaseStatus::fromJob($this->job, $this->metadata);
     }
 }
