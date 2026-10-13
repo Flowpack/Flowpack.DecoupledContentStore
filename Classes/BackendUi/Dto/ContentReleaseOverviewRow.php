@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\BackendUi\Dto;
 
+use Flowpack\DecoupledContentStore\BackendUi\ContentReleaseStatus;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Neos\Flow\Annotations as Flow;
@@ -22,6 +23,7 @@ class ContentReleaseOverviewRow
     private int $renderedUrlCount;
     private bool $isActive;
     private ?float $releaseSize;
+    private ContentReleaseStatus $status;
 
     public function __construct(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -33,6 +35,7 @@ class ContentReleaseOverviewRow
         int $renderedUrlCount,
         bool $isActive,
         ?float $releaseSize,
+        ContentReleaseStatus $status,
     ) {
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->metadata = $metadata;
@@ -43,6 +46,7 @@ class ContentReleaseOverviewRow
         $this->renderedUrlCount = $renderedUrlCount;
         $this->isActive = $isActive;
         $this->releaseSize = $releaseSize;
+        $this->status = $status;
     }
 
     public function getMetadata(): ?ContentReleaseMetadata
@@ -91,5 +95,10 @@ class ContentReleaseOverviewRow
     public function getReleaseSize(): ?float
     {
         return $this->releaseSize;
+    }
+
+    public function getStatus(): ContentReleaseStatus
+    {
+        return $this->status;
     }
 }

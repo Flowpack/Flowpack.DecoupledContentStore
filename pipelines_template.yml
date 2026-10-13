@@ -27,6 +27,11 @@ pipelines:
     # retention_period_hours: 72
     retention_count: 10
 
+    # Rendering reports "success" before validation, transfer and switch have run, so a later failure has to be
+    # written to the release, or the Backend UI shows it as successful once prunner has dropped this job.
+    on_error: &mark_release_failed
+      script:
+        - ./flow contentReleasePrepare:markFailed {{ .contentReleaseId }} {{ .__jobID }}
 
     tasks:
       ################################################################################
@@ -223,6 +228,8 @@ pipelines:
 
     # see the note on do_content_release above
     retention_count: 10
+
+    on_error: *mark_release_failed
 
     tasks:
       ################################################################################

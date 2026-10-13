@@ -31,7 +31,7 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
                                 {props.contentReleaseIdentifier}
                             </Neos.Fusion:Link.Action>
                             {" "}
-                            <span class="neos-badge" title="status" data-neos-toggle="tooltip">{item.metadata.status.displayName}</span>
+                            <Flowpack.DecoupledContentStore:StatusBadge contentReleaseStatus={item.status}/>
                             <span @if.isActive={item.active} class="neos-badge neos-badge-info">active</span>
                             <span @if.errors={item.errorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                         </td>
@@ -104,6 +104,15 @@ Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
     }
 }
 
+prototype(Flowpack.DecoupledContentStore:StatusBadge) < prototype(Neos.Fusion:Component) {
+    contentReleaseStatus = null
+
+    renderer = afx`
+        <span class={props.contentReleaseStatus.badgeClass} title="status"
+              data-neos-toggle="tooltip">{props.contentReleaseStatus.value}</span>
+    `
+}
+
 // Releases which Redis has dropped, but whose prunner logs are still there. The keys a removed release keeps carry the
 // status, author and errors for a while; once they have expired, the prunner job is all that is shown.
 prototype(Flowpack.DecoupledContentStore:RemovedReleases) < prototype(Neos.Fusion:Component) {
@@ -124,7 +133,7 @@ prototype(Flowpack.DecoupledContentStore:RemovedReleases) < prototype(Neos.Fusio
                             {item.contentReleaseIdentifier.identifier}
                         </Neos.Fusion:Link.Action>
                         {" "}
-                        <span class="neos-badge" title="status" data-neos-toggle="tooltip">{item.status}</span>
+                        <Flowpack.DecoupledContentStore:StatusBadge contentReleaseStatus={item.status}/>
                         <span @if.errors={item.errorCount} class="neos-badge neos-badge-important" title="errors" data-neos-toggle="tooltip">{item.errorCount}</span>
                     </td>
                     <td>{item.job.pipeline}</td>

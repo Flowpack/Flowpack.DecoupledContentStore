@@ -88,6 +88,16 @@ class BackendUiDataService
             ...$contentReleaseIds,
         );
 
+        try {
+            $jobsById = [];
+            foreach ($this->prunnerApiService->loadPipelinesAndJobs()->getJobs() as $job) {
+                $jobsById[$job->getId()->getId()] = $job;
+            }
+        } catch (\Throwable $throwable) {
+            // the overview also holds the controls to pause releases, which must keep working while prunner is down
+            $jobsById = null;
+        }
+
         $result = [];
         foreach ($contentReleaseIds as $contentReleaseId) {
             $lastRendering = RenderingStatistics::fromJsonString($lastRenderingStatisticsEntries->getResultForContentRelease(
@@ -98,13 +108,27 @@ class BackendUiDataService
             ));
 
             $metadataForContentRelease = $metadata->getResultForContentRelease($contentReleaseId);
+            if (!$metadataForContentRelease instanceof ContentReleaseMetadata) {
+                $metadataForContentRelease = null;
+            }
+            $jobForContentRelease = $metadataForContentRelease !== null
+                ? $jobsById[$metadataForContentRelease->getPrunnerJobId()->getIdentifier()] ?? null
+                : null;
+            $status = match (true) {
+                $jobForContentRelease !== null => ContentReleaseStatus::fromJob(
+                    $jobForContentRelease,
+                    $metadataForContentRelease,
+                ),
+                $metadataForContentRelease === null || $jobsById === null => ContentReleaseStatus::UNKNOWN,
+                default => ContentReleaseStatus::jobGone($metadataForContentRelease),
+            };
             $countForContentRelease = $counts->getResultForContentRelease($contentReleaseId);
             $iterationsCountForContentRelease = $iterationsCounts->getResultForContentRelease($contentReleaseId);
             $errorCountForContentRelease = $errorCounts->getResultForContentRelease($contentReleaseId);
 
             $result[] = new ContentReleaseOverviewRow(
                 $contentReleaseId,
-                $metadataForContentRelease instanceof ContentReleaseMetadata ? $metadataForContentRelease : null,
+                $metadataForContentRelease,
                 is_int($countForContentRelease) ? $countForContentRelease : 0,
                 is_int($iterationsCountForContentRelease) ? $iterationsCountForContentRelease : 0,
                 is_int($errorCountForContentRelease) ? $errorCountForContentRelease : 0,
@@ -115,9 +139,8 @@ class BackendUiDataService
                 $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease(
                     $redisInstanceIdentifier,
                 )),
-                $metadataForContentRelease instanceof ContentReleaseMetadata
-                    ? $metadataForContentRelease->getContentReleaseSize()
-                    : null,
+                $metadataForContentRelease?->getContentReleaseSize(),
+                $status,
             );
         }
 
