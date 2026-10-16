@@ -51,6 +51,11 @@ class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
         return $this->overrideHttpBaseUri . $this->baseUri;
     }
 
+    public function hasOverrideHttpBaseUri(): bool
+    {
+        return $this->overrideHttpBaseUri !== null;
+    }
+
     /**
      * @param string $overrideHttpBaseUri
      */
