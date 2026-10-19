@@ -1566,11 +1566,6 @@ parameters:
 			count: 1
 			path: Classes/Transfer/ContentReleaseCleaner.php
 
-		-
-			message: '#^Method Flowpack\\DecoupledContentStore\\Transfer\\ContentReleaseCleaner\:\:removeRelease\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: Classes/Transfer/ContentReleaseCleaner.php
 
 		-
 			message: '#^Only booleans are allowed in a negated boolean, Flowpack\\DecoupledContentStore\\Core\\Domain\\ValueObject\\ContentReleaseIdentifier\|null given\.$#'

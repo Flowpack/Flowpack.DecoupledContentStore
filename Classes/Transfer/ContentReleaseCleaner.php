@@ -138,7 +138,7 @@ class ContentReleaseCleaner
         ContentReleaseIdentifier $contentReleaseIdentifierToRemove,
         RedisInstanceIdentifier $redisIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-    ) {
+    ): bool {
         $redis = $this->redisClientManager->getRedis($redisIdentifier);
 
         $currentRelease = $this->redisReleaseSwitchService->getCurrentRelease($redisIdentifier);
@@ -146,12 +146,12 @@ class ContentReleaseCleaner
             $contentReleaseLogger->error(
                 'We did not find a current release in Content Store; so to be safe, we will NOT remove anything.',
             );
-            return;
+            return false;
         }
 
         if ($currentRelease->equals($contentReleaseIdentifierToRemove)) {
             $contentReleaseLogger->error('Release to be removed is currently active, thus we do not remove it.');
-            return;
+            return false;
         }
 
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
@@ -174,5 +174,6 @@ class ContentReleaseCleaner
         }
 
         $redis->zRem('contentStore:registeredReleases', $contentReleaseIdentifierToRemove->getIdentifier());
+        return true;
     }
 }

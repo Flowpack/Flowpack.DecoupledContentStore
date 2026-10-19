@@ -228,11 +228,16 @@ class BackendController extends ActionController
         $bufferedOutput = new BufferedOutput();
         $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifierToRemove);
 
-        $this->contentReleaseCleaner->removeRelease(
+        $removed = $this->contentReleaseCleaner->removeRelease(
             $contentReleaseIdentifierToRemove,
             $redisInstanceIdentifier,
             $logger,
         );
+        if (!$removed) {
+            $this->addFlashMessage($bufferedOutput->fetch(), '', Message::SEVERITY_ERROR);
+        } else {
+            $this->addFlashMessage('Release was removed.', '', Message::SEVERITY_OK);
+        }
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
