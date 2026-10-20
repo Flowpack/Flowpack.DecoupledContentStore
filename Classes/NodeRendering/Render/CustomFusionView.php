@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
 use Neos\Fusion\Core\Cache\RuntimeContentCache;
 use Neos\Fusion\Core\Runtime;
 use Neos\Neos\View\FusionView;
+use ReflectionProperty;
 
 /**
  * This Fusion View improves performance by:
@@ -19,43 +21,30 @@ use Neos\Neos\View\FusionView;
  */
 class CustomFusionView extends FusionView
 {
-    private $fusionRuntimePerSiteNode = [];
+    private array $fusionRuntimePerSiteNode = [];
 
-    /**
-     * @var \ReflectionProperty
-     */
-    private $controllerContextAccessor;
-    /**
-     * @var \ReflectionProperty
-     */
-    private $runtimeContentCacheAccessor;
-    /**
-     * @var \ReflectionProperty
-     */
-    private $defaultContextVariablesAccessor;
+    private ReflectionProperty $controllerContextAccessor;
 
-    /**
-     * @var boolean
-     */
-    private $contentCacheEnabled = true;
+    private ReflectionProperty $runtimeContentCacheAccessor;
 
-    public static $useCustomSiteRootFusionPatternEntryPointForBehavioralTests = false;
+    private ReflectionProperty $defaultContextVariablesAccessor;
+
+    private bool $contentCacheEnabled = true;
+
+    public static bool $useCustomSiteRootFusionPatternEntryPointForBehavioralTests = false;
 
     public function __construct(array $options = [])
     {
         parent::__construct($options);
 
-        $this->controllerContextAccessor = new \ReflectionProperty(Runtime::class, 'controllerContext');
-        $this->controllerContextAccessor->setAccessible(true);
+        $this->controllerContextAccessor = new ReflectionProperty(Runtime::class, 'controllerContext');
 
-        $this->runtimeContentCacheAccessor = new \ReflectionProperty(Runtime::class, 'runtimeContentCache');
-        $this->runtimeContentCacheAccessor->setAccessible(true);
+        $this->runtimeContentCacheAccessor = new ReflectionProperty(Runtime::class, 'runtimeContentCache');
 
-        $this->defaultContextVariablesAccessor = new \ReflectionProperty(Runtime::class, 'defaultContextVariables');
-        $this->defaultContextVariablesAccessor->setAccessible(true);
+        $this->defaultContextVariablesAccessor = new ReflectionProperty(Runtime::class, 'defaultContextVariables');
     }
 
-    public function initializeObject()
+    public function initializeObject(): void
     {
         if (self::$useCustomSiteRootFusionPatternEntryPointForBehavioralTests) {
             // for self-contained tests, we read fusion from another folder.
@@ -119,10 +108,9 @@ class CustomFusionView extends FusionView
     }
 
     /**
-     * @param TraversableNodeInterface $currentSiteNode
-     * @return \Neos\Fusion\Core\Runtime
+     * @return Runtime
      */
-    protected function getFusionRuntime(TraversableNodeInterface $currentSiteNode)
+    protected function getFusionRuntime(Node $currentSiteNode)
     {
         // $this->fusionRuntime is RESET during a call to self::assign()
         // so this means for every rendered document, we enter this block again

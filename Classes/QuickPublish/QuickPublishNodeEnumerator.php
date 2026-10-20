@@ -145,7 +145,7 @@ final class QuickPublishNodeEnumerator
      * marks the security context as initialized as a side effect, which would change what the node lookups of the
      * remaining identifiers are allowed to see.
      *
-     * @param array<int, array{0: NodeInterface, 1: EnumeratedNode}> $nodesToRender
+     * @param array<int, array{0: \Neos\ContentRepository\Core\Projection\ContentGraph\Node, 1: EnumeratedNode}> $nodesToRender
      */
     private function writeChangedUrls(
         array $nodesToRender,
@@ -167,7 +167,7 @@ final class QuickPublishNodeEnumerator
     /**
      * The node variants to render, skipping every given identifier which must not or cannot be published.
      *
-     * @return array<int, array{0: NodeInterface, 1: EnumeratedNode}>
+     * @return array<int, array{0: \Neos\ContentRepository\Core\Projection\ContentGraph\Node, 1: EnumeratedNode}>
      */
     private function enumerateGivenNodes(
         NodeIdentifiers $nodeIdentifiers,
@@ -228,7 +228,7 @@ final class QuickPublishNodeEnumerator
      * it copied - the editor's change would be missing without a single error anywhere.
      */
     private function flushContentCacheForNode(
-        NodeInterface $node,
+        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
         string $nodeIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
     ): void {

@@ -56,14 +56,15 @@ final class NodeRenderingUriService
     protected bool $useRelativeResourceUris;
 
     /**
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param array $arguments
      * @return string The resolved URI for the given node
      * @throws \Exception
      */
-    public function buildNodeUri(NodeInterface $node, array $arguments): string
+    public function buildNodeUri(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments): string
     {
         /** @var Site $currentSite */
+        // TODO 9.0 migration: !! ContentContext::getCurrentSite() is removed in Neos 9.0.
         $currentSite = $node->getContext()->getCurrentSite();
         if (!$currentSite->hasActiveDomains()) {
             throw new Exception(sprintf('Site %s has no active domain', $currentSite->getNodeName()), 1666684522);
@@ -109,7 +110,7 @@ final class NodeRenderingUriService
      */
     public function buildControllerContextAndSetBaseUri(
         string $uri,
-        NodeInterface $node,
+        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
         array $arguments = [],
     ): ControllerContext
     {
@@ -140,9 +141,10 @@ final class NodeRenderingUriService
      * broken host. Targets that already have an override keep it: callers like DocumentRenderer, or exports that
      * want relative URIs, set it explicitly.
      */
-    private function injectResourceBaseUri(NodeInterface $node): void
+    private function injectResourceBaseUri(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): void
     {
         /** @var Site|null $currentSite */
+        // TODO 9.0 migration: !! ContentContext::getCurrentSite() is removed in Neos 9.0.
         $currentSite = $node->getContext()->getCurrentSite();
         $domain = $currentSite?->getFirstActiveDomain();
         if ($domain === null) {
@@ -159,7 +161,7 @@ final class NodeRenderingUriService
         }
     }
 
-    private function buildFakeRequest(string $uri, NodeInterface $node): ActionRequest
+    private function buildFakeRequest(string $uri, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): ActionRequest
     {
         $_SERVER['FLOW_REWRITEURLS'] = '1';
 
@@ -174,7 +176,7 @@ final class NodeRenderingUriService
         $request->setControllerObjectName('Neos\Neos\Controller\Frontend\NodeController');
         $request->setControllerActionName('show');
         $request->setFormat('html');
-        $request->setArgument('node', $node->getContextPath());
+        $request->setArgument('node', \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson());
 
         return $request;
     }

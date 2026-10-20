@@ -6,7 +6,9 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnu
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumeratorInterface;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
+use Neos\Flow\Annotations as Flow;
 
 /**
  * An enumerator which only renders the first N pages. very useful for interactive testing.
@@ -14,10 +16,13 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
  */
 class LimitEnumerator implements DocumentEnumeratorInterface
 {
-    protected int $i = 0;
-    private ?int $limit = null;
-    private ?string $uriPathSegmentFilter = null;
-    private ?string $nodePathSegmentFilter = null;
+    #[Flow\Inject]
+    protected ContentRepositoryRegistry $contentRepositoryRegistry;
+
+    private int $i = 0;
+    private ?int $limit;
+    private ?string $uriPathSegmentFilter;
+    private ?string $nodePathSegmentFilter;
 
     public function __construct(
         array $options = [],
@@ -27,7 +32,7 @@ class LimitEnumerator implements DocumentEnumeratorInterface
         $this->nodePathSegmentFilter = $options['nodePathSegmentFilter'] ?? null;
     }
 
-    public function enumerateDocumentNode(NodeInterface $documentNode): iterable
+    public function enumerateDocumentNode(Node $documentNode): iterable
     {
         if (
             $this->uriPathSegmentFilter !== null
@@ -35,10 +40,13 @@ class LimitEnumerator implements DocumentEnumeratorInterface
         ) {
             return [];
         }
+        $subgraph = $this->contentRepositoryRegistry->subgraphForNode($documentNode);
 
+        // TODO 9.0 migration: Try to remove the (string) cast and make your code more type-safe.
         if (
             $this->nodePathSegmentFilter !== null
-            && str_contains($documentNode->getPath(), $this->nodePathSegmentFilter) === false
+            && str_contains((string) $subgraph->findNodePath($documentNode->aggregateId), $this->nodePathSegmentFilter)
+            === false
         ) {
             return [];
         }

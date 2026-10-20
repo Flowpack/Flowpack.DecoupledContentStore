@@ -32,6 +32,8 @@ final class DocumentNodeFilter
 
     #[Flow\InjectConfiguration('nodeRendering.recurseHiddenContent')]
     protected bool $recurseHiddenContent;
+    #[\Neos\Flow\Annotations\Inject]
+    protected \Neos\ContentRepositoryRegistry\ContentRepositoryRegistry $contentRepositoryRegistry;
 
     /**
      * Builds a FlowQuery filter string from the node type whitelist,
@@ -57,9 +59,10 @@ final class DocumentNodeFilter
      * Concatenated FlowQuery filter parts are ANDed, so a node has to be of every included node type - not of any
      * of them.
      */
-    public function matchesNodeTypeWhitelist(NodeInterface $node): bool
+    public function matchesNodeTypeWhitelist(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): bool
     {
-        $nodeType = $node->getNodeType();
+        $contentRepository = $this->contentRepositoryRegistry->get($node->contentRepositoryId);
+        $nodeType = $contentRepository->getNodeTypeManager()->getNodeType($node->nodeTypeName);
         $partitionedNodeTypes = self::partitionNodeTypeWhitelist($this->nodeTypeWhitelist);
 
         foreach ($partitionedNodeTypes['excludes'] as $excludedNodeType) {
@@ -84,7 +87,7 @@ final class DocumentNodeFilter
      * passing it through the FlowQuery filter, and both enumerators would change behaviour if that were tightened
      * as a side effect. Callers which resolve nodes by identifier check {@see matchesNodeTypeWhitelist()} themselves.
      */
-    public function skipReason(NodeInterface $node, NodeInterface $siteNode): ?string
+    public function skipReason(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $siteNode): ?string
     {
         // the site node has no parent inside the site, so it can never be orphaned
         if ($node !== $siteNode && self::isOrphaned($node, $siteNode)) {
@@ -107,7 +110,7 @@ final class DocumentNodeFilter
      * which was named by hand did not come out of the FlowQuery filter and was not reached by descending from the
      * site node, so nothing else checked either of them.
      */
-    public function skipReasonForNamedNode(NodeInterface $node, NodeInterface $siteNode): ?string
+    public function skipReasonForNamedNode(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $siteNode): ?string
     {
         $skipReason = $this->skipReason($node, $siteNode);
         if ($skipReason !== null) {
@@ -133,7 +136,7 @@ final class DocumentNodeFilter
      * put a page live which the next full release removes again. The walk goes past the site node, because a hidden
      * site node keeps its whole site out of a full release just as well.
      */
-    private static function hasHiddenAncestor(NodeInterface $node): bool
+    private static function hasHiddenAncestor(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): bool
     {
         $parentNode = self::getParentNodeOrNull($node);
         while ($parentNode !== null) {
@@ -146,7 +149,7 @@ final class DocumentNodeFilter
         return false;
     }
 
-    private static function isOrphaned(NodeInterface $node, NodeInterface $siteNode): bool
+    private static function isOrphaned(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $siteNode): bool
     {
         $parentNode = self::getParentNodeOrNull($node);
         while ($parentNode !== $siteNode) {
@@ -167,9 +170,9 @@ final class DocumentNodeFilter
      * class. Both conversions live here so that callers compare nodes of one type, and so that "left the tree"
      * stays a NULL rather than an exception.
      */
-    private static function getParentNodeOrNull(NodeInterface $node): ?NodeInterface
+    private static function getParentNodeOrNull(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): ?\Neos\ContentRepository\Core\Projection\ContentGraph\Node
     {
-        if (!$node instanceof TraversableNodeInterface) {
+        if (!$node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
             return null;
         }
 
@@ -179,7 +182,7 @@ final class DocumentNodeFilter
             return null;
         }
 
-        return $parentNode instanceof NodeInterface ? $parentNode : null;
+        return $parentNode instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node ? $parentNode : null;
     }
 
     /**

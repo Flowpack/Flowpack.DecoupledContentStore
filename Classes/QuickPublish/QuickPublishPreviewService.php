@@ -44,7 +44,7 @@ final class QuickPublishPreviewService
                 $rows[] = QuickPublishPreviewRow::forNode(
                     $nodeIdentifier,
                     $node->getLabel(),
-                    $node instanceof TraversableNodeInterface ? (string) $node->findNodePath() : '',
+                    $node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node ? (string) $node->findNodePath() : '',
                     self::describeDimensions($node),
                     $node->getNodeType()->getName(),
                     $this->backendUri($node, $controllerContext),
@@ -68,14 +68,14 @@ final class QuickPublishPreviewService
         return count(array_filter($rows, static fn(QuickPublishPreviewRow $row): bool => $row->isPublished()));
     }
 
-    private function backendUri(NodeInterface $node, ControllerContext $controllerContext): string
+    private function backendUri(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, ControllerContext $controllerContext): string
     {
         return $controllerContext->getUriBuilder()
             ->reset()
-            ->uriFor('index', ['node' => $node->getContextPath()], 'Backend', 'Neos.Neos.Ui');
+            ->uriFor('index', ['node' => \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson()], 'Backend', 'Neos.Neos.Ui');
     }
 
-    private static function describeDimensions(NodeInterface $node): string
+    private static function describeDimensions(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): string
     {
         $dimensions = [];
         foreach ($node->getContext()->getDimensions() as $dimensionName => $dimensionValues) {

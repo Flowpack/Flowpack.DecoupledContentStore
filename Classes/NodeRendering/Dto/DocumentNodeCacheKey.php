@@ -47,10 +47,12 @@ final class DocumentNodeCacheKey
         $this->arguments = $arguments;
     }
 
-    public static function fromNodeAndArguments(NodeInterface $node, array $arguments): self
+    public static function fromNodeAndArguments(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments): self
     {
+        // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
+        // TODO 9.0 migration: !! Node::getWorkspace() does not make sense anymore concept-wise. In Neos < 9, it pointed to the workspace where the node was *at home at*. Now, the closest we have here is the node identity.
         return new self(
-            $node->getIdentifier(),
+            $node->aggregateId->value,
             $node->getContext()->getDimensions(),
             $node->getWorkspace()->getName(),
             $arguments,

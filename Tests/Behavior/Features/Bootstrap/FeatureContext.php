@@ -102,6 +102,8 @@ class FeatureContext implements Context
     private ?InterruptibleProcessRuntimeEventInterface $renderOrchestratorProcessLastEvent;
     private StubPrunnerApiService $stubPrunnerApiService;
     private BufferedOutput $renderOrchestratorProcessBufferedOutput;
+    #[\Neos\Flow\Annotations\Inject]
+    protected \Neos\ContentRepositoryRegistry\ContentRepositoryRegistry $contentRepositoryRegistry;
 
     public function __construct()
     {
@@ -122,7 +124,7 @@ class FeatureContext implements Context
      */
     public function resetNodeTypeManagerFully()
     {
-        $nodeTypeManager = $this->getObjectManager()->get(NodeTypeManager::class);
+        $nodeTypeManager = $this->getObjectManager()->get(\Neos\ContentRepository\Core\NodeType\NodeTypeManager::class);
         // This is a WORKAROUND, and should be done in NodeTypeManager::overrideNodeTypes().
         ObjectAccess::setProperty($nodeTypeManager, 'cachedSubNodeTypes', [], true);
     }
@@ -383,8 +385,9 @@ class FeatureContext implements Context
         foreach ($combinator->sites() as $site) {
             foreach ($combinator->siteNodeInContexts($site, 'live') as $siteNode) {
                 $node = $siteNode->getContext()->getNode($path);
-                if ($node instanceof NodeInterface) {
-                    return $node->getIdentifier();
+                if ($node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
+                    // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
+                    return $node->aggregateId->value;
                 }
             }
         }
@@ -628,7 +631,8 @@ class FeatureContext implements Context
             );
             $configuration = $this->nodeTypesConfiguration;
         }
-        $this->getObjectManager()->get(NodeTypeManager::class)->overrideNodeTypes($configuration);
+        // TODO 9.0 migration: !! NodeTypeManager::createNodeType() was never meant to be used outside of testing and is removed in Neos 9.0.
+        $this->getObjectManager()->get(\Neos\ContentRepository\Core\NodeType\NodeTypeManager::class)->overrideNodeTypes($configuration);
     }
 
     /**
@@ -758,7 +762,10 @@ class FeatureContext implements Context
         $publishingService = $this->getPublishingService();
         $workspaceRepository = $this->getObjectManager()->get(WorkspaceRepository::class);
         assert($workspaceRepository instanceof WorkspaceRepository);
-        $workspace = $workspaceRepository->findByIdentifier($workspaceName);
+
+        // TODO 9.0 migration: Make this code aware of multiple Content Repositories.
+        $contentRepository = $this->contentRepositoryRegistry->get(\Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId::fromString('default'));
+        $workspace = $contentRepository->findWorkspaceByName(\Neos\ContentRepository\Core\SharedModel\Workspace\WorkspaceName::fromString($workspaceName));
 
         $unpublishedNodes = $publishingService->getUnpublishedNodes($workspace);
         // NOTE: we explicitly need to specify the target workspace here, otherwise, the *node's workspace base workspace*

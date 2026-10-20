@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
+use Generator;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Annotations\Inject;
+use ReflectionClass;
 
 /**
  * Our long-lived processes, especially {@see NodeRenderOrchestrator} and {@see NodeRenderer} are kind of hard to test,
@@ -43,14 +47,16 @@ use Neos\Flow\Annotations as Flow;
  */
 final class InterruptibleProcessRuntime
 {
-    private \Generator $generator;
+    private Generator $generator;
 
     private bool $inTestingMode;
 
     private bool $encounteredExitEvent = false;
     private bool $generatorIsPaused = false;
+    #[Inject]
+    protected ContentRepositoryRegistry $contentRepositoryRegistry;
 
-    private function __construct(\Generator $generator, bool $inTestingMode)
+    private function __construct(Generator $generator, bool $inTestingMode)
     {
         $this->generator = $generator;
         $this->inTestingMode = $inTestingMode;
@@ -59,10 +65,10 @@ final class InterruptibleProcessRuntime
     /**
      * Generate a new Process Runtime in production mode
      *
-     * @param \Generator $generator
+     * @param Generator $generator
      * @return InterruptibleProcessRuntime
      */
-    public static function create(\Generator $generator): self
+    public static function create(Generator $generator): self
     {
         return new self($generator, false);
     }
@@ -70,10 +76,10 @@ final class InterruptibleProcessRuntime
     /**
      * Generate a new Process Runtime in testing mode, where {@see ExitEvent} won't trigger an exit() call.
      *
-     * @param \Generator $generator
+     * @param Generator $generator
      * @return InterruptibleProcessRuntime
      */
-    public static function createForTesting(\Generator $generator): self
+    public static function createForTesting(Generator $generator): self
     {
         return new self($generator, true);
     }
@@ -105,11 +111,16 @@ final class InterruptibleProcessRuntime
         while ($this->generator->valid()) {
             $currentEvent = $this->generator->current();
             if ($currentEvent instanceof ExitEvent) {
+                // TODO 9.0 migration: Make this code aware of multiple Content Repositories.
+
                 $this->encounteredExitEvent = true;
+                // todo wtf is this? rector did that
+//                $contentRepository = $this->contentRepositoryRegistry->get(ContentRepositoryId::fromString('default'));
+//                $contentRepository->getNodeTypeManager() = true;
                 // stop iterating the iterator in all cases
                 return $this->handleExitEvent($currentEvent);
             }
-            $shortName = (new \ReflectionClass($currentEvent))->getShortName();
+            $shortName = new ReflectionClass($currentEvent)->getShortName();
             foreach ($eventClassNames as $eventClassName) {
                 if ($eventClassName === $shortName || is_a($currentEvent, $eventClassName)) {
                     // stop here, can be restarted lateron. We still need to continue to the next event here.

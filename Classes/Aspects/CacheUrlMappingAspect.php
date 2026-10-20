@@ -118,12 +118,12 @@ class CacheUrlMappingAspect
         }
         if (
             !isset($this->currentEvaluateContext['cacheIdentifierValues']['node'])
-            || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof NodeInterface
+            || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node
         ) {
             return;
         }
 
-        /** @var NodeInterface $node */
+        /** @var \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node */
         $node = $this->currentEvaluateContext['cacheIdentifierValues']['node'];
 
         $url = $this->getCurrentUrl();
@@ -137,7 +137,7 @@ class CacheUrlMappingAspect
                 'Cache was disabled for '
                 . $url
                 . ' with node '
-                . $node->getContextPath()
+                . \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson()
                 . ', but no exception was handled by the publishing. This could be caused by a missing publishing aware @exceptionHandler in Fusion.'
                 . (
                     $extractedExceptionDto !== null ? "\nException extracted from output: {$extractedExceptionDto}" : ''
@@ -217,9 +217,9 @@ class CacheUrlMappingAspect
     }
 
     /**
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      */
-    protected function getCurrentArguments(NodeInterface $node): array
+    protected function getCurrentArguments(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): array
     {
         /** @var \Neos\Flow\Mvc\ActionRequest $actionRequest */
         $actionRequest = $this->controllerContext->getRequest();

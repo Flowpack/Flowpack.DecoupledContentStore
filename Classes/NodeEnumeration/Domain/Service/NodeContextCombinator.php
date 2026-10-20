@@ -18,32 +18,22 @@ class NodeContextCombinator
 {
     /**
      * @Flow\Inject
-     * @var ContentDimensionCombinator
-     */
-    protected $contentDimensionCombinator;
-
-    /**
-     * @Flow\Inject
      * @var SiteRepository
      */
     protected $siteRepository;
-
-    /**
-     * @Flow\Inject
-     * @var ContextFactoryInterface
-     */
-    protected $contextFactory;
 
     /**
      * @Flow\InjectConfiguration(path="nodeRendering.recurseHiddenContent", package="Flowpack.DecoupledContentStore")
      * @var ContextFactoryInterface
      */
     protected $recurseHiddenContent;
+    #[\Neos\Flow\Annotations\Inject]
+    protected \Neos\ContentRepositoryRegistry\ContentRepositoryRegistry $contentRepositoryRegistry;
 
     /**
      * Iterate over the node with the given identifier and site in contexts for all available presets (if it exists as a variant)
      *
-     * @return Generator<NodeInterface>
+     * @return Generator<\Neos\ContentRepository\Core\Projection\ContentGraph\Node>
      * @throws NodeNotFoundException
      */
     public function nodeInContexts(string $nodeIdentifier, Site $site, string $workspaceName = 'live'): Generator
@@ -54,7 +44,7 @@ class NodeContextCombinator
         foreach ($this->siteNodeInContexts($site, $workspaceName) as $siteNode) {
             $node = $siteNode->getContext()->getNodeByIdentifier($nodeIdentifier);
 
-            if ($node instanceof NodeInterface) {
+            if ($node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
                 $nodeFound = true;
                 yield $node;
             }
@@ -76,7 +66,7 @@ class NodeContextCombinator
      * need for the orphan check. It also does not report "not found" per site: a node is part of one site, so all
      * the others not having it is the normal case rather than an error.
      *
-     * @return Generator<array{0: NodeInterface, 1: NodeInterface}> the site node and the node, in that order
+     * @return Generator<array{0: \Neos\ContentRepository\Core\Projection\ContentGraph\Node, 1: \Neos\ContentRepository\Core\Projection\ContentGraph\Node}> the site node and the node, in that order
      */
     public function nodeVariantsWithSiteNode(string $nodeIdentifier, string $workspaceName = 'live'): Generator
     {
@@ -93,7 +83,7 @@ class NodeContextCombinator
                 $node = $siteNode->getContext()->getNodeByIdentifier($nodeIdentifier);
                 // getNodeByIdentifier() looks the node up in the whole content repository rather than inside the
                 // site, so it answers for every site alike and the node has to be matched against the site itself
-                if ($node instanceof NodeInterface && self::isWithinSiteNode($node, $siteNode)) {
+                if ($node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node && self::isWithinSiteNode($node, $siteNode)) {
                     $nodeFound = true;
                     yield [$siteNode, $node];
                 }
@@ -112,9 +102,9 @@ class NodeContextCombinator
      * Compared by path rather than by walking up the parents: the walk gives the same answer, while this runs for
      * every site the node is looked up in. Nodes without a path cannot be placed in a site and count as outside it.
      */
-    private static function isWithinSiteNode(NodeInterface $node, NodeInterface $siteNode): bool
+    private static function isWithinSiteNode(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $siteNode): bool
     {
-        if (!$node instanceof TraversableNodeInterface || !$siteNode instanceof TraversableNodeInterface) {
+        if (!$node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node || !$siteNode instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
             return false;
         }
 
@@ -142,17 +132,20 @@ class NodeContextCombinator
      * Iterate over the site node in all available presets (if it exists)
      *
      * @param bool|null $invisibleContentShown NULL follows the "nodeRendering.recurseHiddenContent" setting
-     * @return Generator<NodeInterface>
+     * @return Generator<\Neos\ContentRepository\Core\Projection\ContentGraph\Node>
      */
     public function siteNodeInContexts(
         Site $site,
         string $workspaceName = 'live',
         ?bool $invisibleContentShown = null,
     ): Generator {
-        $allowedContextCombinations = $this->contentDimensionCombinator->getAllAllowedCombinations();
+        $contentRepository = $this->contentRepositoryRegistry->get(\Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId::fromString('default'));
+        $dimensionSpacePoints = $contentRepository->getVariationGraph()->getDimensionSpacePoints();
+        // TODO 9.0 migration: try to directly work with $dimensionSpacePoints, instead of converting them to the legacy dimension format
+        $allowedContextCombinations = array_map(fn(\Neos\ContentRepository\Core\DimensionSpace\DimensionSpacePoint $dimensionSpacePoint) => $dimensionSpacePoint->toLegacyDimensionArray(), iterator_to_array($dimensionSpacePoints));
 
         foreach ($allowedContextCombinations as $dimensionContextCombination) {
-            $contentContext = $this->contextFactory->create(array(
+            $contentContext = new \Neos\Rector\ContentRepository90\Legacy\LegacyContextStub(array(
                 'currentSite' => $site,
                 'workspaceName' => $workspaceName,
                 'dimensions' => $dimensionContextCombination,
@@ -162,7 +155,7 @@ class NodeContextCombinator
 
             $siteNode = $contentContext->getNode('/sites/' . $site->getNodeName());
 
-            if ($siteNode instanceof NodeInterface) {
+            if ($siteNode instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
                 yield $siteNode;
             }
         }
@@ -171,13 +164,15 @@ class NodeContextCombinator
     /**
      * Iterate over the given node and all document child nodes recursively
      *
-     * @return Generator<NodeInterface>
+     * @return Generator<\Neos\ContentRepository\Core\Projection\ContentGraph\Node>
      */
-    public function recurseDocumentChildNodes(NodeInterface $node): Generator
+    public function recurseDocumentChildNodes(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): Generator
     {
         yield $node;
+        $subgraph = $this->contentRepositoryRegistry->subgraphForNode($node);
 
-        foreach ($node->getChildNodes('Neos.Neos:Document') as $childNode) {
+        // TODO 9.0 migration: Try to remove the iterator_to_array($nodes) call.
+        foreach (iterator_to_array($subgraph->findChildNodes($node->aggregateId, \Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindChildNodesFilter::create(nodeTypeConstraints: 'Neos.Neos:Document'))) as $childNode) {
             yield from $this->recurseDocumentChildNodes($childNode);
         }
     }

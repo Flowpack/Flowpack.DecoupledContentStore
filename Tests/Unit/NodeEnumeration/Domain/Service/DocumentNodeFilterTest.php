@@ -177,15 +177,15 @@ class DocumentNodeFilterTest extends TestCase
      * TraversableNodeInterface while everything else is NodeInterface, and that class is what implements both.
      *
      * @param bool $visible what isVisible() answers - the flag and the hidden-before/after dates together
-     * @param Node|null $parentNode NULL where the walk up leaves the tree, as it does above the root node
-     * @return Node&MockObject
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node|null $parentNode NULL where the walk up leaves the tree, as it does above the root node
+     * @return \Neos\ContentRepository\Core\Projection\ContentGraph\Node&MockObject
      */
-    private function nodeMock(bool $visible, ?Node $parentNode): Node
+    private function nodeMock(bool $visible, ?\Neos\ContentRepository\Core\Projection\ContentGraph\Node $parentNode): \Neos\ContentRepository\Core\Projection\ContentGraph\Node
     {
-        $nodeType = $this->createMock(NodeType::class);
+        $nodeType = $this->createMock(\Neos\ContentRepository\Core\NodeType\NodeType::class);
         $nodeType->method('isOfType')->willReturn(true);
 
-        $node = $this->createMock(Node::class);
+        $node = $this->createMock(\Neos\ContentRepository\Core\Projection\ContentGraph\Node::class);
         $node->method('isVisible')->willReturn($visible);
         $node->method('getNodeType')->willReturn($nodeType);
 

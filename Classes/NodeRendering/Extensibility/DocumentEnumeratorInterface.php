@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility;
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 
 /**
  * Adjust document enumeration.
@@ -19,13 +19,14 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
  * - render document nodes in different variants, e.g. formats
  * - use different renderers (configured via Flowpack.DecoupledContentStore.extensions.documentRenderers.[...])
  * - decide at runtime which (document) nodes should be part of a content release and which not.
+ *
+ * Implementations are instantiated with `new`, receiving the configured `enumeratorOptions` array as the first
+ * constructor argument.
  */
 interface DocumentEnumeratorInterface
 {
-    public function __construct(array $options = []);
-
     /**
      * @return iterable<EnumeratedNode>
      */
-    public function enumerateDocumentNode(NodeInterface $documentNode): iterable;
+    public function enumerateDocumentNode(Node $documentNode): iterable;
 }

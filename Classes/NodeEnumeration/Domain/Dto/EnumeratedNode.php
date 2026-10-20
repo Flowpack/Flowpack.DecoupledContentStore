@@ -62,12 +62,13 @@ final class EnumeratedNode implements \JsonSerializable
         $this->rendererId = $rendererId;
     }
 
-    public static function fromNode(NodeInterface $node, array $arguments = []): self
+    public static function fromNode(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments = []): self
     {
+        // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
         return new self(
-            $node->getContextPath(),
-            $node->getIdentifier(),
-            $node->getNodeType()->getName(),
+            \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson(),
+            $node->aggregateId->value,
+            $node->nodeTypeName->value,
             $arguments,
             '',
         );

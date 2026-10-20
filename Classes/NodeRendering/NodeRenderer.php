@@ -93,12 +93,6 @@ class NodeRenderer
 
     /**
      * @Flow\Inject
-     * @var ContextFactoryInterface
-     */
-    protected $contextFactory;
-
-    /**
-     * @Flow\Inject
      * @var ContentReleaseManager
      */
     protected $contentReleaseManager;
@@ -247,15 +241,16 @@ class NodeRenderer
         try {
             $node = $this->fetchRenderableNode($enumeratedNode);
 
-            if (!$node instanceof NodeInterface) {
+            if (!$node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
                 // This could happen because a deleted node was queued after publishing
                 $nodeWasFound = false;
             } else {
                 $nodeWasFound = true;
 
+                // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
                 $contentReleaseLogger->debug('Rendering document node variant', [
-                    'node' => $node->getContextPath(),
-                    'nodeIdentifier' => $node->getIdentifier(),
+                    'node' => \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson(),
+                    'nodeIdentifier' => $node->aggregateId->value,
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
                     'arguments' => $enumeratedNode->getArguments(),
@@ -264,13 +259,13 @@ class NodeRenderer
 
                 $tracer = $this->renderTracerProvider->getTracer();
                 $spanParams = [
-                    'node' => $node->getContextPath(),
+                    'node' => \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson(),
                     'site' => $enumeratedNode->getSiteNodeNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
                     'arguments' => $enumeratedNode->getArguments(),
                 ];
                 $tracer->openSpan(self::SPAN_RENDER_DOCUMENT, $spanParams);
-                $tracer->openSpan(self::SPAN_DOCUMENT_PREFIX . $node->getContextPath(), $spanParams);
+                $tracer->openSpan(self::SPAN_DOCUMENT_PREFIX . \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson(), $spanParams);
                 try {
                     $this->nodeRenderingExtensionManager->renderDocumentNodeVariant(
                         $node,
@@ -348,14 +343,14 @@ class NodeRenderer
 
     /**
      * @param EnumeratedNode $enumeratedNode
-     * @return NodeInterface|null
+     * @return \Neos\ContentRepository\Core\Projection\ContentGraph\Node|null
      * @throws \Exception
      */
-    protected function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?NodeInterface
+    protected function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?\Neos\ContentRepository\Core\Projection\ContentGraph\Node
     {
         $site = $this->siteRepository->findOneByNodeName($enumeratedNode->getSiteNodeNameFromContextPath());
 
-        $context = $this->contextFactory->create([
+        $context = new \Neos\Rector\ContentRepository90\Legacy\LegacyContextStub([
             'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
             'currentSite' => $site,
             'currentDomain' => $site->getFirstActiveDomain(),

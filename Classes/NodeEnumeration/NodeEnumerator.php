@@ -133,11 +133,11 @@ class NodeEnumerator
                 ]);
 
                 $nodeQuery = new FlowQuery([$siteNode]);
-                /** @var NodeInterface[] $matchingNodes */
+                /** @var \Neos\ContentRepository\Core\Projection\ContentGraph\Node[] $matchingNodes */
                 $matchingNodes = $nodeQuery->find($nodeTypeFilter)->add($siteNode)->get();
 
                 foreach ($matchingNodes as $nodeToEnumerate) {
-                    $contextPath = $nodeToEnumerate->getContextPath();
+                    $contextPath = \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($nodeToEnumerate)->toJson();
 
                     $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate, $siteNode);
                     if ($skipReason !== null) {

@@ -57,7 +57,7 @@ class NodeRenderingExtensionManager
     /**
      * @return iterable<EnumeratedNode>
      */
-    public function enumerateDocumentNode(NodeInterface $documentNode): iterable
+    public function enumerateDocumentNode(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $documentNode): iterable
     {
         if (!isset($this->documentEnumerators)) {
             $this->documentEnumerators = self::instantiateExtensions(
@@ -85,7 +85,7 @@ class NodeRenderingExtensionManager
     }
 
     public function renderDocumentNodeVariant(
-        NodeInterface $node,
+        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
         EnumeratedNode $enumeratedNode,
         ContentReleaseLogger $contentReleaseLogger,
     ): void {
@@ -113,14 +113,14 @@ class NodeRenderingExtensionManager
     /**
      * Execute Document Metadata Generators to modify $cacheValues
      *
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param array $arguments
      * @param ControllerContext $controllerContext
      * @param DocumentNodeCacheValues $cacheValues
      * @return DocumentNodeCacheValues
      */
     public function runDocumentMetadataGenerators(
-        NodeInterface $node,
+        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
         array $arguments,
         ControllerContext $controllerContext,
         DocumentNodeCacheValues $cacheValues,

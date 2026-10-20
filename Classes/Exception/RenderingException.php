@@ -13,14 +13,14 @@ class RenderingException extends \Flowpack\DecoupledContentStore\Exception
 
     /**
      * @param string $message
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param string $nodeUri
      * @param int $code
      * @param Exception $previous
      */
     public function __construct(
         string $message,
-        NodeInterface $node,
+        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
         $nodeUri,
         int $code = 0,
         ?Exception $previous = null,

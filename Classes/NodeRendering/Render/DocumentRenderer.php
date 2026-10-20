@@ -69,13 +69,13 @@ class DocumentRenderer
     /**
      * Render a specific node variant
      *
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param array $arguments Request arguments when rendering the node
      * @return string the rendered document (not needed inside this package, but might be useful for others who want to trigger the rendering)
      * @throws Exception\RenderingException
      */
     public function renderDocumentNodeVariant(
-        NodeInterface $node,
+        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
         array $arguments,
         ContentReleaseLogger $contentReleaseLogger,
     ): string {
@@ -83,7 +83,7 @@ class DocumentRenderer
         $nodeUri = $this->nodeRenderingUriService->buildNodeUri($node, $arguments);
 
         try {
-            $arguments['node'] = $node->getContextPath();
+            $arguments['node'] = \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson();
             return $this->renderDocumentView($node, $nodeUri, $arguments, $contentReleaseLogger);
         } catch (\Exception $exception) {
             throw new Exception\RenderingException(
@@ -104,14 +104,14 @@ class DocumentRenderer
      * This will set up a simulated request for rendering the view. If the output contains a "next link"
      * it will render
      *
-     * @param NodeInterface $node
+     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
      * @param string $uri The URI for the node
      * @param array $requestArguments Plain request arguments (e.g. node by context path), could come from routing match results
      * @return string the rendered output
      * @throws Exception\InvalidSiteConfigurationException
      */
     protected function renderDocumentView(
-        NodeInterface $node,
+        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
         $uri,
         array $requestArguments,
         ContentReleaseLogger $contentReleaseLogger,
@@ -119,8 +119,9 @@ class DocumentRenderer
         $this->isRendering = true;
 
         try {
-            /** @var ContentContext $contentContext */
+            /** @var \Neos\Rector\ContentRepository90\Legacy\LegacyContextStub $contentContext */
             $contentContext = $node->getContext();
+            // TODO 9.0 migration: !! ContentContext::getCurrentSite() is removed in Neos 9.0.
             $site = $contentContext->getCurrentSite();
             $domain = $site->getFirstActiveDomain();
             $baseUri = (string) $domain;
