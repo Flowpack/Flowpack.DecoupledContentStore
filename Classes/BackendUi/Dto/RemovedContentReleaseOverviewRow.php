@@ -17,13 +17,13 @@ use Neos\Flow\Annotations as Flow;
  * that is known about the release.
  */
 #[Flow\Proxy(false)]
-final class RemovedContentReleaseOverviewRow
+final readonly class RemovedContentReleaseOverviewRow
 {
     public function __construct(
-        private readonly ContentReleaseIdentifier $contentReleaseIdentifier,
-        private readonly Job $job,
-        private readonly ?ContentReleaseMetadata $metadata,
-        private readonly int $errorCount,
+        private ContentReleaseIdentifier $contentReleaseIdentifier,
+        private Job $job,
+        private ?ContentReleaseMetadata $metadata,
+        private int $errorCount,
     ) {}
 
     public function getContentReleaseIdentifier(): ContentReleaseIdentifier

@@ -58,7 +58,8 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
         ]);
 
         $translator = $this->createMock(Translator::class);
-        $translator->expects(self::once())
+        $translator
+            ->expects(self::once())
             ->method('translateById')
             ->with(
                 'automaticReleases.paused.contentModuleWarning',
@@ -81,18 +82,14 @@ final class AutomaticReleaseStatusDataSourceTest extends UnitTestCase
 
         if ($translator === null) {
             $translator = $this->createMock(Translator::class);
-            $translator->method('translateById')
+            $translator
+                ->method('translateById')
                 ->willReturnCallback(static fn(string $labelId): string => 'translated: ' . $labelId);
         }
 
         $backendDateFormatter = $this->createMock(BackendDateFormatter::class);
         $backendDateFormatter->method('format')->willReturn('formatted date');
 
-        $dataSource = new AutomaticReleaseStatusDataSource();
-        $this->inject($dataSource, 'automaticReleaseSwitchService', $automaticReleaseSwitchService);
-        $this->inject($dataSource, 'translator', $translator);
-        $this->inject($dataSource, 'backendDateFormatter', $backendDateFormatter);
-
-        return $dataSource;
+        return new AutomaticReleaseStatusDataSource($automaticReleaseSwitchService, $translator, $backendDateFormatter);
     }
 }

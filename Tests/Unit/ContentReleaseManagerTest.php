@@ -17,6 +17,7 @@ use Neos\Flow\Security\Context;
 use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\NullLogger;
+use Redis;
 
 /**
  * Tests which release the manager schedules, and when it refuses to.
@@ -26,9 +27,9 @@ use Psr\Log\NullLogger;
  * release are explicit requests and must stay unaffected - otherwise the pause could not be used to prepare a
  * release by hand.
  */
-class ContentReleaseManagerTest extends UnitTestCase
+final class ContentReleaseManagerTest extends UnitTestCase
 {
-    private const NODE_IDENTIFIER = '3239baee-3e7f-785c-0853-f4302ef32570';
+    private const string NODE_IDENTIFIER = '3239baee-3e7f-785c-0853-f4302ef32570';
 
     private PrunnerApiService&MockObject $prunnerApiService;
 
@@ -207,7 +208,7 @@ class ContentReleaseManagerTest extends UnitTestCase
 
     private function buildContentReleaseManager(): ContentReleaseManager
     {
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->createMock(Redis::class);
         $redis->method('get')->willReturn($this->currentContentReleaseId);
 
         $redisClientManager = $this->createMock(RedisClientManager::class);
@@ -216,13 +217,13 @@ class ContentReleaseManagerTest extends UnitTestCase
         $securityContext = $this->createMock(Context::class);
         $securityContext->method('isInitialized')->willReturn(false);
 
-        $contentReleaseManager = new ContentReleaseManager();
-        $this->inject($contentReleaseManager, 'prunnerApiService', $this->prunnerApiService);
-        $this->inject($contentReleaseManager, 'automaticReleaseSwitchService', $this->automaticReleaseSwitchService);
-        $this->inject($contentReleaseManager, 'redisClientManager', $redisClientManager);
-        $this->inject($contentReleaseManager, 'securityContext', $securityContext);
-        $this->inject($contentReleaseManager, 'logger', new NullLogger());
-
-        return $contentReleaseManager;
+        return new ContentReleaseManager(
+            $this->prunnerApiService,
+            $redisClientManager,
+            $this->automaticReleaseSwitchService,
+            new NullLogger(),
+            $securityContext,
+            ['current' => '1', 'previous' => null],
+        );
     }
 }

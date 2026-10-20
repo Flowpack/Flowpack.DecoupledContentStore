@@ -11,29 +11,21 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Neos\Flow\Annotations as Flow;
+use Redis;
+use RuntimeException;
 
-/**
- * @Flow\Scope("singleton")
- */
-class ContentReleaseSynchronizer
+#[Flow\Scope('singleton')]
+final readonly class ContentReleaseSynchronizer
 {
     /**
-     * @Flow\Inject
-     * @var RedisClientManager
+     * @param array<string, mixed> $redisKeyPostfixesForEachReleaseConfiguration
      */
-    protected $redisClientManager;
-
-    /**
-     * @Flow\InjectConfiguration("redisKeyPostfixesForEachRelease")
-     * @var array
-     */
-    protected $redisKeyPostfixesForEachReleaseConfiguration;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+        #[Flow\InjectConfiguration('redisKeyPostfixesForEachRelease')]
+        protected array $redisKeyPostfixesForEachReleaseConfiguration,
+    ) {}
 
     public function syncToTarget(
         RedisInstanceIdentifier $targetRedisIdentifier,
@@ -97,12 +89,12 @@ class ContentReleaseSynchronizer
      *
      * @param string $keyToTransfer
      */
-    protected function transferKey(
-        \Redis $sourceRedis,
-        \Redis $targetRedis,
+    private function transferKey(
+        Redis $sourceRedis,
+        Redis $targetRedis,
         string $keyToTransfer,
         ContentReleaseLogger $contentReleaseLogger,
-    ) {
+    ): void {
         $contentReleaseLogger->debug('SYNC: Attempting to transfer ' . $keyToTransfer);
 
         if (!$sourceRedis->exists($keyToTransfer)) {
@@ -134,12 +126,12 @@ class ContentReleaseSynchronizer
         ));
     }
 
-    protected function transferHashKeyIncrementally(
-        \Redis $sourceRedis,
-        \Redis $targetRedis,
+    private function transferHashKeyIncrementally(
+        Redis $sourceRedis,
+        Redis $targetRedis,
         string $keyToTransfer,
         ContentReleaseLogger $contentReleaseLogger,
-    ) {
+    ): void {
         $contentReleaseLogger->debug('SYNC: (INCREMENTAL) Attempting to transfer ' . $keyToTransfer);
 
         if (!$sourceRedis->exists($keyToTransfer)) {
@@ -156,14 +148,14 @@ class ContentReleaseSynchronizer
             );
         }
 
-        if ($sourceRedis->type($keyToTransfer) !== \Redis::REDIS_HASH) {
+        if ($sourceRedis->type($keyToTransfer) !== Redis::REDIS_HASH) {
             $contentReleaseLogger->error(
                 'SYNC: (INCREMENTAL) !!! transferHashKeyIncrementally should only be used with hashes, but '
                     . $keyToTransfer
                     . ' is of type '
                     . $sourceRedis->type($keyToTransfer),
             );
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 '!!! transferHashKeyIncrementally should only be used with hashes, but '
                     . $keyToTransfer
                     . ' is of type '
@@ -174,7 +166,7 @@ class ContentReleaseSynchronizer
         $expectedNumberOfHashItems = $sourceRedis->hLen($keyToTransfer);
 
         // Don't ever return an empty array until we're done iterating (so that our while loop does not abort early)
-        $sourceRedis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
+        $sourceRedis->setOption(Redis::OPT_SCAN, Redis::SCAN_RETRY);
 
         // we have approx 80 000 entries (as of Mar 2021) in the "data" part
         // and it takes between 1 and 10; or at max 40 seconds to import them
@@ -205,7 +197,7 @@ class ContentReleaseSynchronizer
                 . ', actual: '
                 . $actualNumberOfHashItems,
             );
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 '!!!! Number of hash items mismatch for key '
                 . $keyToTransfer
                 . ' - expected '

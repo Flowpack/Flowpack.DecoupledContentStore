@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
 use Flowpack\DecoupledContentStore\Exception;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class ContentReleaseIdentifier implements \JsonSerializable
+#[Flow\Proxy(false)]
+final readonly class ContentReleaseIdentifier implements JsonSerializable
 {
     private string $identifier;
 

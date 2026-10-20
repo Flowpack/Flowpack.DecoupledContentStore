@@ -4,37 +4,31 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Infrastructure;
 
+use Exception;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
+use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
+use JsonException;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisRenderingQueue
+#[Flow\Scope('singleton')]
+final readonly class RedisRenderingQueue
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+    ) {}
 
     /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
-
-    /**
-     * @throws \JsonException
+     * @throws JsonException
      */
     public function appendRenderingJob(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         EnumeratedNode $enumeratedNode,
-    ) {
+    ): void {
         $encodedNode = json_encode($enumeratedNode, JSON_THROW_ON_ERROR);
         $this->redisClientManager->getPrimaryRedis()->rPush(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'),
@@ -44,9 +38,12 @@ class RedisRenderingQueue
 
     public function numberOfQueuedJobs(ContentReleaseIdentifier $contentReleaseIdentifier): int
     {
-        return $this->redisClientManager
-            ->getPrimaryRedis()
-            ->lLen($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue')) ?? 0;
+        return (
+            $this->redisClientManager
+                ->getPrimaryRedis()
+                ->lLen($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'))
+            ?? 0
+        );
     }
 
     public function numberOfRenderingsInProgress(ContentReleaseIdentifier $contentReleaseIdentifier): int
@@ -54,10 +51,8 @@ class RedisRenderingQueue
         return (
             $this->redisClientManager
                 ->getPrimaryRedis()
-                ->hLen($this->redisKeyService->getRedisKeyForPostfix(
-                    $contentReleaseIdentifier,
-                    'inProgressRenderings',
-                )) ?? 0
+                ->hLen($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'inProgressRenderings'))
+            ?? 0
         );
     }
 
@@ -93,7 +88,7 @@ class RedisRenderingQueue
             2,
         );
         if ($nextEntry === false && $redis->getLastError() !== null) {
-            throw new \Exception('Redis operation EVAL failed: ' . $redis->getLastError(), 1471442667);
+            throw new Exception('Redis operation EVAL failed: ' . $redis->getLastError(), 1471442667);
         }
 
         if ($nextEntry === false) {
@@ -108,9 +103,9 @@ class RedisRenderingQueue
      * the number of the attempt which is about to start (1 for the first attempt).
      *
      * A node which is handed out more than once means the previous rendering did not lead to a complete content
-     * cache entry, {@see \Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator}.
+     * cache entry, {@see NodeRenderOrchestrator}.
      *
-     * @throws \JsonException
+     * @throws JsonException
      */
     public function registerRenderingAttempt(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -130,7 +125,7 @@ class RedisRenderingQueue
      * Call this before {@see removeRenderingJobFromReservedList()}: the orchestrator stops waiting as soon as no
      * rendering is in progress anymore, and then drains this list a last time.
      *
-     * @throws \JsonException
+     * @throws JsonException
      */
     public function reportRenderedJob(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -159,7 +154,7 @@ class RedisRenderingQueue
      * @param EnumeratedNode $enumeratedNode
      * @param RendererIdentifier $rendererIdentifier
      * @return bool TRUE if removal was successful or element was not found, FALSE if element was claimed by another renderer in the meantime (however this has happened)
-     * @throws \JsonException
+     * @throws JsonException
      */
     public function removeRenderingJobFromReservedList(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -196,7 +191,7 @@ class RedisRenderingQueue
         );
     }
 
-    public function flush(ContentReleaseIdentifier $contentReleaseIdentifier)
+    public function flush(ContentReleaseIdentifier $contentReleaseIdentifier): void
     {
         $this->redisClientManager->getPrimaryRedis()->del(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingJobQueue'),

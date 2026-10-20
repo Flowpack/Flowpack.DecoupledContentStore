@@ -13,6 +13,11 @@
         </testsuite>
     </testsuites>
 
+    <!-- Lets the tests double final classes. -->
+    <extensions>
+        <bootstrap class="DG\BypassFinals\PHPUnitExtension"/>
+    </extensions>
+
     <source>
         <include>
             <directory>Classes</directory>

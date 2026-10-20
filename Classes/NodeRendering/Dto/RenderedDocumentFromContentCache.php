@@ -4,32 +4,19 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
+use JsonException;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class RenderedDocumentFromContentCache
+#[Flow\Proxy(false)]
+final readonly class RenderedDocumentFromContentCache
 {
-    /**
-     * @var string
-     */
-    protected $fullContent;
+    private string $fullContent;
 
-    /**
-     * @var DocumentNodeCacheValues
-     */
-    protected $documentNodeCacheValues;
+    private DocumentNodeCacheValues $documentNodeCacheValues;
 
-    /**
-     * @var bool
-     */
-    protected $isComplete;
+    private bool $isComplete;
 
-    /**
-     * @var string
-     */
-    protected $incompleteReason;
+    private string $incompleteReason;
 
     private function __construct(
         string $fullContent,
@@ -81,7 +68,7 @@ final class RenderedDocumentFromContentCache
     }
 
     /**
-     * @throws \JsonException
+     * @throws JsonException
      */
     public function getLegacyMetadataString(): string
     {

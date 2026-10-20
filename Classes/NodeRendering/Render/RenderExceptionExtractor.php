@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
-class RenderExceptionExtractor
+final readonly class RenderExceptionExtractor
 {
-    const HTML_MESSAGE_HANDLER_PATTERN = '#
+    private const string HTML_MESSAGE_HANDLER_PATTERN = '#
         <div \s* class="neos-message-wrapper">
             \s*
             <p \s* class="neos-message-content">
@@ -31,7 +31,7 @@ class RenderExceptionExtractor
         </div>
     #xi';
 
-    const XML_COMMENT_HANDLER_PATTERN = '#
+    private const string XML_COMMENT_HANDLER_PATTERN = '#
         <!--
             \s*
             Exception\ while\ rendering\ (?P<stackTrace> [^\s]*?):\ (?P<message> [^>]*?)\ \( (?P<referenceCode> [^)]*) \)
@@ -39,11 +39,7 @@ class RenderExceptionExtractor
         -->
     #xi';
 
-    /**
-     * @param string $content
-     * @return ExtractedExceptionDto
-     */
-    public static function extractRenderingException($content)
+    public static function extractRenderingException(string $content): ?ExtractedExceptionDto
     {
         if (
             preg_match(self::HTML_MESSAGE_HANDLER_PATTERN, $content, $matches)

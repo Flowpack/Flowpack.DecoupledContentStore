@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure;
 
+use DateTimeImmutable;
+use Exception;
 use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
@@ -14,29 +16,15 @@ use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
+use RuntimeException;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisContentReleaseService
+#[Flow\Scope('singleton')]
+final readonly class RedisContentReleaseService
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+    ) {}
 
     public function createContentRelease(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -57,7 +45,7 @@ class RedisContentReleaseService
                 'Content Release "%s" already exists',
                 $contentReleaseIdentifier->getIdentifier(),
             ));
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf(
                     'Content Release "%s" already exists, cannot create a release with the same identifier',
                     $contentReleaseIdentifier->getIdentifier(),
@@ -66,7 +54,7 @@ class RedisContentReleaseService
             );
         }
 
-        $metadata = ContentReleaseMetadata::create($prunnerJobId, new \DateTimeImmutable(), $workspaceName, $accountId);
+        $metadata = ContentReleaseMetadata::create($prunnerJobId, new DateTimeImmutable(), $workspaceName, $accountId);
 
         $redis->multi();
         try {
@@ -76,7 +64,7 @@ class RedisContentReleaseService
                 json_encode($metadata),
             );
             $redis->exec();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $redis->discard();
             throw $e;
         }
@@ -119,7 +107,7 @@ class RedisContentReleaseService
 
     /**
      * @return ContentReleaseIdentifier[]
-     * @throws \Exception
+     * @throws Exception
      */
     public function fetchAllReleaseIds(RedisInstanceIdentifier $redisInstanceIdentifier): array
     {

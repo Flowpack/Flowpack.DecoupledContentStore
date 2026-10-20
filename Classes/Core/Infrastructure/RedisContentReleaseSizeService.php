@@ -12,18 +12,15 @@ use Neos\Flow\Annotations as Flow;
  * Calculates how much memory a content release occupies in Redis.
  *
  * NOTE: this is an expensive operation, as it needs one MEMORY USAGE call per Redis key of the release.
- * For finished releases, use the pre-calculated size from ContentReleaseMetadata::getContentReleaseSize()
+ * For finished releases, use the pre-calculated size from ContentReleaseMetadata::$contentReleaseSize
  * instead - it is determined once by the NodeRenderOrchestrator when the release is finished.
- *
- * @Flow\Scope("singleton")
  */
-class RedisContentReleaseSizeService
+#[Flow\Scope('singleton')]
+final readonly class RedisContentReleaseSizeService
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+    ) {}
 
     /**
      * @return float size of the content release in megabytes

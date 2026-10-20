@@ -9,16 +9,16 @@ use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisKeyService
+#[Flow\Scope('singleton')]
+final readonly class RedisKeyService
 {
     /**
-     * @Flow\InjectConfiguration("redisKeyPostfixesForEachRelease")
-     * @var array
+     * @param array<string, mixed> $redisKeyPostfixesForEachReleaseConfiguration
      */
-    protected $redisKeyPostfixesForEachReleaseConfiguration;
+    public function __construct(
+        #[Flow\InjectConfiguration('redisKeyPostfixesForEachRelease')]
+        protected array $redisKeyPostfixesForEachReleaseConfiguration,
+    ) {}
 
     public function getRedisKeyForPostfix(ContentReleaseIdentifier $contentReleaseIdentifier, string $postfix): string
     {

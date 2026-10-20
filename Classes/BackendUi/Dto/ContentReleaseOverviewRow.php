@@ -9,10 +9,8 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-class ContentReleaseOverviewRow
+#[Flow\Proxy(false)]
+final readonly class ContentReleaseOverviewRow
 {
     private ContentReleaseIdentifier $contentReleaseIdentifier;
     private ?ContentReleaseMetadata $metadata;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility;
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 
 /**
  * Adjust document enumeration.
@@ -22,10 +22,13 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
  */
 interface DocumentEnumeratorInterface
 {
+    /**
+     * @param array<string, mixed> $options
+     */
     public function __construct(array $options = []);
 
     /**
      * @return iterable<EnumeratedNode>
      */
-    public function enumerateDocumentNode(NodeInterface $documentNode): iterable;
+    public function enumerateDocumentNode(Node $documentNode): iterable;
 }

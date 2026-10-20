@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Utility;
 
-class GeneratorUtility
+final readonly class GeneratorUtility
 {
     /**
      * @template T

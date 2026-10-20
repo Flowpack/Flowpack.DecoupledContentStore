@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Infrastructure;
 
+use Exception;
 use Flowpack\DecoupledContentStore\Core\Domain\Dto\ContentReleaseBatchResult;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
@@ -12,27 +13,18 @@ use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisRenderingErrorManager
+#[Flow\Scope('singleton')]
+final readonly class RedisRenderingErrorManager
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+    ) {}
 
     public function registerRenderingError(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         array $additionalData,
-        \Exception $exception,
+        Exception $exception,
     ): void {
         $this->redisClientManager->getPrimaryRedis()->sAdd(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingErrors'),

@@ -5,17 +5,13 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
 use Flowpack\Prunner\ValueObject\JobId;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class PrunnerJobId implements \JsonSerializable
+#[Flow\Proxy(false)]
+final readonly class PrunnerJobId implements JsonSerializable
 {
-    /**
-     * @var string
-     */
-    private $identifier;
+    private string $identifier;
 
     private function __construct(string $identifier)
     {

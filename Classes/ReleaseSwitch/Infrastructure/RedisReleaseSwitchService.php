@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure;
 
+use DateTimeImmutable;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -13,46 +14,28 @@ use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisCon
 use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisReleaseSwitchService
+#[Flow\Scope('singleton')]
+final readonly class RedisReleaseSwitchService
 {
     /**
-     * @Flow\Inject
-     * @var RedisClientManager
+     * @param array<string, mixed> $redisKeyPostfixesForEachReleaseConfiguration
+     * @param array<string, mixed> $configEpochSettings
      */
-    protected $redisClient;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
-
-    /**
-     * @Flow\InjectConfiguration("redisKeyPostfixesForEachRelease")
-     * @var array
-     */
-    protected $redisKeyPostfixesForEachReleaseConfiguration;
-
-    /**
-     * @Flow\InjectConfiguration("configEpoch")
-     * @var array
-     */
-    protected $configEpochSettings;
+    public function __construct(
+        private RedisClientManager $redisClient,
+        private RedisContentReleaseService $redisContentReleaseService,
+        private RedisKeyService $redisKeyService,
+        #[Flow\InjectConfiguration('redisKeyPostfixesForEachRelease')]
+        protected array $redisKeyPostfixesForEachReleaseConfiguration,
+        #[Flow\InjectConfiguration('configEpoch')]
+        protected array $configEpochSettings,
+    ) {}
 
     public function switchContentRelease(
         RedisInstanceIdentifier $redisInstanceIdentifier,
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-    ) {
+    ): void {
         $redis = $this->redisClient->getRedis($redisInstanceIdentifier);
         $current = $redis->get('contentStore:current');
 
@@ -98,7 +81,7 @@ class RedisReleaseSwitchService
         $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         $this->redisContentReleaseService->setContentReleaseMetadata(
             $contentReleaseIdentifier,
-            $releaseMetadata->withSwitchTime(new \DateTimeImmutable()),
+            $releaseMetadata->withSwitchTime(new DateTimeImmutable()),
             $redisInstanceIdentifier,
         );
 

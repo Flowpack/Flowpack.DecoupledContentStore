@@ -4,78 +4,50 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
+use Exception as PhpException;
 use Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderingUriService;
 use Flowpack\DecoupledContentStore\Transfer\Resource\Target\MultisiteFileSystemSymlinkTarget;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Http\Helper\ResponseInformationHelper;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\Mvc\ActionResponse;
 use Neos\Flow\ResourceManagement\ResourceManager;
-use Neos\Neos\Domain\Service\ContentContext;
 use Psr\Http\Message\ResponseInterface;
 
-/**
- * @Flow\Scope("singleton")
- */
-class DocumentRenderer
+#[Flow\Scope('singleton')]
+final class DocumentRenderer
 {
-    /**
-     * @Flow\InjectConfiguration("nodeRendering.useRelativeResourceUris")
-     * @var bool
-     */
-    protected $useRelativeResourceUris;
+    private bool $isRendering = false;
 
-    /**
-     * @Flow\Inject
-     * @var NodeRenderingUriService
-     */
-    protected $nodeRenderingUriService;
-
-    /**
-     * Add HTTP message if rendering full content
-     *
-     * @Flow\InjectConfiguration("nodeRendering.addHttpMessage")
-     * @var bool
-     */
-    protected $addHttpMessage;
-
-    /**
-     * @Flow\Inject
-     * @var CustomFusionView
-     */
-    protected $fusionView;
-
-    /**
-     * @Flow\Inject(lazy=false)
-     * @var ResourceManager
-     */
-    protected $resourceManager;
-
-    /**
-     * @Flow\Inject
-     * @var CacheUrlMappingAspect
-     */
-    protected $cacheUrlMappingAspect;
-
-    /**
-     * @var bool
-     */
-    protected $isRendering = false;
+    public function __construct(
+        private readonly NodeRenderingUriService $nodeRenderingUriService,
+        private readonly CustomFusionView $fusionView,
+        private readonly ResourceManager $resourceManager,
+        private readonly CacheUrlMappingAspect $cacheUrlMappingAspect,
+        #[Flow\InjectConfiguration('nodeRendering.useRelativeResourceUris')]
+        protected readonly bool $useRelativeResourceUris,
+        /**
+         * Add HTTP message if rendering full content
+         */
+        #[Flow\InjectConfiguration('nodeRendering.addHttpMessage')]
+        protected readonly bool $addHttpMessage,
+    ) {}
 
     /**
      * Render a specific node variant
      *
-     * @param NodeInterface $node
+     * @param Node $node
      * @param array $arguments Request arguments when rendering the node
      * @return string the rendered document (not needed inside this package, but might be useful for others who want to trigger the rendering)
      * @throws Exception\RenderingException
      */
     public function renderDocumentNodeVariant(
-        NodeInterface $node,
+        Node $node,
         array $arguments,
         ContentReleaseLogger $contentReleaseLogger,
     ): string {
@@ -83,16 +55,10 @@ class DocumentRenderer
         $nodeUri = $this->nodeRenderingUriService->buildNodeUri($node, $arguments);
 
         try {
-            $arguments['node'] = $node->getContextPath();
+            $arguments['node'] = NodeAddress::fromNode($node)->toJson();
             return $this->renderDocumentView($node, $nodeUri, $arguments, $contentReleaseLogger);
-        } catch (\Exception $exception) {
-            throw new Exception\RenderingException(
-                'Error rendering document view',
-                $node,
-                $nodeUri,
-                1491378709,
-                $exception,
-            );
+        } catch (PhpException $exception) {
+            throw new Exception\RenderingException('Error rendering document view', $nodeUri, 1491378709, $exception);
         } finally {
             $this->cacheUrlMappingAspect->afterDocumentRendering();
         }
@@ -104,24 +70,27 @@ class DocumentRenderer
      * This will set up a simulated request for rendering the view. If the output contains a "next link"
      * it will render
      *
-     * @param NodeInterface $node
+     * @param Node $node
      * @param string $uri The URI for the node
      * @param array $requestArguments Plain request arguments (e.g. node by context path), could come from routing match results
      * @return string the rendered output
      * @throws Exception\InvalidSiteConfigurationException
      */
-    protected function renderDocumentView(
-        NodeInterface $node,
-        $uri,
+    private function renderDocumentView(
+        Node $node,
+        string $uri,
         array $requestArguments,
         ContentReleaseLogger $contentReleaseLogger,
     ): string {
         $this->isRendering = true;
 
         try {
-            /** @var ContentContext $contentContext */
-            $contentContext = $node->getContext();
-            $site = $contentContext->getCurrentSite();
+            $site = $this->nodeRenderingUriService->findSiteForNode(
+                $node,
+            ) ?? throw new Exception\InvalidSiteConfigurationException(
+                'No site node found for node ' . $node->aggregateId->value,
+                1762862401,
+            );
             $domain = $site->getFirstActiveDomain();
             $baseUri = (string) $domain;
             if ($baseUri === '') {
@@ -154,21 +123,17 @@ class DocumentRenderer
             $this->fusionView->assign('value', $node);
 
             $output = $this->fusionView->render();
-            if ($this->addHttpMessage) {
-                if ($output instanceof ResponseInterface) {
-                    $output =
-                        implode("\r\n", ResponseInformationHelper::prepareHeaders($output))
-                        . "\r\n"
-                        . $output->getBody()->getContents();
-                } else {
-                    $output = self::wrapInHttpMessage($output, $controllerContext->getResponse());
-                }
-            } else {
-                if ($output instanceof ResponseInterface) {
-                    $output = $output->getBody()->getContents();
-                }
+            if ($output instanceof ResponseInterface) {
+                return $this->addHttpMessage
+                    ? implode("\r\n", ResponseInformationHelper::prepareHeaders($output))
+                    . "\r\n"
+                    . $output->getBody()->getContents()
+                    : $output->getBody()->getContents();
             }
-            return $output;
+
+            return $this->addHttpMessage
+                ? self::wrapInHttpMessage($output->getContents(), $controllerContext->getResponse())
+                : $output->getContents();
         } finally {
             $this->isRendering = false;
         }
@@ -197,17 +162,17 @@ class DocumentRenderer
     /**
      * @return bool
      */
-    public function isRendering()
+    public function isRendering(): bool
     {
         return $this->isRendering;
     }
 
-    public function disableCache()
+    public function disableCache(): void
     {
         $this->fusionView->disableCache();
     }
 
-    public function enableCache()
+    public function enableCache(): void
     {
         $this->fusionView->enableCache();
     }

@@ -14,115 +14,54 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
-use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Core\RedisPruneService;
 use Flowpack\DecoupledContentStore\Exception;
-use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishPreviewService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\PipelineName;
+use GuzzleHttp\Psr7\Response;
 use Neos\Error\Messages\Message;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\I18n\Translator;
 use Neos\Flow\Mvc\Controller\ActionController;
 use Neos\Fusion\View\FusionView;
 use Neos\Neos\Controller\BackendUserTranslationTrait;
+use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
 
-class BackendController extends ActionController
+final class BackendController extends ActionController
 {
     use BackendUserTranslationTrait;
 
-    /**
-     * @Flow\Inject
-     * @var PrunnerApiService
-     */
-    protected $prunnerApiService;
-
-    /**
-     * @Flow\Inject
-     * @var ContentReleaseManager
-     */
-    protected $contentReleaseManager;
-
-    /**
-     * @Flow\Inject
-     * @var BackendUiDataService
-     */
-    protected $backendUiDataService;
-
-    /**
-     * @Flow\Inject
-     * @var WorkerErrorLogAggregator
-     */
-    protected $workerErrorLogAggregator;
-
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisReleaseSwitchService
-     */
-    protected $redisReleaseSwitchService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
-
-    /**
-     * @Flow\Inject
-     * @var ContentReleaseCleaner
-     */
-    protected $contentReleaseCleaner;
-
-    /**
-     * @Flow\Inject
-     * @var RedisPruneService
-     */
-    protected $redisPruneService;
-
-    #[Flow\Inject]
-    protected AutomaticReleaseSwitchService $automaticReleaseSwitchService;
-
-    #[Flow\Inject]
-    protected Translator $translator;
-
-    #[Flow\Inject]
-    protected BackendDateFormatter $backendDateFormatter;
-
-    #[Flow\Inject]
-    protected QuickPublishPreviewService $quickPublishPreviewService;
-
-    /**
-     * @Flow\InjectConfiguration("redisContentStores")
-     * @var array
-     */
-    protected $redisContentStores;
-
-    /**
-     * @Flow\InjectConfiguration("configEpoch")
-     * @var array
-     */
-    protected $configEpochSettings;
-
     protected $defaultViewObjectName = FusionView::class;
 
-    public function indexAction(?string $contentStore = null)
+    /**
+     * @param array<string, mixed> $redisContentStores
+     * @param array<string, mixed> $configEpochSettings
+     */
+    public function __construct(
+        private readonly PrunnerApiService $prunnerApiService,
+        private readonly ContentReleaseManager $contentReleaseManager,
+        private readonly BackendUiDataService $backendUiDataService,
+        private readonly WorkerErrorLogAggregator $workerErrorLogAggregator,
+        private readonly RedisClientManager $redisClientManager,
+        private readonly RedisReleaseSwitchService $redisReleaseSwitchService,
+        private readonly ContentReleaseCleaner $contentReleaseCleaner,
+        private readonly RedisPruneService $redisPruneService,
+        private readonly AutomaticReleaseSwitchService $automaticReleaseSwitchService,
+        private readonly Translator $translator,
+        private readonly BackendDateFormatter $backendDateFormatter,
+        private readonly QuickPublishPreviewService $quickPublishPreviewService,
+        #[Flow\InjectConfiguration('redisContentStores')]
+        protected readonly array $redisContentStores,
+        #[Flow\InjectConfiguration('configEpoch')]
+        protected readonly array $configEpochSettings,
+    ) {}
+
+    public function indexAction(?string $contentStore = null): void
     {
         $contentStore = $contentStore
             ? RedisInstanceIdentifier::fromString($contentStore)
@@ -164,7 +103,7 @@ class BackendController extends ActionController
         ?string $detailTaskName = '',
         ?string $prunnerJobId = '',
         bool $showAllRenderingErrors = false,
-    ) {
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $contentStore = $contentStore
             ? RedisInstanceIdentifier::fromString($contentStore)
@@ -199,25 +138,24 @@ class BackendController extends ActionController
         }
     }
 
-    public function publishAllAction()
+    public function publishAllAction(): void
     {
         $this->contentReleaseManager->cancelAllRunningContentReleases();
         $this->contentReleaseManager->startFullContentRelease();
         $this->redirect('index');
     }
 
-    public function publishAllWithoutValidationAction()
+    public function publishAllWithoutValidationAction(): void
     {
         $this->contentReleaseManager->cancelAllRunningContentReleases();
         $this->contentReleaseManager->startFullContentRelease(false);
         $this->redirect('index');
     }
 
-    public function removeAction(string $contentReleaseIdentifier, string $redisInstanceIdentifier)
+    public function removeAction(string $contentReleaseIdentifier, string $redisInstanceIdentifier): ResponseInterface
     {
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatusCode(405);
-            return 'Method not allowed';
+            return new Response(405, [], 'Method not allowed');
         }
 
         $contentReleaseIdentifierToRemove = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
@@ -242,11 +180,10 @@ class BackendController extends ActionController
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
 
-    public function switchAction(string $contentReleaseIdentifier, string $redisInstanceIdentifier)
+    public function switchAction(string $contentReleaseIdentifier, string $redisInstanceIdentifier): ResponseInterface
     {
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatusCode(405);
-            return 'Method not allowed';
+            return new Response(405, [], 'Method not allowed');
         }
 
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
@@ -269,7 +206,7 @@ class BackendController extends ActionController
     public function switchContentReleaseOnOtherInstanceAction(
         string $targetRedisInstanceIdentifier,
         string $contentReleaseIdentifier,
-    ) {
+    ): void {
         $redis = $this->redisClientManager->getPrimaryRedis();
         $currentContentReleaseId = $redis->get('contentStore:current');
 
@@ -282,7 +219,7 @@ class BackendController extends ActionController
         $this->redirect('index', null, null, ['contentStore' => $targetRedisInstanceIdentifier]);
     }
 
-    public function pruneContentStoreAction(string $redisInstanceIdentifier)
+    public function pruneContentStoreAction(string $redisInstanceIdentifier): void
     {
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
         $this->redisPruneService->pruneRedisInstance($redisInstanceIdentifier);
@@ -290,7 +227,7 @@ class BackendController extends ActionController
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
 
-    public function cancelRunningReleaseAction(string $redisInstanceIdentifier)
+    public function cancelRunningReleaseAction(string $redisInstanceIdentifier): void
     {
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
         $this->contentReleaseManager->cancelAllRunningContentReleases();
@@ -298,37 +235,31 @@ class BackendController extends ActionController
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
 
-    public function pauseAutomaticReleasesAction(?string $contentStore = null): ?string
+    public function pauseAutomaticReleasesAction(?string $contentStore = null): ResponseInterface
     {
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatusCode(405);
-            return 'Method not allowed';
+            return new Response(405, [], 'Method not allowed');
         }
 
         $this->automaticReleaseSwitchService->pause();
         $this->addFlashMessage($this->translateById('automaticReleases.paused.flashMessage'));
 
         $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
-
-        return null;
     }
 
-    public function resumeAutomaticReleasesAction(?string $contentStore = null): ?string
+    public function resumeAutomaticReleasesAction(?string $contentStore = null): ResponseInterface
     {
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatusCode(405);
-            return 'Method not allowed';
+            return new Response(405, [], 'Method not allowed');
         }
 
         $this->automaticReleaseSwitchService->resume();
         $this->addFlashMessage($this->translateById('automaticReleases.resumed.flashMessage'));
 
         $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
-
-        return null;
     }
 
-    public function toggleConfigEpochAction(string $redisInstanceIdentifier)
+    public function toggleConfigEpochAction(string $redisInstanceIdentifier): void
     {
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
         $this->contentReleaseManager->toggleConfigEpoch($redisInstanceIdentifier);
@@ -350,11 +281,10 @@ class BackendController extends ActionController
      * What the given identifiers resolve to, before anything is published. The identifiers end up in a shell command
      * in the pipeline, so this is also where anything which is not a node identifier is rejected.
      */
-    public function quickPublishPreviewAction(string $nodeIdentifiers, ?string $contentStore = null): ?string
+    public function quickPublishPreviewAction(string $nodeIdentifiers, ?string $contentStore = null): ?ResponseInterface
     {
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatusCode(405);
-            return 'Method not allowed';
+            return new Response(405, [], 'Method not allowed');
         }
 
         try {
@@ -365,8 +295,6 @@ class BackendController extends ActionController
                 'contentStore' => $contentStore,
                 'nodeIdentifiers' => $nodeIdentifiers,
             ]);
-
-            return null;
         }
 
         $previewRows = $this->quickPublishPreviewService->preview($identifiers, $this->controllerContext);
@@ -379,11 +307,10 @@ class BackendController extends ActionController
         return null;
     }
 
-    public function quickPublishAction(string $nodeIdentifiers, ?string $contentStore = null): ?string
+    public function quickPublishAction(string $nodeIdentifiers, ?string $contentStore = null): ResponseInterface
     {
         if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
-            $this->response->setStatusCode(405);
-            return 'Method not allowed';
+            return new Response(405, [], 'Method not allowed');
         }
 
         try {
@@ -397,14 +324,10 @@ class BackendController extends ActionController
                 'contentStore' => $contentStore,
                 'nodeIdentifiers' => $nodeIdentifiers,
             ]);
-
-            return null;
         }
 
         $this->addFlashMessage($this->translateById('quickPublish.scheduled.flashMessage', [$contentReleaseIdentifier->getIdentifier()]));
         $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
-
-        return null;
     }
 
     /**

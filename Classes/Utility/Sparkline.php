@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Utility;
 
 // taken and adapted from https://raw.githubusercontent.com/jxxe/sparkline/master/sparkline.php
-class Sparkline
+final readonly class Sparkline
 {
     /**
      * Generate SVG sparklines with PHP
@@ -14,7 +14,7 @@ class Sparkline
      * @license MIT
      * @link https://github.com/jxxe/sparkline/
      */
-    private static function getY($max, $height, $diff, $value)
+    private static function getY(int|float $max, int|float $height, int|float $diff, int|float $value): float
     {
         // prevent division by zero
         if ($max === 0) {
@@ -24,7 +24,10 @@ class Sparkline
         return round(floatval($height - (($value * $height) / $max) + $diff), 2);
     }
 
-    private static function buildElement($tag, $attrs)
+    /**
+     * @param array<string, string|int|float> $attrs
+     */
+    private static function buildElement(string $tag, array $attrs): string
     {
         $element = '<' . $tag . ' ';
         foreach ($attrs as $attr => $value) {
@@ -34,12 +37,16 @@ class Sparkline
         return $element;
     }
 
+    /**
+     * @param array<int|float> $values
+     * @param array{strokeWidth: int|float, width: int|float, height: int|float}|null $options
+     */
     public static function sparkline(
-        $svgClass,
-        $values,
-        $lineColor = '#aaa',
-        $fillColor = 'none',
-        $options = null,
+        string $svgClass,
+        array $values,
+        string $lineColor = '#aaa',
+        string $fillColor = 'none',
+        ?array $options = null,
     ): string {
         if (count($values) <= 1) {
             return '';

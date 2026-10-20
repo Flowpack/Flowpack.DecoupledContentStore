@@ -4,75 +4,39 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\PrepareContentRelease\Dto;
 
+use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
+use Exception;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class ContentReleaseMetadata implements \JsonSerializable
+#[Flow\Proxy(false)]
+final readonly class ContentReleaseMetadata implements JsonSerializable
 {
-    private PrunnerJobId $prunnerJobId;
-
     /**
-     * @var \DateTimeInterface|null
+     * @param PrunnerJobId[] $manualTransferJobIds
+     * @param float|null $contentReleaseSize size of the content release in Redis, in megabytes. Determined once
+     *     when the release is finished, as calculating it is expensive.
      */
-    private $startTime;
-
-    /**
-     * @var \DateTimeInterface|null
-     */
-    private $endTime;
-
-    /**
-     * @var \DateTimeInterface|null
-     */
-    private $switchTime;
-
-    /**
-     * @var PrunnerJobId[]
-     */
-    private $manualTransferJobIds;
-
-    private NodeRenderingCompletionStatus $status;
-
-    private ?string $workspaceName;
-
-    private ?string $accountId;
-
-    /**
-     * Size of the content release in Redis, in megabytes. Determined once when the release is finished,
-     * as calculating it is expensive.
-     */
-    private ?float $contentReleaseSize;
-
     private function __construct(
-        PrunnerJobId $prunnerJobId,
-        ?\DateTimeInterface $startTime,
-        ?\DateTimeInterface $endTime,
-        ?\DateTimeInterface $switchTime,
-        ?NodeRenderingCompletionStatus $status,
-        ?array $manualTransferJobIds = [],
-        string $workspaceName = 'live',
-        ?string $accountId = 'cli',
-        ?float $contentReleaseSize = null,
-    ) {
-        $this->prunnerJobId = $prunnerJobId;
-        $this->startTime = $startTime;
-        $this->endTime = $endTime;
-        $this->switchTime = $switchTime;
-        $this->status = $status ?: NodeRenderingCompletionStatus::scheduled();
-        $this->manualTransferJobIds = $manualTransferJobIds;
-        $this->workspaceName = $workspaceName;
-        $this->accountId = $accountId;
-        $this->contentReleaseSize = $contentReleaseSize;
-    }
+        public PrunnerJobId $prunnerJobId,
+        public ?DateTimeInterface $startTime,
+        public ?DateTimeInterface $endTime,
+        public ?DateTimeInterface $switchTime,
+        public NodeRenderingCompletionStatus $status,
+        public array $manualTransferJobIds = [],
+        public string $workspaceName = 'live',
+        public ?string $accountId = 'cli',
+        public ?float $contentReleaseSize = null,
+    ) {}
 
     public static function create(
         PrunnerJobId $prunnerJobId,
-        \DateTimeInterface $startTime,
+        DateTimeInterface $startTime,
         string $workspace = 'live',
         string $accountId = 'cli',
     ): self {
@@ -88,30 +52,34 @@ final class ContentReleaseMetadata implements \JsonSerializable
         );
     }
 
-    public static function fromJsonString($metadataEncoded, ContentReleaseIdentifier $contentReleaseIdentifier): self
-    {
+    /**
+     * @throws Exception
+     */
+    public static function fromJsonString(
+        mixed $metadataEncoded,
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+    ): self {
         if (!is_string($metadataEncoded)) {
-            throw new \Exception('Metadata is no string for ' . $contentReleaseIdentifier->getIdentifier());
+            throw new Exception('Metadata is no string for ' . $contentReleaseIdentifier->getIdentifier());
         }
         $tmp = json_decode($metadataEncoded, true);
         if (!is_array($tmp)) {
-            throw new \Exception('ContentReleaseMetadata cannot be constructed from: ' . $metadataEncoded);
+            throw new Exception('ContentReleaseMetadata cannot be constructed from: ' . $metadataEncoded);
         }
 
         return new self(
             PrunnerJobId::fromString($tmp['prunnerJobId']),
             $tmp['startTime'] !== null
-                ? \DateTimeImmutable::createFromFormat(\DateTime::RFC3339_EXTENDED, $tmp['startTime'])
+                ? DateTimeImmutable::createFromFormat(DateTime::RFC3339_EXTENDED, $tmp['startTime'])
                 : null,
             $tmp['endTime'] !== null
-                ? \DateTimeImmutable::createFromFormat(\DateTime::RFC3339_EXTENDED, $tmp['endTime'])
+                ? DateTimeImmutable::createFromFormat(DateTime::RFC3339_EXTENDED, $tmp['endTime'])
                 : null,
             $tmp['switchTime'] !== null
-                ? \DateTimeImmutable::createFromFormat(\DateTime::RFC3339_EXTENDED, $tmp['switchTime'])
+                ? DateTimeImmutable::createFromFormat(DateTime::RFC3339_EXTENDED, $tmp['switchTime'])
                 : null,
             NodeRenderingCompletionStatus::fromString($tmp['status']),
-            isset($tmp['manualTransferJobIds'])
-                ? array_map(function (string $item) {
+            isset($tmp['manualTransferJobIds']) ? array_map(function (string $item): PrunnerJobId {
                     return PrunnerJobId::fromString($item);
                 }, json_decode($tmp['manualTransferJobIds'])) : [],
             $tmp['workspaceName'] ?? 'live',
@@ -124,9 +92,9 @@ final class ContentReleaseMetadata implements \JsonSerializable
     {
         return [
             'prunnerJobId' => $this->prunnerJobId->getIdentifier(),
-            'startTime' => $this->startTime ? $this->startTime->format(\DateTime::RFC3339_EXTENDED) : null,
-            'endTime' => $this->endTime ? $this->endTime->format(\DateTime::RFC3339_EXTENDED) : null,
-            'switchTime' => $this->switchTime ? $this->switchTime->format(\DateTime::RFC3339_EXTENDED) : null,
+            'startTime' => $this->startTime?->format(DateTime::RFC3339_EXTENDED),
+            'endTime' => $this->endTime?->format(DateTime::RFC3339_EXTENDED),
+            'switchTime' => $this->switchTime?->format(DateTime::RFC3339_EXTENDED),
             'status' => $this->status,
             'manualTransferJobIds' => json_encode($this->manualTransferJobIds),
             'workspaceName' => $this->workspaceName,
@@ -135,7 +103,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
         ];
     }
 
-    public function withEndTime(\DateTimeInterface $endTime): self
+    public function withEndTime(DateTimeInterface $endTime): self
     {
         return new self(
             $this->prunnerJobId,
@@ -150,7 +118,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
         );
     }
 
-    public function withSwitchTime(\DateTimeInterface $switchTime): self
+    public function withSwitchTime(DateTimeInterface $switchTime): self
     {
         return new self(
             $this->prunnerJobId,
@@ -182,7 +150,7 @@ final class ContentReleaseMetadata implements \JsonSerializable
 
     public function withAdditionalManualTransferJobId(PrunnerJobId $prunnerJobId): self
     {
-        $manualTransferIdArray = $this->getManualTransferJobIds();
+        $manualTransferIdArray = $this->manualTransferJobIds;
         $manualTransferIdArray[] = $prunnerJobId;
         return new self(
             $this->prunnerJobId,
@@ -210,56 +178,5 @@ final class ContentReleaseMetadata implements \JsonSerializable
             $this->accountId,
             $contentReleaseSize,
         );
-    }
-
-    public function getPrunnerJobId(): PrunnerJobId
-    {
-        return $this->prunnerJobId;
-    }
-
-    public function getStartTime(): ?\DateTimeInterface
-    {
-        return $this->startTime;
-    }
-
-    public function getEndTime(): ?\DateTimeInterface
-    {
-        return $this->endTime;
-    }
-
-    public function getSwitchTime(): ?\DateTimeInterface
-    {
-        return $this->switchTime;
-    }
-
-    public function getStatus(): NodeRenderingCompletionStatus
-    {
-        return $this->status;
-    }
-
-    /**
-     * @return PrunnerJobId[]
-     */
-    public function getManualTransferJobIds(): ?array
-    {
-        return $this->manualTransferJobIds;
-    }
-
-    public function getWorkspaceName(): ?string
-    {
-        return $this->workspaceName;
-    }
-
-    public function getAccountId(): ?string
-    {
-        return $this->accountId;
-    }
-
-    /**
-     * @return float|null size of the content release in megabytes, or NULL if it was not determined (yet)
-     */
-    public function getContentReleaseSize(): ?float
-    {
-        return $this->contentReleaseSize;
     }
 }

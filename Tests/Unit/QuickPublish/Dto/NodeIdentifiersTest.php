@@ -16,8 +16,8 @@ use Neos\Flow\Tests\UnitTestCase;
  */
 final class NodeIdentifiersTest extends UnitTestCase
 {
-    private const IDENTIFIER = '3239baee-3e7f-785c-0853-f4302ef32570';
-    private const OTHER_IDENTIFIER = 'de3b7ec6-b9d1-40d1-91ae-a9c1a4d47dab';
+    private const string IDENTIFIER = '3239baee-3e7f-785c-0853-f4302ef32570';
+    private const string OTHER_IDENTIFIER = 'de3b7ec6-b9d1-40d1-91ae-a9c1a4d47dab';
 
     public function testIdentifiersAreReadOnePerEntry(): void
     {

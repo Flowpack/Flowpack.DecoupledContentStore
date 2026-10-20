@@ -9,10 +9,8 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\Prunner\Dto\Job;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-class ContentReleaseDetails
+#[Flow\Proxy(false)]
+final readonly class ContentReleaseDetails
 {
     private ContentReleaseIdentifier $contentReleaseIdentifier;
     private ?Job $job;

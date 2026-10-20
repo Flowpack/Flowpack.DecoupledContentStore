@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Tests\Unit\BackendUi;
 
+use DateTimeImmutable;
 use Flowpack\DecoupledContentStore\BackendUi\ContentReleaseStatus;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
@@ -15,47 +16,35 @@ final class ContentReleaseStatusTest extends UnitTestCase
 {
     public function testARenderedReleaseWhichIsStillValidatingIsRunning(): void
     {
-        self::assertSame(
-            ContentReleaseStatus::RUNNING,
-            ContentReleaseStatus::fromJob(
-                self::job(false, false, false),
-                self::metadata(NodeRenderingCompletionStatus::success()),
-            ),
-        );
+        self::assertSame(ContentReleaseStatus::RUNNING, ContentReleaseStatus::fromJob(
+            self::job(false, false, false),
+            self::metadata(NodeRenderingCompletionStatus::success()),
+        ));
     }
 
     public function testAReleaseWhoseJobErroredOutsideRenderingIsFailed(): void
     {
-        self::assertSame(
-            ContentReleaseStatus::FAILED,
-            ContentReleaseStatus::fromJob(
-                self::job(true, false, true),
-                self::metadata(NodeRenderingCompletionStatus::running()),
-            ),
-        );
+        self::assertSame(ContentReleaseStatus::FAILED, ContentReleaseStatus::fromJob(
+            self::job(true, false, true),
+            self::metadata(NodeRenderingCompletionStatus::running()),
+        ));
     }
 
     public function testAJobCancelledByAPrunnerRestartIsCanceled(): void
     {
         // prunner flags such a job cancelled on boot but never gives it an end, so it is not completed either
-        self::assertSame(
-            ContentReleaseStatus::CANCELED,
-            ContentReleaseStatus::fromJob(
-                self::job(false, true, false),
-                self::metadata(NodeRenderingCompletionStatus::running()),
-            ),
-        );
+        self::assertSame(ContentReleaseStatus::CANCELED, ContentReleaseStatus::fromJob(
+            self::job(false, true, false),
+            self::metadata(NodeRenderingCompletionStatus::running()),
+        ));
     }
 
     public function testACompletedJobIsSuccess(): void
     {
-        self::assertSame(
-            ContentReleaseStatus::SUCCESS,
-            ContentReleaseStatus::fromJob(
-                self::job(true, false, false),
-                self::metadata(NodeRenderingCompletionStatus::success()),
-            ),
-        );
+        self::assertSame(ContentReleaseStatus::SUCCESS, ContentReleaseStatus::fromJob(
+            self::job(true, false, false),
+            self::metadata(NodeRenderingCompletionStatus::success()),
+        ));
     }
 
     public function testASwitchedReleaseWhoseJobIsGoneIsSuccess(): void
@@ -63,7 +52,7 @@ final class ContentReleaseStatusTest extends UnitTestCase
         self::assertSame(
             ContentReleaseStatus::SUCCESS,
             ContentReleaseStatus::jobGone(
-                self::metadata(NodeRenderingCompletionStatus::success())->withSwitchTime(new \DateTimeImmutable()),
+                self::metadata(NodeRenderingCompletionStatus::success())->withSwitchTime(new DateTimeImmutable()),
             ),
         );
     }
@@ -74,7 +63,7 @@ final class ContentReleaseStatusTest extends UnitTestCase
         self::assertSame(
             ContentReleaseStatus::FAILED,
             ContentReleaseStatus::jobGone(
-                self::metadata(NodeRenderingCompletionStatus::failed())->withSwitchTime(new \DateTimeImmutable()),
+                self::metadata(NodeRenderingCompletionStatus::failed())->withSwitchTime(new DateTimeImmutable()),
             ),
         );
     }
@@ -105,8 +94,9 @@ final class ContentReleaseStatusTest extends UnitTestCase
 
     private static function metadata(NodeRenderingCompletionStatus $status): ContentReleaseMetadata
     {
-        return ContentReleaseMetadata::create(PrunnerJobId::fromString('job'), new \DateTimeImmutable())
-            ->withStatus($status);
+        return ContentReleaseMetadata::create(PrunnerJobId::fromString('job'), new DateTimeImmutable())->withStatus(
+            $status,
+        );
     }
 
     private static function job(bool $completed, bool $canceled, bool $errored): Job

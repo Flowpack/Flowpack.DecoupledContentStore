@@ -14,10 +14,13 @@ use Neos\Flow\Cli\CommandController;
 /**
  * Commands to read statistics events for a content release from redis
  */
-class ContentReleaseEventsCommandController extends CommandController
+final class ContentReleaseEventsCommandController extends CommandController
 {
-    #[Flow\Inject]
-    protected RedisStatisticsEventService $redisStatisticsEventService;
+    public function __construct(
+        private readonly RedisStatisticsEventService $redisStatisticsEventService,
+    ) {
+        parent::__construct();
+    }
 
     /**
      * Count statistics events in a content release.

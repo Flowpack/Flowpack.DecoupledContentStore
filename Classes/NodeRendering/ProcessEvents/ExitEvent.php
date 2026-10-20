@@ -9,15 +9,11 @@ use Neos\Flow\Annotations as Flow;
 
 /**
  * A process
- *
- * @Flow\Proxy(false)
  */
-final class ExitEvent implements InterruptibleProcessRuntimeEventInterface
+#[Flow\Proxy(false)]
+final readonly class ExitEvent implements InterruptibleProcessRuntimeEventInterface
 {
-    /**
-     * @var int
-     */
-    protected $statusCode;
+    private int $statusCode;
 
     private function __construct(int $statusCode)
     {

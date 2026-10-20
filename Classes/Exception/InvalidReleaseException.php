@@ -6,4 +6,4 @@ namespace Flowpack\DecoupledContentStore\Exception;
 
 use Flowpack\DecoupledContentStore\Exception;
 
-class InvalidReleaseException extends Exception {}
+final class InvalidReleaseException extends Exception {}

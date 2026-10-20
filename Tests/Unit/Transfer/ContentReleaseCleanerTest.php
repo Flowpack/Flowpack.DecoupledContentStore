@@ -9,6 +9,8 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
+use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
 use Neos\Flow\Tests\UnitTestCase;
@@ -49,12 +51,14 @@ final class ContentReleaseCleanerTest extends UnitTestCase
     private function removeRelease(int $retentionSeconds): void
     {
         $redis = $this->createMock(Redis::class);
-        $redis->method('del')
+        $redis
+            ->method('del')
             ->willReturnCallback(function (string $key): int {
                 $this->deletedKeys[] = $key;
                 return 1;
             });
-        $redis->method('expire')
+        $redis
+            ->method('expire')
             ->willReturnCallback(function (string $key, int $seconds): bool {
                 $this->expiringKeys[$key] = $seconds;
                 return true;
@@ -68,14 +72,16 @@ final class ContentReleaseCleanerTest extends UnitTestCase
         $redisReleaseSwitchService = $this->createMock(RedisReleaseSwitchService::class);
         $redisReleaseSwitchService->method('getCurrentRelease')->willReturn(ContentReleaseIdentifier::fromString('6'));
 
-        $redisKeyService = new RedisKeyService();
-        $this->inject($redisKeyService, 'redisKeyPostfixesForEachReleaseConfiguration', self::keyConfiguration());
+        $redisKeyService = new RedisKeyService(self::keyConfiguration());
 
-        $cleaner = new ContentReleaseCleaner();
-        $this->inject($cleaner, 'redisClientManager', $redisClientManager);
-        $this->inject($cleaner, 'redisKeyService', $redisKeyService);
-        $this->inject($cleaner, 'redisReleaseSwitchService', $redisReleaseSwitchService);
-        $this->inject($cleaner, 'redisKeyPostfixesForEachReleaseConfiguration', self::keyConfiguration());
+        $cleaner = new ContentReleaseCleaner(
+            $redisClientManager,
+            $redisKeyService,
+            $redisReleaseSwitchService,
+            $this->createMock(RedisRenderingErrorManager::class),
+            $this->createMock(RedisContentReleaseService::class),
+            self::keyConfiguration(),
+        );
 
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString('5');
         $cleaner->removeRelease(

@@ -6,18 +6,13 @@ namespace Flowpack\DecoupledContentStore\Core\Domain\ValueObject;
 
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class RedisInstanceIdentifier
+#[Flow\Proxy(false)]
+final readonly class RedisInstanceIdentifier
 {
     // must match the default config in Settings.yaml
-    private const PRIMARY = 'primary';
+    private const string PRIMARY = 'primary';
 
-    /**
-     * @var string
-     */
-    private $identifier;
+    private string $identifier;
 
     private function __construct(string $identifier)
     {

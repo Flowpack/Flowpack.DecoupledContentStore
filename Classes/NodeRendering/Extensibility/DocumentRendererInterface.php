@@ -9,7 +9,7 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 
 /**
  * Decide how to render a document node. Used throughout {@see NodeRenderOrchestrator} and {@see NodeRenderer}
@@ -20,10 +20,12 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
  */
 interface DocumentRendererInterface
 {
-    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(EnumeratedNode $enumeratedNode): RenderedDocumentFromContentCache;
+    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(
+        EnumeratedNode $enumeratedNode,
+    ): RenderedDocumentFromContentCache;
 
     public function renderDocumentNodeVariant(
-        NodeInterface $node,
+        Node $node,
         EnumeratedNode $enumeratedNode,
         ContentReleaseLogger $contentReleaseLogger,
     ): void;

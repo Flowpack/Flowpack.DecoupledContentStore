@@ -1,6 +1,7 @@
 Flowpack:
   DecoupledContentStore:
-    # auto-start an incremental release whenever a workspace publish happens
+    # auto-start an incremental release whenever a publish into live happens, and when nodes are enabled or disabled
+    # directly in live (e.g. by ./flow timeableNodeVisibility:execute)
     # if you want to disable auto-start of incremental releases, set this to false
     startIncrementalReleaseOnWorkspacePublish: true
     # Automatically start an incremental release when an asset is changed/replaced
@@ -40,8 +41,11 @@ Flowpack:
       #   - 'Neos.Neos:Document'
       #   - '!My.Package:Bar'
       # If only exclusions are configured, 'Neos.Neos:Document' is used as the included node type.
+      # Shortcuts must stay excluded: Neos 9 routing always resolves a shortcut to its target's URI, so a rendered
+      # shortcut would overwrite its target's entry in the content release. Keep this exclusion when overriding the list.
       nodeTypeWhitelist:
         - 'Neos.Neos:Document'
+        - '!Neos.Neos:Shortcut'
 
       # Allows to filter the list of enumerated URLs which should end up in the content store.
       #
@@ -262,8 +266,6 @@ Neos:
         javascript:
           'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':
             resource: 'resource://Flowpack.DecoupledContentStore/Public/ContentModule/AutomaticReleaseWarning.js'
-            # Before the UI host and without "defer", because the host reads the inlined _NEOS_UI_* globals once and
-            # deletes them - the script has to capture the route table before that happens.
             position: 'before Neos.Neos.UI:Host'
         stylesheets:
           'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':
@@ -291,6 +293,14 @@ Neos:
       routes:
         'Flowpack.DecoupledContentStore':
           position: 'before Neos.Neos'
+
+  ContentRepositoryRegistry:
+    presets:
+      'default':
+        contentGraphProjection:
+          catchUpHooks:
+            'Flowpack.DecoupledContentStore:IncrementalContentRelease':
+              factoryObjectName: Flowpack\DecoupledContentStore\IncrementalContentReleaseCatchUpHookFactory
 
   Fusion:
     defaultContext:

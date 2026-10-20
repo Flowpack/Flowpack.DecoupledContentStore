@@ -20,3 +20,21 @@ parameters:
             enabled: false
         noNamedArgument:
             enabled: false
+    ignoreErrors:
+        # the unit tests mock final classes through dg/bypass-finals (see phpunit.xml), which PHPStan cannot know:
+        # for it, FinalClass&MockObject is an impossible type
+        -
+            identifiers:
+                - method.unresolvableReturnType
+                - property.unresolvableNativeType
+                - return.unresolvableType
+            path: Tests/Unit
+        # Flow signals are implemented as AOP advice, which cannot be woven into private methods
+        -
+            identifier: ergebnis.privateInFinalClass
+            message: '#::emitNodeEnumerated\(\)#'
+            path: Classes/NodeEnumeration/NodeEnumerator.php
+        # the extension classes are named in the settings, so they can only be fetched from the object manager
+        -
+            identifier: ergebnis.noParameterWithContainerTypeDeclaration
+            path: Classes/NodeRendering/Extensibility/NodeRenderingExtensionManager.php

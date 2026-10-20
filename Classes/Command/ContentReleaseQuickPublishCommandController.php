@@ -11,7 +11,6 @@ use Flowpack\DecoupledContentStore\Exception;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
 use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
 /**
@@ -19,11 +18,12 @@ use Neos\Flow\Cli\CommandController;
  */
 final class ContentReleaseQuickPublishCommandController extends CommandController
 {
-    #[Flow\Inject]
-    protected RedisReleaseCopyService $redisReleaseCopyService;
-
-    #[Flow\Inject]
-    protected QuickPublishNodeEnumerator $quickPublishNodeEnumerator;
+    public function __construct(
+        private readonly RedisReleaseCopyService $redisReleaseCopyService,
+        private readonly QuickPublishNodeEnumerator $quickPublishNodeEnumerator,
+    ) {
+        parent::__construct();
+    }
 
     /**
      * Take the content of a finished content release over into a new one, within the same redis instance.

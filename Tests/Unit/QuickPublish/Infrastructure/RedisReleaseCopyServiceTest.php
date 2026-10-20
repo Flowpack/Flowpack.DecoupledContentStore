@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Tests\Unit\QuickPublish\Infrastructure;
 
+use DateTimeImmutable;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
@@ -17,6 +18,7 @@ use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisCon
 use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
 use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use Redis;
 use Symfony\Component\Console\Output\BufferedOutput;
 
 /**
@@ -27,7 +29,7 @@ use Symfony\Component\Console\Output\BufferedOutput;
  */
 final class RedisReleaseCopyServiceTest extends UnitTestCase
 {
-    private const SOURCE_KEYS = [
+    private const array SOURCE_KEYS = [
         'contentStore:5:data',
         'contentStore:5:meta:urls',
         'contentStore:5:renderingJobQueue',
@@ -121,21 +123,21 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
     }
 
     private function copyRelease(
-        \Redis $redis,
+        Redis $redis,
         RedisContentReleaseService $redisContentReleaseService,
         string $targetContentReleaseIdentifier = '6',
     ): void {
         $redisClientManager = $this->createMock(RedisClientManager::class);
         $redisClientManager->method('getRedis')->willReturn($redis);
 
-        $redisKeyService = new RedisKeyService();
-        $this->inject($redisKeyService, 'redisKeyPostfixesForEachReleaseConfiguration', self::keyConfiguration());
+        $redisKeyService = new RedisKeyService(self::keyConfiguration());
 
-        $service = new RedisReleaseCopyService();
-        $this->inject($service, 'redisClientManager', $redisClientManager);
-        $this->inject($service, 'redisKeyService', $redisKeyService);
-        $this->inject($service, 'redisContentReleaseService', $redisContentReleaseService);
-        $this->inject($service, 'redisKeyPostfixesForEachReleaseConfiguration', self::keyConfiguration());
+        $service = new RedisReleaseCopyService(
+            $redisClientManager,
+            $redisKeyService,
+            $redisContentReleaseService,
+            self::keyConfiguration(),
+        );
 
         $service->copyReleaseWithin(
             RedisInstanceIdentifier::primary(),
@@ -147,16 +149,17 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
 
     /**
      * @param array<string> $existingKeys
-     * @return \Redis&MockObject
+     * @return Redis&MockObject
      */
-    private function buildRedis(array $existingKeys = self::SOURCE_KEYS, string $redisVersion = '7.2.4'): \Redis
+    private function buildRedis(array $existingKeys = self::SOURCE_KEYS, string $redisVersion = '7.2.4'): Redis
     {
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->createMock(Redis::class);
         $redis->method('info')->willReturn(['redis_version' => $redisVersion]);
         $redis->method('exists')->willReturnCallback(static fn(string $key): int => in_array($key, $existingKeys, true)
             ? 1
             : 0);
-        $redis->method('copy')
+        $redis
+            ->method('copy')
             ->willReturnCallback(function (string $sourceKey, string $targetKey): bool {
                 $this->copiedKeys[] = [$sourceKey, $targetKey];
                 return true;
@@ -173,7 +176,7 @@ final class RedisReleaseCopyServiceTest extends UnitTestCase
     ): RedisContentReleaseService {
         $metadata = ContentReleaseMetadata::create(
             PrunnerJobId::fromString('job'),
-            new \DateTimeImmutable(),
+            new DateTimeImmutable(),
         )->withStatus($status ?? NodeRenderingCompletionStatus::success());
 
         $redisContentReleaseService = $this->createMock(RedisContentReleaseService::class);

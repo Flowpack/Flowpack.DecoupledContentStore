@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
+use Exception;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Exception\RenderingException;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -17,15 +19,19 @@ use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingQu
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\DocumentRenderedEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
-use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerProvider;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use Generator;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-use Neos\Neos\Domain\Repository\SiteRepository;
+use Neos\Flow\Property\Exception as PropertyException;
+use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
+use RuntimeException;
 
 /**
  * Not called directly, but through Scripts/renderWorker.sh.
@@ -41,106 +47,64 @@ use Neos\Neos\Domain\Repository\SiteRepository;
  *
  * If an editor publishes in that window and the publish flushes cache tags of the just-rendered page, the copy finds
  * holes in the content cache and the page is rendered again in the next iteration.
- *
- * @Flow\Scope("singleton")
  */
-class NodeRenderer
+#[Flow\Scope('singleton')]
+final readonly class NodeRenderer
 {
-    protected const RESTART_AFTER_RENDER_COUNT = 20;
-    protected const CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT = 5;
+    private const int RESTART_AFTER_RENDER_COUNT = 20;
+    private const int CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT = 5;
 
     /**
      * Name of the span around every document rendering. It is the same for all documents on purpose, so that a
      * profiler can sum it up into a single "time spent rendering documents" figure.
      */
-    public const SPAN_RENDER_DOCUMENT = 'Content Release: Render Document';
+    private const string SPAN_RENDER_DOCUMENT = 'Content Release: Render Document';
 
     /**
      * Prefix of the per-document span. Distinct name per document, which is what makes a timeline view and
      * "group by span name" useful.
      */
-    public const SPAN_DOCUMENT_PREFIX = 'Content Release Document: ';
+    private const string SPAN_DOCUMENT_PREFIX = 'Content Release Document: ';
 
-    /**
-     * @Flow\Inject
-     * @var DocumentRenderer
-     */
-    protected $documentRenderer;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingQueue
-     */
-    protected $redisRenderingQueue;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingErrorManager
-     */
-    protected $redisRenderingErrorManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var SiteRepository
-     */
-    protected $siteRepository;
-
-    /**
-     * @Flow\Inject
-     * @var ContextFactoryInterface
-     */
-    protected $contextFactory;
-
-    /**
-     * @Flow\Inject
-     * @var ContentReleaseManager
-     */
-    protected $contentReleaseManager;
-
-    /**
-     * @Flow\Inject
-     * @var PersistenceManagerInterface
-     */
-    protected $persistenceManager;
-
-    /**
-     * @Flow\Inject
-     * @var ConcurrentBuildLockService
-     */
-    protected $concurrentBuildLockService;
-
-    /**
-     * @Flow\Inject
-     * @var NodeRenderingExtensionManager
-     */
-    protected $nodeRenderingExtensionManager;
-
-    #[Flow\Inject]
-    protected RenderTracerProvider $renderTracerProvider;
+    public function __construct(
+        private RedisRenderingQueue $redisRenderingQueue,
+        private RedisRenderingErrorManager $redisRenderingErrorManager,
+        private RedisContentReleaseService $redisContentReleaseService,
+        private ContentReleaseManager $contentReleaseManager,
+        private PersistenceManagerInterface $persistenceManager,
+        private ConcurrentBuildLockService $concurrentBuildLockService,
+        private NodeRenderingExtensionManager $nodeRenderingExtensionManager,
+        private RenderTracerProvider $renderTracerProvider,
+        private ContentRepositoryRegistry $contentRepositoryRegistry,
+        #[Flow\InjectConfiguration('nodeRendering.recurseHiddenContent')]
+        protected bool $recurseHiddenContent,
+    ) {}
 
     public function render(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
         RendererIdentifier $rendererIdentifier,
-    ) {
+    ): Generator {
         $contentReleaseLogger = $contentReleaseLogger->withRenderer($rendererIdentifier);
 
-        $this->renderTracerProvider->getTracer()->describeRun([
-            RenderTracerInterface::META_CONTENT_RELEASE => $contentReleaseIdentifier->getIdentifier(),
-            RenderTracerInterface::META_RENDERER => $rendererIdentifier->string(),
-        ]);
+        $this->renderTracerProvider
+            ->getTracer()
+            ->describeRun([
+                RenderTracerInterface::META_CONTENT_RELEASE => $contentReleaseIdentifier->getIdentifier(),
+                RenderTracerInterface::META_RENDERER => $rendererIdentifier->string(),
+            ]);
 
         $i = 0;
         while (true) {
-            $renderStatus = $this->redisContentReleaseService
-                ->fetchMetadataForContentRelease($contentReleaseIdentifier)
-                ->getStatus();
+            $releaseMetadata =
+                $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
+            if ($releaseMetadata === null) {
+                throw new RuntimeException(sprintf(
+                    'No metadata found for content release %s.',
+                    $contentReleaseIdentifier->getIdentifier(),
+                ));
+            }
+            $renderStatus = $releaseMetadata->status;
             if ($renderStatus->hasCompleted()) {
                 $contentReleaseLogger->info('Content release completed; so we terminate ourselves gracefully.');
                 yield ExitEvent::createWithStatusCode(0);
@@ -200,17 +164,14 @@ class NodeRenderer
 
             $i++;
 
-            if (
-                static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT > 0
-                && ($i % static::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT) === 0
-            ) {
+            if (($i % self::CHECK_FOR_CONCURRENT_RELEASES_RENDER_COUNT) === 0) {
                 $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($contentReleaseIdentifier);
             }
 
-            if (($i % static::RESTART_AFTER_RENDER_COUNT) === 0) {
+            if (($i % self::RESTART_AFTER_RENDER_COUNT) === 0) {
                 $contentReleaseLogger->info(sprintf(
                     'Restarting after %d renders.',
-                    static::RESTART_AFTER_RENDER_COUNT,
+                    self::RESTART_AFTER_RENDER_COUNT,
                 ));
                 yield ExitEvent::createWithStatusCode(193);
                 return;
@@ -237,25 +198,25 @@ class NodeRenderer
      * @param integer $releaseIdentifier
      * @param int $renderingAttempt Number of the current attempt for this node within this content release (1 = first attempt)
      */
-    protected function renderDocumentNodeVariant(
+    private function renderDocumentNodeVariant(
         EnumeratedNode $enumeratedNode,
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
         int $renderingAttempt = 1,
-    ) {
+    ): void {
         $nodeWasFound = false;
         try {
             $node = $this->fetchRenderableNode($enumeratedNode);
 
-            if (!$node instanceof NodeInterface) {
+            if (!$node instanceof Node) {
                 // This could happen because a deleted node was queued after publishing
                 $nodeWasFound = false;
             } else {
                 $nodeWasFound = true;
 
                 $contentReleaseLogger->debug('Rendering document node variant', [
-                    'node' => $node->getContextPath(),
-                    'nodeIdentifier' => $node->getIdentifier(),
+                    'node' => NodeAddress::fromNode($node)->toJson(),
+                    'nodeIdentifier' => $node->aggregateId->value,
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
                     'arguments' => $enumeratedNode->getArguments(),
@@ -264,13 +225,12 @@ class NodeRenderer
 
                 $tracer = $this->renderTracerProvider->getTracer();
                 $spanParams = [
-                    'node' => $node->getContextPath(),
-                    'site' => $enumeratedNode->getSiteNodeNameFromContextPath(),
+                    'node' => NodeAddress::fromNode($node)->toJson(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
                     'arguments' => $enumeratedNode->getArguments(),
                 ];
                 $tracer->openSpan(self::SPAN_RENDER_DOCUMENT, $spanParams);
-                $tracer->openSpan(self::SPAN_DOCUMENT_PREFIX . $node->getContextPath(), $spanParams);
+                $tracer->openSpan(self::SPAN_DOCUMENT_PREFIX . NodeAddress::fromNode($node)->toJson(), $spanParams);
                 try {
                     $this->nodeRenderingExtensionManager->renderDocumentNodeVariant(
                         $node,
@@ -287,7 +247,7 @@ class NodeRenderer
             // all pages in the full iteration (and then, if errors exist, we stop).
             // This is to gain better visibility into all errors currently happening; and thus maybe being able to see
             // patterns among the errors.
-        } catch (\Neos\Flow\Property\Exception $exception) {
+        } catch (PropertyException $exception) {
             $contentReleaseLogger->logException(
                 $exception->getPrevious(),
                 'Exception getting document node variant for rendering',
@@ -307,16 +267,16 @@ class NodeRenderer
                 'Exception while rendering document node variant',
                 array(
                     'node' => $enumeratedNode->debugString(),
-                    'nodeUri' => $exception->getNodeUri(),
+                    'nodeUri' => $exception->nodeUri,
                 ),
             );
 
             $this->redisRenderingErrorManager->registerRenderingError(
                 $contentReleaseIdentifier,
-                ['node' => $enumeratedNode->debugString(), 'nodeUri' => $exception->getNodeUri()],
+                ['node' => $enumeratedNode->debugString(), 'nodeUri' => $exception->nodeUri],
                 $exception->getPrevious(),
             );
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             $contentReleaseLogger->logException($exception, 'Exception while rendering document node variant', array(
                 'node' => $enumeratedNode->debugString(),
             ));
@@ -338,7 +298,7 @@ class NodeRenderer
             $this->redisRenderingErrorManager->registerRenderingError(
                 $contentReleaseIdentifier,
                 ['node' => $enumeratedNode->debugString()],
-                new \Exception(
+                new Exception(
                     'We could not load a node which was part of the enumeration. At this point, the content release will definitely fail with no further possibility of recovery. Thus, we are exiting the rendering with an error',
                 ),
             );
@@ -347,20 +307,21 @@ class NodeRenderer
     }
 
     /**
-     * @param EnumeratedNode $enumeratedNode
-     * @return NodeInterface|null
-     * @throws \Exception
+     * Looks the node up by its identifier, not by the stored address as a whole: the node may have moved since the
+     * enumeration. Visibility follows {@see NodeContextCombinator::siteNodeInContexts()}, so a document which was
+     * hidden after the enumeration is not found.
      */
-    protected function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?NodeInterface
+    private function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?Node
     {
-        $site = $this->siteRepository->findOneByNodeName($enumeratedNode->getSiteNodeNameFromContextPath());
+        $nodeAddress = $enumeratedNode->getNodeAddress();
+        $visibilityConstraints = $this->recurseHiddenContent
+            ? NeosVisibilityConstraints::excludeRemoved()
+            : NeosVisibilityConstraints::excludeRemoved()->merge(NeosVisibilityConstraints::excludeDisabled());
 
-        $context = $this->contextFactory->create([
-            'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
-            'currentSite' => $site,
-            'currentDomain' => $site->getFirstActiveDomain(),
-            'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
-        ]);
-        return $context->getNodeByIdentifier($enumeratedNode->getNodeIdentifier());
+        return $this->contentRepositoryRegistry
+            ->get($nodeAddress->contentRepositoryId)
+            ->getContentGraph($nodeAddress->workspaceName)
+            ->getSubgraph($nodeAddress->dimensionSpacePoint, $visibilityConstraints)
+            ->findNodeById(NodeAggregateId::fromString($enumeratedNode->getNodeIdentifier()));
     }
 }

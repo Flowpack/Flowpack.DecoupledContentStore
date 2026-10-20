@@ -6,4 +6,4 @@ namespace Flowpack\DecoupledContentStore\Exception;
 
 use Flowpack\DecoupledContentStore\Exception;
 
-class InvalidSiteConfigurationException extends Exception {}
+final class InvalidSiteConfigurationException extends Exception {}

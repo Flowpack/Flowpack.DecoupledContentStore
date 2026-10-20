@@ -6,6 +6,7 @@ namespace Flowpack\DecoupledContentStore\Metrics\Dto;
 
 use Flowpack\DecoupledContentStore\BackendUi\Dto\WorkerErrorLog;
 use Flowpack\DecoupledContentStore\Metrics\NodeIdentifierExtractor;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -13,32 +14,30 @@ use Neos\Flow\Annotations as Flow;
  *
  * Those log files live on the container's disk and fall out of the pipeline's `retention_count` quickly, so the
  * stacktrace is copied into the measurement of the release while it is still readable.
- *
- * @Flow\Proxy(false)
  */
-final class WorkerError implements \JsonSerializable
+#[Flow\Proxy(false)]
+final readonly class WorkerError implements JsonSerializable
 {
     /**
      * Stacktraces are long, and a release which broke usually broke in more than one worker. These caps keep one
      * measurement inside the size a log aggregator will still accept.
      */
-    private const MAX_ERROR_BLOCKS = 5;
-    private const MAX_ERROR_BLOCK_LENGTH = 4000;
+    private const int MAX_ERROR_BLOCKS = 5;
+    private const int MAX_ERROR_BLOCK_LENGTH = 4000;
 
     /**
      * @param string[] $errorBlocks
      */
     private function __construct(
-        public readonly string $workerName,
-        public readonly string $status,
-        public readonly int $exitCode,
-        public readonly bool $wasKilledByOrchestrator,
-        public readonly ?string $taskError,
-        public readonly ?string $lastAttemptedNode,
-        public readonly ?string $lastAttemptedNodeIdentifier,
-        public readonly array $errorBlocks,
-    ) {
-    }
+        public string $workerName,
+        public string $status,
+        public int $exitCode,
+        public bool $wasKilledByOrchestrator,
+        public ?string $taskError,
+        public ?string $lastAttemptedNode,
+        public ?string $lastAttemptedNodeIdentifier,
+        public array $errorBlocks,
+    ) {}
 
     public static function fromWorkerErrorLog(WorkerErrorLog $workerErrorLog): self
     {

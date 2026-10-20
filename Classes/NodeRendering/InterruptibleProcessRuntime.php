@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
+use Generator;
 use Neos\Flow\Annotations as Flow;
+use ReflectionClass;
+use RuntimeException;
 
 /**
  * Our long-lived processes, especially {@see NodeRenderOrchestrator} and {@see NodeRenderer} are kind of hard to test,
@@ -38,19 +41,18 @@ use Neos\Flow\Annotations as Flow;
  * instead of calling exit(), you should `yield ExitEvent::createWithStatusCode()` instead.
  *
  * For this to work,
- *
- * @Flow\Proxy(false)
  */
+#[Flow\Proxy(false)]
 final class InterruptibleProcessRuntime
 {
-    private \Generator $generator;
+    private readonly Generator $generator;
 
-    private bool $inTestingMode;
+    private readonly bool $inTestingMode;
 
     private bool $encounteredExitEvent = false;
     private bool $generatorIsPaused = false;
 
-    private function __construct(\Generator $generator, bool $inTestingMode)
+    private function __construct(Generator $generator, bool $inTestingMode)
     {
         $this->generator = $generator;
         $this->inTestingMode = $inTestingMode;
@@ -59,10 +61,10 @@ final class InterruptibleProcessRuntime
     /**
      * Generate a new Process Runtime in production mode
      *
-     * @param \Generator $generator
+     * @param Generator $generator
      * @return InterruptibleProcessRuntime
      */
-    public static function create(\Generator $generator): self
+    public static function create(Generator $generator): self
     {
         return new self($generator, false);
     }
@@ -70,10 +72,10 @@ final class InterruptibleProcessRuntime
     /**
      * Generate a new Process Runtime in testing mode, where {@see ExitEvent} won't trigger an exit() call.
      *
-     * @param \Generator $generator
+     * @param Generator $generator
      * @return InterruptibleProcessRuntime
      */
-    public static function createForTesting(\Generator $generator): self
+    public static function createForTesting(Generator $generator): self
     {
         return new self($generator, true);
     }
@@ -94,7 +96,7 @@ final class InterruptibleProcessRuntime
     public function runUntilEventEncountered(string ...$eventClassNames): ?InterruptibleProcessRuntimeEventInterface
     {
         if ($this->encounteredExitEvent) {
-            throw new \RuntimeException('Cannot continue running the Process, as we received an Exit Event already.');
+            throw new RuntimeException('Cannot continue running the Process, as we received an Exit Event already.');
         }
 
         if ($this->generatorIsPaused) {
@@ -109,7 +111,7 @@ final class InterruptibleProcessRuntime
                 // stop iterating the iterator in all cases
                 return $this->handleExitEvent($currentEvent);
             }
-            $shortName = (new \ReflectionClass($currentEvent))->getShortName();
+            $shortName = new ReflectionClass($currentEvent)->getShortName();
             foreach ($eventClassNames as $eventClassName) {
                 if ($eventClassName === $shortName || is_a($currentEvent, $eventClassName)) {
                     // stop here, can be restarted lateron. We still need to continue to the next event here.

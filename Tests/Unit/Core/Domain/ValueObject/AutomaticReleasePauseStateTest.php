@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Tests\Unit\Core\Domain\ValueObject;
 
+use DateTimeInterface;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\AutomaticReleasePauseState;
+use InvalidArgumentException;
 use Neos\Flow\Tests\UnitTestCase;
 
 /**
@@ -21,7 +23,7 @@ final class AutomaticReleasePauseStateTest extends UnitTestCase
             'suppressedReleaseCount' => '7',
         ]);
 
-        self::assertSame('2026-08-13T09:15:00+02:00', $pauseState->getPausedAt()->format(\DateTimeInterface::ATOM));
+        self::assertSame('2026-08-13T09:15:00+02:00', $pauseState->getPausedAt()->format(DateTimeInterface::ATOM));
         self::assertSame('admin', $pauseState->getAccountId());
         self::assertSame(7, $pauseState->getSuppressedReleaseCount());
     }
@@ -50,7 +52,7 @@ final class AutomaticReleasePauseStateTest extends UnitTestCase
 
     public function testAHashWithoutPausedAtIsRejected(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         AutomaticReleasePauseState::fromRedisHash(['suppressedReleaseCount' => '3']);
     }

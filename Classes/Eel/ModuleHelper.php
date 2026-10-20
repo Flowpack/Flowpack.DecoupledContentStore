@@ -8,10 +8,8 @@ use Flowpack\Prunner\Dto\TaskResult;
 use Neos\Eel\ProtectedContextAwareInterface;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class ModuleHelper implements ProtectedContextAwareInterface
+#[Flow\Scope('singleton')]
+final readonly class ModuleHelper implements ProtectedContextAwareInterface
 {
     /**
      * Sort task results by name using a natural order, so that numeric render workers appear as
@@ -46,10 +44,10 @@ class ModuleHelper implements ProtectedContextAwareInterface
         $lineCount = count($lines);
 
         $formattedLines = array_map(
-            static function (string $line, int $index) use ($lineCount) {
+            static function (string $line, int $index) use ($lineCount): string {
                 // Extract additional JSON data
                 preg_match("/\{.*}/", $line, $jsonMatches);
-                $jsonData = array_filter(array_map(static function (string $match) {
+                $jsonData = array_filter(array_map(static function (string $match): mixed {
                     $matchData = json_decode($match, true);
                     return $matchData['message'] ?? $matchData;
                 }, $jsonMatches));

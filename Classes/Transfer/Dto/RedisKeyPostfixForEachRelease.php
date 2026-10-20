@@ -7,21 +7,20 @@ namespace Flowpack\DecoupledContentStore\Transfer\Dto;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Exception\InvalidTransferConfigException;
 use Neos\Flow\Annotations as Flow;
+use RuntimeException;
 
-/**
- * @Flow\Proxy(false)
- */
-final class RedisKeyPostfixForEachRelease
+#[Flow\Proxy(false)]
+final readonly class RedisKeyPostfixForEachRelease
 {
-    private const TRANSFER_MODE_HASH_INCREMENTAL = 'hash_incremental';
-    private const TRANSFER_MODE_DUMP = 'dump';
+    private const string TRANSFER_MODE_HASH_INCREMENTAL = 'hash_incremental';
+    private const string TRANSFER_MODE_DUMP = 'dump';
 
-    protected string $redisKeyPostfix;
-    protected array $transfer;
-    protected string $transferMode;
-    protected bool $isRequired;
-    protected bool $copyOnQuickRelease;
-    protected bool $keepAfterRemoval;
+    private string $redisKeyPostfix;
+    private array $transfer;
+    private string $transferMode;
+    private bool $isRequired;
+    private bool $copyOnQuickRelease;
+    private bool $keepAfterRemoval;
 
     /**
      * @param string $redisKeyPostfix
@@ -33,14 +32,14 @@ final class RedisKeyPostfixForEachRelease
      */
     private function __construct(
         string $redisKeyPostfix,
-        $transfer,
+        bool|array $transfer,
         string $transferMode,
         bool $isRequired,
         bool $copyOnQuickRelease,
         bool $keepAfterRemoval,
     ) {
         if (!in_array($transferMode, [self::TRANSFER_MODE_HASH_INCREMENTAL, self::TRANSFER_MODE_DUMP])) {
-            throw new \RuntimeException('TransferMode ' . $transferMode . ' not supported.');
+            throw new RuntimeException('TransferMode ' . $transferMode . ' not supported.');
         }
 
         if (is_bool($transfer)) {

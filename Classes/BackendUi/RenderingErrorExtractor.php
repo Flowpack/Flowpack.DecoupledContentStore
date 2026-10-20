@@ -6,10 +6,8 @@ namespace Flowpack\DecoupledContentStore\BackendUi;
 
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RenderingErrorExtractor
+#[Flow\Scope('singleton')]
+final readonly class RenderingErrorExtractor
 {
     /**
      * Extracts ERROR-prefixed lines and exception blocks from a raw log string.

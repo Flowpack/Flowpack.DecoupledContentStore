@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Infrastructure;
 
+use Exception;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheKey;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheValues;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
@@ -11,39 +12,33 @@ use Neos\Cache\Backend\AbstractBackend;
 use Neos\Cache\Backend\RedisBackend;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Package\Exception\UnknownPackageException;
 use Neos\Flow\Package\PackageManager;
 use Neos\Fusion\Core\Cache\ContentCache;
+use Redis;
+use RedisException;
+use ReflectionProperty;
+use RuntimeException;
+use Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisContentCacheReader
+#[Flow\Scope('singleton')]
+final class RedisContentCacheReader
 {
-    /**
-     * @Flow\Inject
-     * @var StringFrontend
-     */
-    protected $contentCache;
+    #[Flow\Inject]
+    protected StringFrontend $contentCache;
 
-    /**
-     * @Flow\Inject
-     * @var ObjectManagerInterface
-     */
-    protected $objectManager;
+    private ?string $scriptSha1 = null;
+    private ?Redis $redis = null;
 
-    /**
-     * @Flow\InjectConfiguration(path="cache.applicationIdentifier", package="Neos.Flow")
-     * @var string
-     */
-    protected $applicationIdentifier;
+    public function __construct(
+        private readonly PackageManager $packageManager,
+        #[Flow\InjectConfiguration('cache.applicationIdentifier', 'Neos.Flow')]
+        protected readonly string $applicationIdentifier,
+    ) {}
 
-    protected ?string $scriptSha1 = null;
-    protected ?\Redis $redis = null;
-
-    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey $documentNodeCacheKey): RenderedDocumentFromContentCache
-    {
+    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(
+        DocumentNodeCacheKey $documentNodeCacheKey,
+    ): RenderedDocumentFromContentCache {
         /**
          * @see AbstractBackend::setCache()
          */
@@ -67,7 +62,7 @@ class RedisContentCacheReader
         return RenderedDocumentFromContentCache::createWithFullContent($content, $documentNodeCacheValues);
     }
 
-    protected function executeRedisCall(array $params): array
+    private function executeRedisCall(array $params): array
     {
         $redis = $this->getRedis();
 
@@ -78,20 +73,20 @@ class RedisContentCacheReader
 
             $error = $redis->getLastError();
             if ($error !== null) {
-                throw new \RuntimeException('Redis error: ' . $error);
+                throw new RuntimeException('Redis error: ' . $error);
             }
-        } catch (\Exception $e) {
-            throw new \RuntimeException('Redis script execution error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            throw new RuntimeException('Redis script execution error: ' . $e->getMessage());
         }
 
         if (!is_array($res) || count($res) !== 2) {
-            throw new \RuntimeException('Result is no array of length 2, but: ' . count($res));
+            throw new RuntimeException('Result is no array of length 2, but: ' . count($res));
         }
 
         return $res;
     }
 
-    protected function prepareRedisScript(): void
+    private function prepareRedisScript(): void
     {
         $redis = $this->getRedis();
 
@@ -105,12 +100,12 @@ class RedisContentCacheReader
                 $script = $this->buildRedisScript();
                 $this->scriptSha1 = $redis->script('load', $script);
             }
-        } catch (\RedisException $e) {
-            throw new \RuntimeException('Redis Error: ' . $e->getMessage());
+        } catch (RedisException $e) {
+            throw new RuntimeException('Redis Error: ' . $e->getMessage());
         }
     }
 
-    protected function buildRedisScript(): string
+    private function buildRedisScript(): string
     {
         $maxNestLevel = ContentCache::MAXIMUM_NESTING_LEVEL;
         $contentCacheStartToken = ContentCache::CACHE_SEGMENT_START_TOKEN;
@@ -171,37 +166,31 @@ class RedisContentCacheReader
     /**
      * @throws UnknownPackageException
      */
-    protected function getRedis(): \Redis
+    private function getRedis(): Redis
     {
         if ($this->redis) {
             return $this->redis;
         }
 
-        $packageManager = $this->objectManager->get(PackageManager::class);
-        $flowPackage = $packageManager->getPackage('Neos.Flow');
+        $flowPackage = $this->packageManager->getPackage('Neos.Flow');
         preg_match('/^(\d+\.\d+)/', $flowPackage->getInstalledVersion(), $versionMatches);
         $flowMajorVersion = (int) ($versionMatches[1] ?? '0');
 
         $backend = $this->contentCache->getBackend();
 
         if ($flowMajorVersion >= 8 && $backend instanceof RedisBackend) {
-            $reflProp = new \ReflectionProperty(RedisBackend::class, 'redis');
-            $reflProp->setAccessible(true);
+            $reflProp = new ReflectionProperty(RedisBackend::class, 'redis');
             $this->redis = $reflProp->getValue($backend);
             return $this->redis;
         }
 
         if (get_class($backend) === 'Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend') {
-            $reflProp = new \ReflectionProperty(
-                \Sandstorm\OptimizedRedisCacheBackend\OptimizedRedisCacheBackend::class,
-                'redis',
-            );
-            $reflProp->setAccessible(true);
+            $reflProp = new ReflectionProperty(OptimizedRedisCacheBackend::class, 'redis');
             $this->redis = $reflProp->getValue($backend);
             return $this->redis;
         }
 
-        throw new \RuntimeException(
+        throw new RuntimeException(
             'The cache backend for "Neos_Fusion_Content" must be an OptimizedRedisCacheBackend, but is '
                 . get_class($backend),
             1622570000,

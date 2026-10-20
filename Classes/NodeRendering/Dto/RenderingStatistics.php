@@ -4,33 +4,21 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
+use Exception;
 use Flowpack\DecoupledContentStore\Utility\Sparkline;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class RenderingStatistics implements \JsonSerializable
+#[Flow\Proxy(false)]
+final readonly class RenderingStatistics implements JsonSerializable
 {
-    /**
-     * @var int
-     */
-    protected $remainingJobs;
+    private int $remainingJobs;
 
-    /**
-     * @var int
-     */
-    protected $totalJobs;
+    private int $totalJobs;
 
-    /**
-     * @var array
-     */
-    protected $renderingsPerSecond;
+    private array $renderingsPerSecond;
 
-    /**
-     * @var string
-     */
-    protected $svgSparkline;
+    private string $svgSparkline;
 
     /**
      * @param int $remainingJobs
@@ -49,14 +37,14 @@ final class RenderingStatistics implements \JsonSerializable
         return new self($remainingJobs, $totalJobs, $renderingsPerSecond);
     }
 
-    public static function fromJsonString($jsonString): self
+    public static function fromJsonString(mixed $jsonString): self
     {
         if (!is_string($jsonString)) {
             return new self(-1, -1, []);
         }
         $tmp = json_decode($jsonString, true);
         if (!is_array($tmp)) {
-            throw new \Exception('DocumentNodeCacheValues cannot be constructed from: ' . $jsonString);
+            throw new Exception('DocumentNodeCacheValues cannot be constructed from: ' . $jsonString);
         }
         return new self($tmp['remainingJobs'], $tmp['totalJobs'], $tmp['renderingsPerSecond']);
     }

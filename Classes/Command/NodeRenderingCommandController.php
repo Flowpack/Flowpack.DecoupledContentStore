@@ -10,27 +10,21 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntime;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderOrchestrator;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
 /**
  * Commands for the RENDERING stage in the pipeline. Not meant to be called manually.
  */
-class NodeRenderingCommandController extends CommandController
+final class NodeRenderingCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var NodeRenderOrchestrator
-     */
-    protected $nodeRenderOrchestrator;
+    public function __construct(
+        private readonly NodeRenderOrchestrator $nodeRenderOrchestrator,
+        private readonly NodeRenderer $nodeRenderer,
+    ) {
+        parent::__construct();
+    }
 
-    /**
-     * @Flow\Inject
-     * @var NodeRenderer
-     */
-    protected $nodeRenderer;
-
-    public function orchestrateRenderingCommand(string $contentReleaseIdentifier)
+    public function orchestrateRenderingCommand(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
@@ -41,7 +35,7 @@ class NodeRenderingCommandController extends CommandController
         ))->runUntilEnd();
     }
 
-    public function renderWorkerCommand(string $contentReleaseIdentifier, string $rendererIdentifier)
+    public function renderWorkerCommand(string $contentReleaseIdentifier, string $rendererIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $rendererIdentifier = RendererIdentifier::fromString($rendererIdentifier);

@@ -15,47 +15,23 @@ use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisCon
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
 use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Neos\Flow\Annotations as Flow;
+use RuntimeException;
 
-/**
- * @Flow\Scope("singleton")
- */
-class ContentReleaseCleaner
+#[Flow\Scope('singleton')]
+final readonly class ContentReleaseCleaner
 {
     /**
-     * @Flow\Inject
-     * @var RedisClientManager
+     * @param array<string, mixed> $redisKeyPostfixesForEachReleaseConfiguration
      */
-    protected $redisClientManager;
-
-    /**
-     * @Flow\InjectConfiguration("redisKeyPostfixesForEachRelease")
-     * @var array
-     */
-    protected $redisKeyPostfixesForEachReleaseConfiguration;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisReleaseSwitchService
-     */
-    protected $redisReleaseSwitchService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingErrorManager
-     */
-    protected $redisRenderingErrorManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+        private RedisReleaseSwitchService $redisReleaseSwitchService,
+        private RedisRenderingErrorManager $redisRenderingErrorManager,
+        private RedisContentReleaseService $redisContentReleaseService,
+        #[Flow\InjectConfiguration('redisKeyPostfixesForEachRelease')]
+        protected array $redisKeyPostfixesForEachReleaseConfiguration,
+    ) {}
 
     public function removeOldReleases(
         RedisInstanceIdentifier $redisInstanceIdentifier,
@@ -80,7 +56,7 @@ class ContentReleaseCleaner
 
         $contentReleasesToKeep = $this->redisClientManager->getRetentionCount($redisInstanceIdentifier);
         if ($contentReleasesToKeep < 2) {
-            throw new \RuntimeException('contentReleaseRetentionCount must be at least 2, found: '
+            throw new RuntimeException('contentReleaseRetentionCount must be at least 2, found: '
             . $contentReleasesToKeep);
         }
 
@@ -104,7 +80,7 @@ class ContentReleaseCleaner
                     if (
                         $this->redisContentReleaseService->fetchMetadataForContentRelease(
                             $id,
-                        )->getStatus()->getStatus() === NodeRenderingCompletionStatus::success()->getStatus()
+                        )?->status->getStatus() === NodeRenderingCompletionStatus::success()->getStatus()
                         && count($this->redisRenderingErrorManager->getRenderingErrors($id)) === 0
                     ) {
                         $healthyReleaseCounter++;

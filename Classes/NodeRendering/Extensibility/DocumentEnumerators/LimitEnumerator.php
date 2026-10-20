@@ -6,39 +6,50 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnu
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumeratorInterface;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
+use Neos\Flow\Annotations as Flow;
 
 /**
  * An enumerator which only renders the first N pages. very useful for interactive testing.
  * NOT useful for production.
  */
-class LimitEnumerator implements DocumentEnumeratorInterface
+final class LimitEnumerator implements DocumentEnumeratorInterface
 {
-    protected int $i = 0;
-    private ?int $limit = null;
-    private ?string $uriPathSegmentFilter = null;
-    private ?string $nodePathSegmentFilter = null;
+    #[Flow\Inject]
+    protected ContentRepositoryRegistry $contentRepositoryRegistry;
 
-    public function __construct(
-        array $options = [],
-    ) {
+    private int $i = 0;
+    private readonly ?int $limit;
+    private readonly ?string $uriPathSegmentFilter;
+    private readonly ?string $nodePathSegmentFilter;
+
+    /**
+     * @param array{limit?: int, uriPathSegmentFilter?: string, nodePathSegmentFilter?: string} $options
+     */
+    public function __construct(array $options = [])
+    {
         $this->limit = $options['limit'] ?? null;
         $this->uriPathSegmentFilter = $options['uriPathSegmentFilter'] ?? null;
         $this->nodePathSegmentFilter = $options['nodePathSegmentFilter'] ?? null;
     }
 
-    public function enumerateDocumentNode(NodeInterface $documentNode): iterable
+    public function enumerateDocumentNode(Node $documentNode): iterable
     {
         if (
             $this->uriPathSegmentFilter !== null
-            && str_contains($documentNode->getProperty('uriPathSegment'), $this->uriPathSegmentFilter) === false
+            && str_contains((string) $documentNode->getProperty('uriPathSegment'), $this->uriPathSegmentFilter) === false
         ) {
             return [];
         }
+        $subgraph = $this->contentRepositoryRegistry->subgraphForNode($documentNode);
 
         if (
             $this->nodePathSegmentFilter !== null
-            && str_contains($documentNode->getPath(), $this->nodePathSegmentFilter) === false
+            && str_contains(
+                $subgraph->retrieveNodePath($documentNode->aggregateId)->serializeToString(),
+                $this->nodePathSegmentFilter,
+            ) === false
         ) {
             return [];
         }

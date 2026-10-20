@@ -16,40 +16,24 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStat
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Generator;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\Eel\Exception;
 use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Model\Site;
 
-class NodeEnumerator
+final class NodeEnumerator
 {
-    #[Flow\Inject]
-    protected DocumentNodeFilter $documentNodeFilter;
-
-    /**
-     * @Flow\Inject
-     * @var RedisEnumerationRepository
-     */
-    protected $redisEnumerationRepository;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var ConcurrentBuildLockService
-     */
-    protected $concurrentBuildLockService;
-
-    /**
-     * @Flow\Inject
-     * @var NodeRenderingExtensionManager
-     */
-    protected $nodeRenderingExtensionManager;
+    public function __construct(
+        private readonly RedisEnumerationRepository $redisEnumerationRepository,
+        private readonly RedisContentReleaseService $redisContentReleaseService,
+        private readonly ConcurrentBuildLockService $concurrentBuildLockService,
+        private readonly NodeRenderingExtensionManager $nodeRenderingExtensionManager,
+        private readonly DocumentNodeFilter $documentNodeFilter,
+        private readonly NodeContextCombinator $nodeContextCombinator,
+    ) {}
 
     public function enumerateAndStoreInRedis(
         ?Site $site,
@@ -71,7 +55,7 @@ class NodeEnumerator
 
         $this->redisEnumerationRepository->clearDocumentNodesEnumeration($releaseIdentifier);
         foreach (GeneratorUtility::createArrayBatch(
-            $this->enumerateAll($site, $contentReleaseLogger, $newMetadata->getWorkspaceName()),
+            $this->enumerateAll($site, $contentReleaseLogger, $newMetadata->workspaceName),
             100,
         ) as $enumeration) {
             $this->concurrentBuildLockService->assertNoOtherContentReleaseWasStarted($releaseIdentifier);
@@ -114,32 +98,30 @@ class NodeEnumerator
         ContentReleaseLogger $contentReleaseLogger,
         string $workspaceName,
     ): iterable {
-        $combinator = new NodeContextCombinator();
-
         $nodeTypeFilter = $this->documentNodeFilter->flowQueryNodeTypeFilter();
 
-        $queueSite = function (Site $site) use ($combinator, $nodeTypeFilter, $contentReleaseLogger, $workspaceName) {
+        $queueSite = function (Site $site) use ($nodeTypeFilter, $contentReleaseLogger, $workspaceName): Generator {
             $contentReleaseLogger->debug('Publishing site', [
                 'name' => $site->getName(),
                 'domain' => $site->getFirstActiveDomain(),
             ]);
 
-            foreach ($combinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
+            foreach ($this->nodeContextCombinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
                 $startTime = microtime(true);
-                $dimensionValues = $siteNode->getContext()->getDimensions();
+                $dimensionValues = $siteNode->dimensionSpacePoint->coordinates;
 
                 $contentReleaseLogger->debug('Publishing dimension combination', [
                     'dimensionValues' => $dimensionValues,
                 ]);
 
                 $nodeQuery = new FlowQuery([$siteNode]);
-                /** @var NodeInterface[] $matchingNodes */
+                /** @var Node[] $matchingNodes */
                 $matchingNodes = $nodeQuery->find($nodeTypeFilter)->add($siteNode)->get();
 
                 foreach ($matchingNodes as $nodeToEnumerate) {
-                    $contextPath = $nodeToEnumerate->getContextPath();
+                    $contextPath = NodeAddress::fromNode($nodeToEnumerate)->toJson();
 
-                    $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate, $siteNode);
+                    $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate);
                     if ($skipReason !== null) {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it is ' . $skipReason, [
                             'node' => $contextPath,
@@ -166,7 +148,7 @@ class NodeEnumerator
         };
 
         if ($site === null) {
-            foreach ($combinator->sites() as $siteInList) {
+            foreach ($this->nodeContextCombinator->sites() as $siteInList) {
                 yield from $queueSite($siteInList);
             }
         } else {
@@ -185,11 +167,11 @@ class NodeEnumerator
      * @param ContentReleaseIdentifier $releaseIdentifier
      * @param ContentReleaseLogger $contentReleaseLogger
      * @return void
-     * @Flow\Signal
      */
+    #[Flow\Signal]
     protected function emitNodeEnumerated(
         EnumeratedNode $enumeratedNode,
         ContentReleaseIdentifier $releaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-    ) {}
+    ): void {}
 }

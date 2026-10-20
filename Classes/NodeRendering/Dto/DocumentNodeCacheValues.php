@@ -5,32 +5,26 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
 use Exception;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
 /**
  * Represents contents of the top-level Fusion Cache identifier for a rendered node
- *
- * @Flow\Proxy(false)
  */
-final class DocumentNodeCacheValues implements \JsonSerializable
+#[Flow\Proxy(false)]
+final readonly class DocumentNodeCacheValues implements JsonSerializable
 {
     /**
      * the root cache identifier which contains the actual content (possibly nested)
-     * @var string
      */
-    protected $rootIdentifier;
+    private string $rootIdentifier;
 
     /**
      * the currently rendered URL
-     *
-     * @var string
      */
-    protected $url;
+    private string $url;
 
-    /**
-     * @var array
-     */
-    protected $metadata;
+    private array $metadata;
 
     private function __construct(string $rootIdentifier, string $url, array $metadata)
     {
@@ -52,7 +46,7 @@ final class DocumentNodeCacheValues implements \JsonSerializable
     /**
      * @throws Exception
      */
-    public static function fromJsonString($jsonString): self
+    public static function fromJsonString(string $jsonString): self
     {
         $tmp = json_decode($jsonString, true);
         if (!is_array($tmp)) {
@@ -84,7 +78,7 @@ final class DocumentNodeCacheValues implements \JsonSerializable
     /**
      * Add additional metadata.
      */
-    public function withMetadata(string $key, $value): self
+    public function withMetadata(string $key, mixed $value): self
     {
         $metadata = $this->metadata;
         $metadata[$key] = $value;

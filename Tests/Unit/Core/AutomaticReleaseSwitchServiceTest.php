@@ -20,7 +20,7 @@ use Redis;
  */
 final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
 {
-    private const REDIS_KEY = 'contentStore:automaticReleasesPaused';
+    private const string REDIS_KEY = 'contentStore:automaticReleasesPaused';
 
     public function testTheSwitchIsSetOnlyIfThePausedAtFieldExists(): void
     {
@@ -37,13 +37,10 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
         // between the caller's isPaused() check and the count - and pruning never reaches that key
         $redis = $this->createMock(Redis::class);
         $redis->expects(self::never())->method('hIncrBy');
-        $redis->expects(self::once())
+        $redis
+            ->expects(self::once())
             ->method('eval')
-            ->with(
-                self::stringContains('HEXISTS'),
-                self::equalTo([self::REDIS_KEY]),
-                self::equalTo(1),
-            );
+            ->with(self::stringContains('HEXISTS'), self::equalTo([self::REDIS_KEY]), self::equalTo(1));
 
         $this->buildService($redis)->countSuppressedRelease();
     }
@@ -62,7 +59,8 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     {
         $redis = $this->createMock(Redis::class);
         $redis->method('hExists')->willReturn(false);
-        $redis->expects(self::once())
+        $redis
+            ->expects(self::once())
             ->method('hMSet')
             ->with(self::REDIS_KEY, self::callback(static function (array $hash): bool {
                 return (
@@ -86,7 +84,8 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
     public function testThePauseStateIsReadFromTheHash(): void
     {
         $redis = $this->createMock(Redis::class);
-        $redis->method('hGetAll')
+        $redis
+            ->method('hGetAll')
             ->willReturn([
                 'pausedAt' => '2026-08-13T09:15:00+02:00',
                 'accountId' => 'admin',
@@ -108,10 +107,6 @@ final class AutomaticReleaseSwitchServiceTest extends UnitTestCase
         $securityContext = $this->createMock(Context::class);
         $securityContext->method('isInitialized')->willReturn(false);
 
-        $service = new AutomaticReleaseSwitchService();
-        $this->inject($service, 'redisClientManager', $redisClientManager);
-        $this->inject($service, 'securityContext', $securityContext);
-
-        return $service;
+        return new AutomaticReleaseSwitchService($redisClientManager, $securityContext);
     }
 }

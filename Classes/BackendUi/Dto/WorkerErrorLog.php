@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\BackendUi\Dto;
 
 use Flowpack\DecoupledContentStore\BackendUi\WorkerErrorLogAggregator;
-use Neos\Eel\ProtectedContextAwareInterface;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class WorkerErrorLog
+#[Flow\Proxy(false)]
+final readonly class WorkerErrorLog
 {
     public bool $wasKilledByOrchestrator;
 

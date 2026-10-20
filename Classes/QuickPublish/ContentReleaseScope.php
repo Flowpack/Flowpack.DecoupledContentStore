@@ -18,16 +18,15 @@ use Neos\Flow\Annotations as Flow;
  * over unchanged from a release that was validated already.
  */
 #[Flow\Scope('singleton')]
-final class ContentReleaseScope
+final readonly class ContentReleaseScope
 {
-    private const CHANGED_URLS_POSTFIX = 'quickPublish:changedUrls';
-    private const URLS_POSTFIX = 'meta:urls';
+    private const string CHANGED_URLS_POSTFIX = 'quickPublish:changedUrls';
+    private const string URLS_POSTFIX = 'meta:urls';
 
-    #[Flow\Inject]
-    protected RedisClientManager $redisClientManager;
-
-    #[Flow\Inject]
-    protected RedisKeyService $redisKeyService;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+    ) {}
 
     /**
      * The URLs a quick content release re-rendered, or NULL for a release which was rendered as a whole - meaning

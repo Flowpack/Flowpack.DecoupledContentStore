@@ -8,10 +8,12 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\DocumentNodeFi
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\QuickPublishPreviewRow;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ControllerContext;
+use Neos\Neos\Domain\NodeLabel\NodeLabelGeneratorInterface;
 
 /**
  * Resolves the node identifiers of a quick release into what the confirmation page shows.
@@ -21,13 +23,14 @@ use Neos\Flow\Mvc\Controller\ControllerContext;
  * the pipeline then skips.
  */
 #[Flow\Scope('singleton')]
-final class QuickPublishPreviewService
+final readonly class QuickPublishPreviewService
 {
-    #[Flow\Inject]
-    protected NodeContextCombinator $nodeContextCombinator;
-
-    #[Flow\Inject]
-    protected DocumentNodeFilter $documentNodeFilter;
+    public function __construct(
+        private NodeContextCombinator $nodeContextCombinator,
+        private DocumentNodeFilter $documentNodeFilter,
+        private NodeLabelGeneratorInterface $nodeLabelGenerator,
+        private ContentRepositoryRegistry $contentRepositoryRegistry,
+    ) {}
 
     /**
      * @return array<int, QuickPublishPreviewRow> one row per dimension variant of every given identifier
@@ -39,16 +42,19 @@ final class QuickPublishPreviewService
         foreach ($nodeIdentifiers as $nodeIdentifier) {
             $nodeFound = false;
 
-            foreach ($this->nodeContextCombinator->nodeVariantsWithSiteNode($nodeIdentifier) as [$siteNode, $node]) {
+            foreach ($this->nodeContextCombinator->nodeVariants($nodeIdentifier) as $node) {
                 $nodeFound = true;
                 $rows[] = QuickPublishPreviewRow::forNode(
                     $nodeIdentifier,
-                    $node->getLabel(),
-                    $node instanceof TraversableNodeInterface ? (string) $node->findNodePath() : '',
+                    $this->nodeLabelGenerator->getLabel($node),
+                    $this->contentRepositoryRegistry
+                        ->subgraphForNode($node)
+                        ->retrieveNodePath($node->aggregateId)
+                        ->serializeToString(),
                     self::describeDimensions($node),
-                    $node->getNodeType()->getName(),
+                    $node->nodeTypeName->value,
                     $this->backendUri($node, $controllerContext),
-                    $this->documentNodeFilter->skipReasonForNamedNode($node, $siteNode),
+                    $this->documentNodeFilter->skipReasonForNamedNode($node),
                 );
             }
 
@@ -68,18 +74,19 @@ final class QuickPublishPreviewService
         return count(array_filter($rows, static fn(QuickPublishPreviewRow $row): bool => $row->isPublished()));
     }
 
-    private function backendUri(NodeInterface $node, ControllerContext $controllerContext): string
+    private function backendUri(Node $node, ControllerContext $controllerContext): string
     {
-        return $controllerContext->getUriBuilder()
+        return $controllerContext
+            ->getUriBuilder()
             ->reset()
-            ->uriFor('index', ['node' => $node->getContextPath()], 'Backend', 'Neos.Neos.Ui');
+            ->uriFor('index', ['node' => NodeAddress::fromNode($node)->toJson()], 'Backend', 'Neos.Neos.Ui');
     }
 
-    private static function describeDimensions(NodeInterface $node): string
+    private static function describeDimensions(Node $node): string
     {
         $dimensions = [];
-        foreach ($node->getContext()->getDimensions() as $dimensionName => $dimensionValues) {
-            $dimensions[] = $dimensionName . ': ' . implode(', ', $dimensionValues);
+        foreach ($node->dimensionSpacePoint->coordinates as $dimensionName => $dimensionValue) {
+            $dimensions[] = $dimensionName . ': ' . $dimensionValue;
         }
 
         return implode(' | ', $dimensions);

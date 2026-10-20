@@ -17,19 +17,15 @@ use Neos\Flow\Annotations as Flow;
  *
  * This is extensible to control the format of the content releases, and to add additional metadata.
  */
-class GzipWriter implements ContentReleaseWriterInterface
+final class GzipWriter implements ContentReleaseWriterInterface
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
+    #[Flow\Inject]
+    protected RedisClientManager $redisClientManager;
 
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
+    #[Flow\Inject]
+    protected RedisKeyService $redisKeyService;
+
+    public function __construct(array $options = []) {}
 
     public function processRenderedDocument(
         ContentReleaseIdentifier $contentReleaseIdentifier,

@@ -19,19 +19,19 @@ use Neos\Flow\Annotations as Flow;
  * before anybody gets to look at it. This DTO is what survives that.
  */
 #[Flow\Proxy(false)]
-final class ContentReleaseMetrics implements JsonSerializable
+final readonly class ContentReleaseMetrics implements JsonSerializable
 {
     /**
      * Errors are shipped inline, so a release with thousands of failing documents must not produce a log line
      * nobody can read. `renderingErrorCount` always carries the real number.
      */
-    private const MAX_REPORTED_ERRORS = 50;
+    private const int MAX_REPORTED_ERRORS = 50;
 
     /**
      * The orchestrator SIGTERMs the remaining workers once one of them failed, so a broken release produces one
      * entry per worker - and only the first few carry a real error.
      */
-    private const MAX_REPORTED_WORKER_ERRORS = 10;
+    private const int MAX_REPORTED_WORKER_ERRORS = 10;
 
     /**
      * @param RenderingIteration[] $iterations
@@ -39,23 +39,23 @@ final class ContentReleaseMetrics implements JsonSerializable
      * @param WorkerError[]|null $workerErrors NULL when the worker logs could not be read
      */
     private function __construct(
-        public readonly string $contentReleaseIdentifier,
-        public readonly string $prunnerJobId,
-        public readonly string $status,
-        public readonly ?string $workspaceName,
-        public readonly ?string $accountId,
-        public readonly ?string $startTime,
-        public readonly ?string $endTime,
-        public readonly ?int $durationSeconds,
-        public readonly ?float $sizeMegabytes,
-        public readonly int $documentCount,
-        public readonly int $newlyRenderedDocumentCount,
-        public readonly int $renderingCount,
-        public readonly int $iterationCount,
-        public readonly array $iterations,
-        public readonly int $renderingErrorCount,
-        public readonly array $renderingErrors,
-        public readonly ?array $workerErrors,
+        public string $contentReleaseIdentifier,
+        public string $prunnerJobId,
+        public string $status,
+        public ?string $workspaceName,
+        public ?string $accountId,
+        public ?string $startTime,
+        public ?string $endTime,
+        public ?int $durationSeconds,
+        public ?float $sizeMegabytes,
+        public int $documentCount,
+        public int $newlyRenderedDocumentCount,
+        public int $renderingCount,
+        public int $iterationCount,
+        public array $iterations,
+        public int $renderingErrorCount,
+        public array $renderingErrors,
+        public ?array $workerErrors,
     ) {}
 
     /**
@@ -81,10 +81,10 @@ final class ContentReleaseMetrics implements JsonSerializable
             $renderingCount += $iteration->completedRenderings;
         }
 
-        $startTime = $metadata->getStartTime();
+        $startTime = $metadata->startTime;
         // The end time is written when the rendering finished, so the duration covers enumeration and rendering -
         // not the transfer and switch tasks which run after them.
-        $endTime = $metadata->getEndTime();
+        $endTime = $metadata->endTime;
         // A release which was aborted never gets an end time written, so its duration is measured up to the
         // moment this report is taken - which is the moment the pipeline gave up on it.
         $durationEnd = $endTime ?? $now;
@@ -104,14 +104,14 @@ final class ContentReleaseMetrics implements JsonSerializable
 
         return new self(
             $contentReleaseIdentifier->getIdentifier(),
-            $metadata->getPrunnerJobId()->getIdentifier(),
-            $metadata->getStatus()->getStatus(),
-            $metadata->getWorkspaceName(),
-            $metadata->getAccountId(),
+            $metadata->prunnerJobId->getIdentifier(),
+            $metadata->status->getStatus(),
+            $metadata->workspaceName,
+            $metadata->accountId,
             $startTime?->format(DateTimeInterface::RFC3339_EXTENDED),
             $endTime?->format(DateTimeInterface::RFC3339_EXTENDED),
             $startTime !== null ? $durationEnd->getTimestamp() - $startTime->getTimestamp() : null,
-            $metadata->getContentReleaseSize(),
+            $metadata->contentReleaseSize,
             $documentCount,
             // The first iteration copies everything which is still complete in the content cache and schedules
             // the rest - so its scheduled count is the number of documents this release rendered anew.

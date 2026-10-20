@@ -10,49 +10,42 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseCleaner;
 use Flowpack\DecoupledContentStore\Transfer\ContentReleaseSynchronizer;
 use Flowpack\DecoupledContentStore\Transfer\Resource\RemoteResourceSynchronizer;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
 /**
  * Commands for the TRANSFER stage in the pipeline. Not meant to be called manually.
  */
-class ContentReleaseTransferCommandController extends CommandController
+final class ContentReleaseTransferCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var RemoteResourceSynchronizer
-     */
-    protected $remoteResourceSynchronizer;
+    public function __construct(
+        private readonly RemoteResourceSynchronizer $remoteResourceSynchronizer,
+        private readonly ContentReleaseSynchronizer $contentReleaseSynchronizer,
+        private readonly ContentReleaseCleaner $contentReleaseCleaner,
+    ) {
+        parent::__construct();
+    }
 
-    /**
-     * @Flow\Inject
-     * @var ContentReleaseSynchronizer
-     */
-    protected $contentReleaseSynchronizer;
-
-    /**
-     * @Flow\Inject
-     * @var ContentReleaseCleaner
-     */
-    protected $contentReleaseCleaner;
-
-    public function syncResourcesCommand(string $contentReleaseIdentifier)
+    public function syncResourcesCommand(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
         $this->remoteResourceSynchronizer->synchronize($logger);
     }
 
-    public function transferToContentStoreCommand(string $redisContentStoreIdentifier, string $contentReleaseIdentifier)
-    {
+    public function transferToContentStoreCommand(
+        string $redisContentStoreIdentifier,
+        string $contentReleaseIdentifier,
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisContentStoreIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
         $this->contentReleaseSynchronizer->syncToTarget($redisInstanceIdentifier, $contentReleaseIdentifier, $logger);
     }
 
-    public function removeOldReleasesCommand(string $redisContentStoreIdentifier, string $contentReleaseIdentifier)
-    {
+    public function removeOldReleasesCommand(
+        string $redisContentStoreIdentifier,
+        string $contentReleaseIdentifier,
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisContentStoreIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);

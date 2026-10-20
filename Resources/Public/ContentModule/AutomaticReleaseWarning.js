@@ -14,10 +14,19 @@
     const VISIBLE_CLASS = 'flowpack-decoupledcontentstore-release-warning-visible';
     const HEIGHT_PROPERTY = '--flowpack-decoupledcontentstore-release-warning-height';
 
-    // Read now, not when polling: the UI host consumes the inlined _NEOS_UI_* globals with a "delete" as soon as it
-    // boots, so this script is registered before the host and without "defer" purely to get here first.
-    const routes = window._NEOS_UI_routes;
+    let routes = null;
     let warned = false;
+
+    // the UI inlines its route table as JSON into <script id="initialData">, which only exists once the head is parsed
+    function readRoutes() {
+        const initialData = document.getElementById('initialData');
+
+        try {
+            return initialData ? JSON.parse(initialData.textContent).routes : null;
+        } catch (error) {
+            return null;
+        }
+    }
 
     function statusUri() {
         const dataSourceUri = routes && routes.core && routes.core.service && routes.core.service.dataSource;
@@ -71,7 +80,7 @@
     function poll() {
         const uri = statusUri();
         if (!uri) {
-            warn('_NEOS_UI_routes.core.service.dataSource is not available');
+            warn('routes.core.service.dataSource is missing in #initialData');
             return;
         }
 
@@ -94,6 +103,7 @@
     }
 
     function start() {
+        routes = readRoutes();
         poll();
         window.setInterval(poll, POLL_INTERVAL_IN_MS);
         // the message wraps to a different number of lines as the window gets narrower

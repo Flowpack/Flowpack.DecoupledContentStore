@@ -4,24 +4,15 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
-class ExtractedExceptionDto
+final readonly class ExtractedExceptionDto
 {
-    /**
-     * @var string
-     */
-    protected $message = '';
+    private string $message;
 
-    /**
-     * @var string
-     */
-    protected $stackTrace = '';
+    private string $stackTrace;
 
-    /**
-     * @var string
-     */
-    protected $referenceCode = '';
+    private string $referenceCode;
 
-    public function __construct($message, $stackTrace, $referenceCode)
+    public function __construct(string $message, string $stackTrace, string $referenceCode)
     {
         $this->message = $message;
         $this->stackTrace = $stackTrace;
@@ -52,7 +43,7 @@ class ExtractedExceptionDto
         return $this->referenceCode;
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         return (
             $this->getMessage()

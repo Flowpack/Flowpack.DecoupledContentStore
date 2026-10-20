@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering;
 
+use DateTimeImmutable;
+use Exception;
+use Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
@@ -22,9 +25,11 @@ use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingIteratio
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
+use Generator;
 use Neos\Flow\Annotations as Flow;
 use Neos\Fusion\Core\Cache\ContentCache;
-use Neos\Neos\Fusion\Helper\CachingHelper;
+use Neos\Neos\Fusion\Cache\CacheTag;
+use RuntimeException;
 
 /**
  * TODO: explain concept of Working Set
@@ -48,79 +53,35 @@ use Neos\Neos\Fusion\Helper\CachingHelper;
  * SCHWIERIGER: URL Segment wird geändert von Node.
  * -> Eventually consistent, kurzzeitig broken link.
  * ALTERNATIVE: Logik hier im Orchestrator ändern
- *
- * @Flow\Scope("singleton")
  */
-class NodeRenderOrchestrator
+#[Flow\Scope('singleton')]
+final readonly class NodeRenderOrchestrator
 {
-    /**
-     * @Flow\Inject
-     * @var RedisEnumerationRepository
-     */
-    protected $redisEnumerationRepository;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingQueue
-     */
-    protected $redisRenderingQueue;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingErrorManager
-     */
-    protected $redisRenderingErrorManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingTimeStatisticsStore
-     */
-    protected $redisRenderingStatisticsStore;
-
-    /**
-     * @Flow\Inject
-     * @var NodeRenderingExtensionManager
-     */
-    protected $nodeRenderingExtensionManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var ConcurrentBuildLockService
-     */
-    protected $concurrentBuildLockService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseSizeService
-     */
-    protected $redisContentReleaseSizeService;
-
-    #[Flow\Inject]
-    protected ContentCache $contentCache;
-
-    #[Flow\Inject]
-    protected CachingHelper $cachingHelper;
-
-    #[Flow\InjectConfiguration('nodeRendering.flushDocumentCacheOnRetry')]
-    protected bool $flushDocumentCacheOnRetry;
-
-    private const EXIT_ERRORSTATUSCODE_RELEASE_ALREADY_COMPLETED = 1;
-    private const EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION = 2;
-    private const EXIT_ERRORSTATUSCODE_RETRY_LIMIT_REACHED = 3;
-    private const EXIT_ERRORSTATUSCODE_RENDERING_ERRORS = 4;
+    private const int EXIT_ERRORSTATUSCODE_RELEASE_ALREADY_COMPLETED = 1;
+    private const int EXIT_ERRORSTATUSCODE_EMPTY_ENUMERATION = 2;
+    private const int EXIT_ERRORSTATUSCODE_RETRY_LIMIT_REACHED = 3;
+    private const int EXIT_ERRORSTATUSCODE_RENDERING_ERRORS = 4;
 
     /**
      * How often the very same set of nodes may be scheduled in a row before we give up on them. The rendering gets
      * one real retry (which flushes the content cache for these nodes, {@see flushContentCacheForRetry()}) before
      * this kicks in.
      */
-    private const MAX_ITERATIONS_WITHOUT_PROGRESS = 3;
+    private const int MAX_ITERATIONS_WITHOUT_PROGRESS = 3;
+
+    public function __construct(
+        private RedisEnumerationRepository $redisEnumerationRepository,
+        private RedisRenderingQueue $redisRenderingQueue,
+        private RedisRenderingErrorManager $redisRenderingErrorManager,
+        private RedisRenderingTimeStatisticsStore $redisRenderingStatisticsStore,
+        private NodeRenderingExtensionManager $nodeRenderingExtensionManager,
+        private RedisContentReleaseService $redisContentReleaseService,
+        private ConcurrentBuildLockService $concurrentBuildLockService,
+        private RedisContentReleaseSizeService $redisContentReleaseSizeService,
+        private ContentCache $contentCache,
+        #[Flow\InjectConfiguration('nodeRendering.flushDocumentCacheOnRetry')]
+        protected bool $flushDocumentCacheOnRetry,
+    ) {}
 
     /**
      * !!! You need to wrap this in the {@see InterruptibleProcessRuntime} so that it works correctly.
@@ -131,15 +92,15 @@ class NodeRenderOrchestrator
     public function renderContentRelease(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-    ): \Generator {
+    ): Generator {
         $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         if ($releaseMetadata === null) {
-            throw new \RuntimeException(sprintf(
+            throw new RuntimeException(sprintf(
                 'No metadata found for content release %s.',
                 $contentReleaseIdentifier->getIdentifier(),
             ));
         }
-        $renderStatus = $releaseMetadata->getStatus();
+        $renderStatus = $releaseMetadata->status;
 
         if ($renderStatus->hasCompleted()) {
             $contentReleaseLogger->error(
@@ -267,7 +228,7 @@ class NodeRenderOrchestrator
                     $this->redisRenderingErrorManager->registerRenderingError(
                         $contentReleaseIdentifier,
                         ['node' => $enumeratedNode->debugString()],
-                        new \Exception(sprintf(
+                        new Exception(sprintf(
                             'This node was scheduled for rendering %d times in a row without ever becoming complete in the content cache. Check the render worker logs for this node - most likely no "doc--..." mapping entry is written for it.',
                             self::MAX_ITERATIONS_WITHOUT_PROGRESS,
                         )),
@@ -418,7 +379,7 @@ class NodeRenderOrchestrator
     /**
      * Simply rendering a node again does not necessarily help: if its content cache entries are still valid, the
      * rendering is served straight from the content cache. Fusion then never processes a document-level cache
-     * segment, so {@see \Flowpack\DecoupledContentStore\Aspects\CacheUrlMappingAspect} does not write the "doc--..."
+     * segment, so {@see CacheUrlMappingAspect} does not write the "doc--..."
      * mapping entry the content release needs - and the node is scheduled again, and again, until the retry limit
      * aborts the whole release. Flushing the node's cache entries turns the re-rendering into a real rendering.
      *
@@ -434,13 +395,12 @@ class NodeRenderOrchestrator
     ): void {
         $tags = [];
         foreach ($nodesScheduledForRendering as $enumeratedNode) {
-            $tags[] =
-                'Node_'
-                . $this->cachingHelper->renderWorkspaceTagForContextNode(
-                    $enumeratedNode->getWorkspaceNameFromContextPath(),
-                )
-                . '_'
-                . $enumeratedNode->getNodeIdentifier();
+            $nodeAddress = $enumeratedNode->getNodeAddress();
+            $tags[] = CacheTag::forNodeAggregate(
+                $nodeAddress->contentRepositoryId,
+                $nodeAddress->workspaceName,
+                $nodeAddress->aggregateId,
+            )->value;
         }
 
         foreach (array_unique($tags) as $tag) {
@@ -458,7 +418,7 @@ class NodeRenderOrchestrator
         ContentReleaseLogger $contentReleaseLogger,
         ContentReleaseMetadata $releaseMetadata,
         int $startTime,
-    ): \Generator {
+    ): Generator {
         $contentReleaseLogger->info(sprintf(
             'Everything rendered completely in %d seconds. Finishing RenderOrchestrator',
             time() - $startTime,
@@ -477,7 +437,7 @@ class NodeRenderOrchestrator
             $contentReleaseIdentifier,
             $releaseMetadata
                 ->withStatus(NodeRenderingCompletionStatus::success())
-                ->withEndTime(new \DateTimeImmutable())
+                ->withEndTime(new DateTimeImmutable())
                 ->withContentReleaseSize($contentReleaseSize),
             RedisInstanceIdentifier::primary(),
         );
