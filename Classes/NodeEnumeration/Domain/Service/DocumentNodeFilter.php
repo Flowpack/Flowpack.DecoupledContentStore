@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service;
 
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
-use Neos\ContentRepository\Exception\NodeException;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\Flow\Annotations as Flow;
+use Neos\Neos\Domain\SubtreeTagging\NeosSubtreeTag;
 
 /**
  * Decides which document nodes end up in a content release.
@@ -59,10 +58,13 @@ final class DocumentNodeFilter
      * Concatenated FlowQuery filter parts are ANDed, so a node has to be of every included node type - not of any
      * of them.
      */
-    public function matchesNodeTypeWhitelist(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): bool
+    public function matchesNodeTypeWhitelist(Node $node): bool
     {
         $contentRepository = $this->contentRepositoryRegistry->get($node->contentRepositoryId);
         $nodeType = $contentRepository->getNodeTypeManager()->getNodeType($node->nodeTypeName);
+        if ($nodeType === null) {
+            return false;
+        }
         $partitionedNodeTypes = self::partitionNodeTypeWhitelist($this->nodeTypeWhitelist);
 
         foreach ($partitionedNodeTypes['excludes'] as $excludedNodeType) {
@@ -87,16 +89,11 @@ final class DocumentNodeFilter
      * passing it through the FlowQuery filter, and both enumerators would change behaviour if that were tightened
      * as a side effect. Callers which resolve nodes by identifier check {@see matchesNodeTypeWhitelist()} themselves.
      */
-    public function skipReason(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $siteNode): ?string
+    public function skipReason(Node $node): ?string
     {
-        // the site node has no parent inside the site, so it can never be orphaned
-        if ($node !== $siteNode && self::isOrphaned($node, $siteNode)) {
-            return 'orphaned';
-        }
-
-        // isVisible() rather than isHidden(), so that a page hidden by "hiddenBeforeDateTime" or
-        // "hiddenAfterDateTime" counts as hidden as well - it is hidden to a visitor just the same
-        if (!$node->isVisible()) {
+        // only the node's own tag: an inherited one means a page above it is hidden, which the full enumeration
+        // decides by its traversal and {@see skipReasonForNamedNode()} by "recurseHiddenContent"
+        if ($node->tags->withoutInherited()->contain(NeosSubtreeTag::disabled())) {
             return 'hidden';
         }
 
@@ -110,79 +107,34 @@ final class DocumentNodeFilter
      * which was named by hand did not come out of the FlowQuery filter and was not reached by descending from the
      * site node, so nothing else checked either of them.
      */
-    public function skipReasonForNamedNode(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $siteNode): ?string
+    public function skipReasonForNamedNode(Node $node): ?string
     {
-        $skipReason = $this->skipReason($node, $siteNode);
+        return $this->visibilitySkipReasonForNamedNode($node)
+            ?? ($this->matchesNodeTypeWhitelist($node) ? null : 'not of a node type which is published');
+    }
+
+    /**
+     * Everything {@see skipReasonForNamedNode()} answers apart from the node type, which needs the content repository.
+     *
+     * A node named by identifier is resolved in a subgraph that shows disabled nodes, so that "it is hidden" can be
+     * reported instead of "it does not exist". The full enumeration needs no check for the pages above: it descends
+     * from the site node in a subgraph built from "recurseHiddenContent", and therefore never reaches a document
+     * below a hidden page unless that setting says it should - publishing one from a quick release would put a page
+     * live which the next full release removes again. Inherited tags include the site node's, because a hidden site
+     * node keeps its whole site out of a full release just as well.
+     */
+    private function visibilitySkipReasonForNamedNode(Node $node): ?string
+    {
+        $skipReason = $this->skipReason($node);
         if ($skipReason !== null) {
             return $skipReason;
         }
 
-        // "recurseHiddenContent" is what the full enumeration descends into hidden pages with, so where it is set a
-        // document below one is part of an ordinary release and has to be part of a quick release just the same
-        if (!$this->recurseHiddenContent && self::hasHiddenAncestor($node)) {
+        if (!$this->recurseHiddenContent && $node->tags->onlyInherited()->contain(NeosSubtreeTag::disabled())) {
             return 'below a hidden page';
         }
 
-        return $this->matchesNodeTypeWhitelist($node) ? null : 'not of a node type which is published';
-    }
-
-    /**
-     * Whether one of the pages above the node is hidden, by its flag or by its hidden-before/after dates.
-     *
-     * Only asked about a node named by identifier, which is resolved in a context that shows hidden nodes so that
-     * "it is hidden" can be reported instead of "it does not exist". The full enumeration needs no such check: it
-     * descends from the site node in a context built from "recurseHiddenContent", and therefore never reaches a
-     * document below a hidden page unless that setting says it should - publishing one from a quick release would
-     * put a page live which the next full release removes again. The walk goes past the site node, because a hidden
-     * site node keeps its whole site out of a full release just as well.
-     */
-    private static function hasHiddenAncestor(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): bool
-    {
-        $parentNode = self::getParentNodeOrNull($node);
-        while ($parentNode !== null) {
-            if (!$parentNode->isVisible()) {
-                return true;
-            }
-            $parentNode = self::getParentNodeOrNull($parentNode);
-        }
-
-        return false;
-    }
-
-    private static function isOrphaned(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, \Neos\ContentRepository\Core\Projection\ContentGraph\Node $siteNode): bool
-    {
-        $parentNode = self::getParentNodeOrNull($node);
-        while ($parentNode !== $siteNode) {
-            if ($parentNode === null) {
-                return true;
-            }
-            $parentNode = self::getParentNodeOrNull($parentNode);
-        }
-
-        return false;
-    }
-
-    /**
-     * The parent of a node, or NULL where the walk up leaves the tree.
-     *
-     * Walking up needs findParentNode(), which belongs to TraversableNodeInterface - a different interface from the
-     * NodeInterface the rest of this class works with, implemented side by side by the content repository's node
-     * class. Both conversions live here so that callers compare nodes of one type, and so that "left the tree"
-     * stays a NULL rather than an exception.
-     */
-    private static function getParentNodeOrNull(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node): ?\Neos\ContentRepository\Core\Projection\ContentGraph\Node
-    {
-        if (!$node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
-            return null;
-        }
-
-        try {
-            $parentNode = $node->findParentNode();
-        } catch (NodeException) {
-            return null;
-        }
-
-        return $parentNode instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node ? $parentNode : null;
+        return null;
     }
 
     /**

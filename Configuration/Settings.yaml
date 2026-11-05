@@ -262,8 +262,6 @@ Neos:
         javascript:
           'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':
             resource: 'resource://Flowpack.DecoupledContentStore/Public/ContentModule/AutomaticReleaseWarning.js'
-            # Before the UI host and without "defer", because the host reads the inlined _NEOS_UI_* globals once and
-            # deletes them - the script has to capture the route table before that happens.
             position: 'before Neos.Neos.UI:Host'
         stylesheets:
           'Flowpack.DecoupledContentStore:AutomaticReleaseWarning':

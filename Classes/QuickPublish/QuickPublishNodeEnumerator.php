@@ -21,7 +21,8 @@ use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderingUriService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\Flow\Annotations as Flow;
 use Neos\Fusion\Core\Cache\ContentCache;
 use Neos\Neos\Fusion\Helper\CachingHelper;
@@ -145,7 +146,7 @@ final class QuickPublishNodeEnumerator
      * marks the security context as initialized as a side effect, which would change what the node lookups of the
      * remaining identifiers are allowed to see.
      *
-     * @param array<int, array{0: \Neos\ContentRepository\Core\Projection\ContentGraph\Node, 1: EnumeratedNode}> $nodesToRender
+     * @param array<int, array{0: Node, 1: EnumeratedNode}> $nodesToRender
      */
     private function writeChangedUrls(
         array $nodesToRender,
@@ -167,7 +168,7 @@ final class QuickPublishNodeEnumerator
     /**
      * The node variants to render, skipping every given identifier which must not or cannot be published.
      *
-     * @return array<int, array{0: \Neos\ContentRepository\Core\Projection\ContentGraph\Node, 1: EnumeratedNode}>
+     * @return array<int, array{0: Node, 1: EnumeratedNode}>
      */
     private function enumerateGivenNodes(
         NodeIdentifiers $nodeIdentifiers,
@@ -179,17 +180,16 @@ final class QuickPublishNodeEnumerator
         foreach ($nodeIdentifiers as $nodeIdentifier) {
             $contentCacheFlushed = false;
 
-            $variants = $this->nodeContextCombinator->nodeVariantsWithSiteNode($nodeIdentifier, $workspaceName);
-            foreach ($variants as [$siteNode, $nodeToEnumerate]) {
+            foreach ($this->nodeContextCombinator->nodeVariants($nodeIdentifier, $workspaceName) as $nodeToEnumerate) {
                 if (!$contentCacheFlushed) {
                     // the tags carry the node identifier and the workspace, so one flush covers every dimension
                     $this->flushContentCacheForNode($nodeToEnumerate, $nodeIdentifier, $contentReleaseLogger);
                     $contentCacheFlushed = true;
                 }
 
-                $contextPath = $nodeToEnumerate->getContextPath();
+                $contextPath = NodeAddress::fromNode($nodeToEnumerate)->toJson();
 
-                $skipReason = $this->documentNodeFilter->skipReasonForNamedNode($nodeToEnumerate, $siteNode);
+                $skipReason = $this->documentNodeFilter->skipReasonForNamedNode($nodeToEnumerate);
                 if ($skipReason !== null) {
                     // warn rather than debug: somebody asked for this node by hand and will not see it change
                     $contentReleaseLogger->warn('Skipping node from publishing, because it is ' . $skipReason, [
@@ -228,7 +228,7 @@ final class QuickPublishNodeEnumerator
      * it copied - the editor's change would be missing without a single error anywhere.
      */
     private function flushContentCacheForNode(
-        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
+        Node $node,
         string $nodeIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
     ): void {

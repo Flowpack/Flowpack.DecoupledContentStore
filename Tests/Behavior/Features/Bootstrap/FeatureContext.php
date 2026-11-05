@@ -39,10 +39,13 @@ use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
 use Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures\StubPrunnerApiService;
 use Neos\Behat\FlowBootstrapTrait;
 use Neos\Behat\FlowEntitiesTrait;
+use Neos\ContentRepository\Core\Projection\ContentGraph\AbsoluteNodePath;
+use Neos\ContentRepository\Core\Projection\ContentGraph\NodePath;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Mvc\ActionRequest;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
@@ -57,6 +60,7 @@ use Neos\Neos\Domain\Model\Domain;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\DomainRepository;
 use Neos\Neos\Domain\Repository\SiteRepository;
+use Neos\Neos\Domain\Service\NodeTypeNameFactory;
 use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Neos\Utility\Arrays;
 use Neos\Utility\ObjectAccess;
@@ -381,12 +385,17 @@ class FeatureContext implements Context
     private function nodeIdentifierForPath(string $path): string
     {
         $combinator = $this->getObjectManager()->get(NodeContextCombinator::class);
+        $contentRepositoryRegistry = $this->getObjectManager()->get(ContentRepositoryRegistry::class);
+        // the fixtures spell paths the Neos 8 way, starting with "/sites/"
+        $absolutePath = AbsoluteNodePath::fromRootNodeTypeNameAndRelativePath(
+            NodeTypeNameFactory::forSites(),
+            NodePath::fromString(substr($path, strlen('/sites/'))),
+        );
 
         foreach ($combinator->sites() as $site) {
             foreach ($combinator->siteNodeInContexts($site, 'live') as $siteNode) {
-                $node = $siteNode->getContext()->getNode($path);
-                if ($node instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node) {
-                    // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
+                $node = $contentRepositoryRegistry->subgraphForNode($siteNode)->findNodeByAbsolutePath($absolutePath);
+                if ($node !== null) {
                     return $node->aggregateId->value;
                 }
             }

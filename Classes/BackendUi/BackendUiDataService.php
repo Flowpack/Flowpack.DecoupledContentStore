@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\BackendUi;
 
+use Exception;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseDetails;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\RemovedContentReleaseOverviewRow;
@@ -21,49 +22,33 @@ use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwit
 use Flowpack\Prunner\Dto\Job;
 use Flowpack\Prunner\PrunnerApiService;
 use Neos\Flow\Annotations as Flow;
+use Throwable;
 
-/**
- * @Flow\Scope("singleton")
- */
+#[Flow\Scope('singleton')]
 class BackendUiDataService
 {
-    /**
-     * @Flow\Inject
-     * @var PrunnerApiService
-     */
-    protected $prunnerApiService;
+    #[Flow\Inject]
+    protected PrunnerApiService $prunnerApiService;
+
+    #[Flow\Inject]
+    protected RedisEnumerationRepository $redisEnumerationRepository;
+
+    #[Flow\Inject]
+    protected RedisContentReleaseService $redisContentReleaseService;
+
+    #[Flow\Inject]
+    protected RedisRenderingTimeStatisticsStore $redisRenderingStatisticsStore;
+
+    #[Flow\Inject]
+    protected RedisRenderingErrorManager $redisRenderingErrorManager;
+
+    #[Flow\Inject]
+    protected RedisReleaseSwitchService $redisReleaseSwitchService;
 
     /**
-     * @Flow\Inject
-     * @var RedisEnumerationRepository
+     * @throws Exception
      */
-    protected $redisEnumerationRepository;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingTimeStatisticsStore
-     */
-    protected $redisRenderingStatisticsStore;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingErrorManager
-     */
-    protected $redisRenderingErrorManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisReleaseSwitchService
-     */
-    protected $redisReleaseSwitchService;
-
-    public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier)
+    public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier): array
     {
         $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier);
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(
@@ -93,7 +78,7 @@ class BackendUiDataService
             foreach ($this->prunnerApiService->loadPipelinesAndJobs()->getJobs() as $job) {
                 $jobsById[$job->getId()->getId()] = $job;
             }
-        } catch (\Throwable $throwable) {
+        } catch (Throwable) {
             // the overview also holds the controls to pause releases, which must keep working while prunner is down
             $jobsById = null;
         }
@@ -155,6 +140,7 @@ class BackendUiDataService
      * "replace", most of them were replaced while waiting and have no logs at all.
      *
      * @return RemovedContentReleaseOverviewRow[]|null NULL when the prunner API could not be reached
+     * @throws Exception
      */
     public function loadRemovedReleasesOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier): ?array
     {
@@ -164,7 +150,7 @@ class BackendUiDataService
 
         try {
             $jobs = $this->prunnerApiService->loadPipelinesAndJobs()->getJobs();
-        } catch (\Throwable $throwable) {
+        } catch (Throwable) {
             // the overview also holds the controls to pause releases, which must keep working while prunner is down
             return null;
         }

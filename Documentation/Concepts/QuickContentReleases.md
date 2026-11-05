@@ -175,7 +175,7 @@ the release which was copied while the document itself is re-rendered, so a page
 go live disagreeing with each other. They are not written into `quickPublish:changedUrls`, though, which only knows
 the documents that were named — a scoped validator does not see them.
 
-The hidden / orphaned / node-type guards are shared with the full enumeration through
+The hidden / node-type guards are shared with the full enumeration through
 `NodeEnumeration/Domain/Service/DocumentNodeFilter`, which expresses `nodeTypeWhitelist` twice: as the FlowQuery
 filter string the full enumeration passes to `find()`, and as a check for a single node, which is what an enumerator
 starting from identifiers needs. The node-type check is deliberately **not** part of the shared `skipReason()`:
@@ -192,34 +192,32 @@ The identifiers are a value object, `QuickPublish/Dto/NodeIdentifiers`, which re
 This is not cosmetic: the list travels through a pipeline variable into a shell command, so unvalidated input is a
 command-injection hole. The check lives at the point where the list is read, not only in the backend form.
 
-Variants of a node are resolved through `NodeContextCombinator::nodeVariantsWithSiteNode()` — via `sites()` and
-`siteNodeInContexts()` rather than `nodeInContexts()`, because the orphan check needs the site node.
-`getNodeByIdentifier()` searches the whole content repository rather than one site, so it answers for every site
-alike: each candidate is matched against the site node by its `findNodePath()` before it is handed out, or a
-multi-site installation would pair every node with the first site and report it as orphaned. Once a site has claimed
-the node the remaining ones are skipped, since a node belongs to exactly one site.
+Variants of a node are resolved through `NodeContextCombinator::nodeVariants()`: one `findNodeById()` per dimension
+space point of the content repository. There is no site lookup and no orphan check — the content graph only holds a
+node in a dimension space point where its parent is covered as well, so every node it hands out sits below a site node.
 
-That lookup shows invisible content regardless of `nodeRendering.recurseHiddenContent`, which defaults to `false`.
+That lookup shows disabled nodes regardless of `nodeRendering.recurseHiddenContent`, which defaults to `false`.
 The setting is about recursing into hidden content while walking the tree; applied to a lookup by identifier it makes
 a hidden page indistinguishable from one which does not exist, and the first hidden page tried reported "not found in
-any site and dimension". `siteNodeInContexts()` therefore takes an `$invisibleContentShown` override, `NULL` keeping
-the configured behaviour for the full enumeration. Hidden pages are still not published — the skip reason says
-"hidden", on the confirmation page and in the pipeline log alike.
+any site and dimension". `nodeVariants()` therefore uses its own visibility constraints (soft-removed nodes excluded,
+disabled ones shown), while `siteNodeInContexts()` builds the full enumeration's subgraphs from the setting. Hidden
+pages are still not published — the skip reason says "hidden", on the confirmation page and in the pipeline log alike.
 
-Because of that override, `skipReasonForNamedNode()` also has to walk the pages **above** the node, which
-`skipReason()` does not: with `recurseHiddenContent` at its default the full enumeration descends from the site node
-in a context which hides them, so a document below a hidden page is not in the content store at all. Naming it in a
-quick release would resolve, render and publish it — a page live until the next full release quietly removes it
-again. The skip reason for that is "below a hidden page".
+Because of that, `skipReasonForNamedNode()` also has to look at the pages **above** the node, which `skipReason()`
+does not: with `recurseHiddenContent` at its default the full enumeration descends from the site node in a subgraph
+which hides them, so a document below a hidden page is not in the content store at all. Naming it in a quick release
+would resolve, render and publish it — a page live until the next full release quietly removes it again. The skip
+reason for that is "below a hidden page".
 
-That walk is therefore gated on the very setting which decides the traversal: where `recurseHiddenContent` is `true`
+That check is therefore gated on the very setting which decides the traversal: where `recurseHiddenContent` is `true`
 the full enumeration does reach such a document, and skipping it in a quick release would be the same mismatch the
 other way round. The hidden page itself stays unpublished either way — that is `skipReason()`, which the setting does
 not touch.
 
-Both levels ask `isVisible()` rather than `isHidden()`, so a page hidden by `hiddenBeforeDateTime` /
-`hiddenAfterDateTime` counts as hidden as well: it is hidden to a visitor just the same, and the context of the full
-enumeration filters it on exactly that measure.
+Both levels read the `disabled` subtree tag: `skipReason()` the node's own, `skipReasonForNamedNode()` the inherited
+one, which the content graph already carries on every node below a disabled one — no walk up the tree is needed. A
+page hidden by `enableAfterDateTime` / `disableAfterDateTime` counts as hidden only once
+`neos/timeable-node-visibility` has disabled it, which is also when the full enumeration stops seeing it.
 
 ## 6. Validation scoped to the changed URLs
 
@@ -291,16 +289,14 @@ administrators inside the Content Store module. The state is published as a Neos
 the backend module: `ModulePrivilege` expands internally into a method privilege over every action of the module
 controller, so a status action there would be readable only by the people who already have module access — precisely
 not the editors the warning is for. Data sources are granted to `Neos.Neos:AbstractEditor` by Neos itself, need no
-route of their own, and the script reaches them through `_NEOS_UI_routes.core.service.dataSource`, so no URI is
+route of their own, and the script reaches them through `routes.core.service.dataSource`, so no URI is
 hardcoded. The data source returns nothing but the flag, the timestamp, the account and the counter, so widening its
 access costs nothing. It must not be `final`: Neos instantiates data sources with `new`, and an unproxied class gets
 no property injection.
 
-Two constraints on the script which registers under `Neos.Neos.Ui.resources.javascript`, both learned the hard way:
-it must run **before** `Neos.Neos.UI:Host` and **without `defer`**. The UI host reads the inlined `_NEOS_UI_*`
-globals through `getInlinedData()`, which does `delete window[...]` immediately after reading, so a deferred script
-finds `_NEOS_UI_routes` already gone and cannot build the endpoint URI. The script therefore captures the route table
-at evaluation time and waits for `DOMContentLoaded` before touching the DOM.
+The script registers under `Neos.Neos.Ui.resources.javascript` and reads the route table from the JSON the UI inlines
+into `<script id="initialData">`. That element sits in the head after the registered scripts, so the script reads it
+on `DOMContentLoaded`, not at evaluation time.
 
 The warning is translated **server-side in the data source**: Neos exposes no translation API to plain JavaScript,
 and the service controllers already set the current locale from the backend user's interface language, so the message

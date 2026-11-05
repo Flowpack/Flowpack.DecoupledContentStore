@@ -16,12 +16,12 @@ open-source way, based on the learnings of the first iteration. Especially the r
 
 ## Versioning Scheme
 
-| Package Version             | Neos / Flow Version | Released? | Supported              | Remarks                                                                                                 |
-|-----------------------------|---------------------|-----------|------------------------|---------------------------------------------------------------------------------------------------------|
-| 2.x                         | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. |
-| 3.x                         | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to make configuration more readable.                                    |
-| 4.x (current `main` branch) | 8.x                 | ☑️        | current active release | Bumped minimum PHP version to 8.2   . Currently used in production in bigger sites.                     |
-| 5.x                         | 9.x                 | ⛔️        | ⛔️                     | Coming #soon                                                                                            |
+| Package Version                       | Neos / Flow Version | Released? | Supported              | Remarks                                                                                                 |
+|---------------------------------------|---------------------|-----------|------------------------|---------------------------------------------------------------------------------------------------------|
+| 2.x                                   | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. |
+| 3.x                                   | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to make configuration more readable.                                    |
+| 4.x                                   | 8.x                 | ☑️        | ️️️️⛔️️️️️ ️ ️                   | Bumped minimum PHP version to 8.2.                                                                      |
+| 5.x           (current `main` branch) | 9.2                 | ☑️️        | current active release | Bumped minimum PHP version to 8.4. Currently used in production in bigger sites.                        |
 
 ## Upgrade guides
 
@@ -451,7 +451,7 @@ content-module warning uses is outside the target, so editors can see the banner
 With automatic releases paused, the module offers *Quick publish pages*. Paste the node identifiers of the documents to
 publish, one per line. The confirmation page then shows one row per dimension variant with its title, path, dimensions,
 node type and a link into the Neos backend, and flags every row which will **not** be published — a page which is
-hidden, orphaned, of a node type outside `nodeRendering.nodeTypeWhitelist`, or an identifier which resolves nowhere at
+hidden, of a node type outside `nodeRendering.nodeTypeWhitelist`, or an identifier which resolves nowhere at
 all. Check those before you continue: a page you meant to fix would otherwise silently stay as it is.
 
 The identifiers are checked against the identifier format before they are used anywhere. They end up inside a shell
