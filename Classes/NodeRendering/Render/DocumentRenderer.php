@@ -119,10 +119,11 @@ class DocumentRenderer
         $this->isRendering = true;
 
         try {
-            /** @var \Neos\Rector\ContentRepository90\Legacy\LegacyContextStub $contentContext */
-            $contentContext = $node->getContext();
-            // TODO 9.0 migration: !! ContentContext::getCurrentSite() is removed in Neos 9.0.
-            $site = $contentContext->getCurrentSite();
+            $site = $this->nodeRenderingUriService->findSiteForNode($node)
+                ?? throw new Exception\InvalidSiteConfigurationException(
+                    'No site node found for node ' . $node->aggregateId->value,
+                    1762862401,
+                );
             $domain = $site->getFirstActiveDomain();
             $baseUri = (string) $domain;
             if ($baseUri === '') {

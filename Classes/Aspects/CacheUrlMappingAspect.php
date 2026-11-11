@@ -12,10 +12,13 @@ use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExte
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\RenderExceptionExtractor;
 use Neos\Cache\Exception\InvalidDataException;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Aop\JoinPointInterface;
+use Neos\Flow\Mvc\Controller\Arguments;
+use Neos\Flow\Mvc\Controller\ControllerContext;
 use Neos\Fusion\Core\Cache\CacheSegmentParser;
+use Neos\Fusion\Core\LegacyFusionControllerContext;
 use Neos\Utility\Exception\PropertyNotAccessibleException;
 use Neos\Utility\ObjectAccess;
 
@@ -26,33 +29,27 @@ use Neos\Utility\ObjectAccess;
  * through Batch Rendering (so when {@see DocumentRenderer} has invoked the rendering. This is to keep complexity lower
  * and code paths simpler: The system NEVER re-uses content cache entries created by editors while browsing the page; but
  * ONLY re-uses content cache entries created by previous Batch Renderings.
- *
- * @Flow\Aspect
- * @Flow\Scope("singleton")
  */
+#[Flow\Aspect]
+#[Flow\Scope('singleton')]
 class CacheUrlMappingAspect
 {
     /**
      * are we currently rendering the page from within a Content Release? {@see DocumentRenderer}
-     *
-     * @var bool
      */
-    protected $isActive = false;
+    protected bool $isActive = false;
+
+    protected ?int $renderTimestamp = null;
+
+    protected array $currentEvaluateContext;
 
     /**
-     * @var null | int
+     * The cache entry identifier only carries a string identifier of the node, so the node is taken from the Fusion
+     * context of the segment instead.
      */
-    protected $renderTimestamp = null;
+    protected ?Node $currentNode = null;
 
-    /**
-     * @var array
-     */
-    protected $currentEvaluateContext;
-
-    /**
-     * @var \Neos\Flow\Mvc\Controller\ControllerContext
-     */
-    protected $controllerContext;
+    protected ?LegacyFusionControllerContext $controllerContext = null;
 
     /**
      * @Flow\Inject
@@ -99,6 +96,8 @@ class CacheUrlMappingAspect
         $runtimeContentCache = $joinPoint->getProxy();
         /** @var \Neos\Fusion\Core\Runtime $runtime */
         $runtime = ObjectAccess::getProperty($runtimeContentCache, 'runtime', true);
+        $contextNode = $runtime->getCurrentContext()['node'] ?? null;
+        $this->currentNode = $contextNode instanceof Node ? $contextNode : null;
         $this->controllerContext = $runtime->getControllerContext();
     }
 
@@ -116,15 +115,10 @@ class CacheUrlMappingAspect
         if (!$this->isActive) {
             return;
         }
-        if (
-            !isset($this->currentEvaluateContext['cacheIdentifierValues']['node'])
-            || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof \Neos\ContentRepository\Core\Projection\ContentGraph\Node
-        ) {
+        if (!isset($this->currentEvaluateContext['cacheIdentifierValues']['node']) || $this->currentNode === null) {
             return;
         }
-
-        /** @var \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node */
-        $node = $this->currentEvaluateContext['cacheIdentifierValues']['node'];
+        $node = $this->currentNode;
 
         $url = $this->getCurrentUrl();
 
@@ -191,7 +185,12 @@ class CacheUrlMappingAspect
         $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators(
             $node,
             $arguments,
-            $this->controllerContext,
+            new ControllerContext(
+                $this->controllerContext->getRequest(),
+                $this->controllerContext->getResponse(),
+                new Arguments([]),
+                $this->controllerContext->getUriBuilder(),
+            ),
             $rootCacheValues,
         );
         $this->contentCacheFrontend->set(

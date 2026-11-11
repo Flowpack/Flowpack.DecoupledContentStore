@@ -52,7 +52,6 @@ final class EnumeratedNode implements JsonSerializable
 
     public static function fromNode(Node $node, array $arguments = []): self
     {
-        // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
         return new self(
             NodeAddress::fromNode($node)->toJson(),
             $node->aggregateId->value,
@@ -91,19 +90,9 @@ final class EnumeratedNode implements JsonSerializable
         ];
     }
 
-    /**
-     * @throws Exception
-     */
-    public function getSiteNodeNameFromContextPath(): string
+    public function getNodeAddress(): NodeAddress
     {
-        if (preg_match('#^/sites/([^/@]*)#', $this->contextPath, $matches)) {
-            return $matches[1];
-        } else {
-            throw new Exception(
-                'Could not get site node name from context path "' . $this->contextPath . '"',
-                1495535171,
-            );
-        }
+        return NodeAddress::fromJsonString($this->contextPath);
     }
 
     /**

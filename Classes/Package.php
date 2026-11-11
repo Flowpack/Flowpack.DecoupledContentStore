@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore;
 
-use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\Flow\Core\Bootstrap;
 use Neos\Flow\Mvc\Controller\ControllerInterface;
 use Neos\Flow\Package\Package as BasePackage;
@@ -19,14 +18,6 @@ class Package extends BasePackage
     public function boot(Bootstrap $bootstrap)
     {
         $dispatcher = $bootstrap->getSignalSlotDispatcher();
-
-        // TODO 9.0 migration: The signal "afterNodePublishing" on "Workspace" has been removed. Please check https://docs.neos.io/api/upgrade-instructions/9/signals-and-slots for further information, how to replace a signal.
-        $dispatcher->connect(
-            \Neos\ContentRepository\Core\SharedModel\Workspace\Workspace::class,
-            'afterNodePublishing',
-            IncrementalContentReleaseHandler::class,
-            'nodePublished',
-        );
 
         // Neos.Neos connects its own AssetChangeHandlerForCacheFlushing first (it boots before this package), so the
         // cache tags are already collected when this slot runs.

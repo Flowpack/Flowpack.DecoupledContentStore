@@ -10,6 +10,7 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\Exception\RenderingException;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
+use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -21,11 +22,13 @@ use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerProvider;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-use Neos\Neos\Domain\Repository\SiteRepository;
+use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 
 /**
  * Not called directly, but through Scripts/renderWorker.sh.
@@ -87,12 +90,6 @@ class NodeRenderer
 
     /**
      * @Flow\Inject
-     * @var SiteRepository
-     */
-    protected $siteRepository;
-
-    /**
-     * @Flow\Inject
      * @var ContentReleaseManager
      */
     protected $contentReleaseManager;
@@ -117,6 +114,12 @@ class NodeRenderer
 
     #[Flow\Inject]
     protected RenderTracerProvider $renderTracerProvider;
+
+    #[Flow\Inject]
+    protected ContentRepositoryRegistry $contentRepositoryRegistry;
+
+    #[Flow\InjectConfiguration('nodeRendering.recurseHiddenContent')]
+    protected bool $recurseHiddenContent;
 
     public function render(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -247,9 +250,8 @@ class NodeRenderer
             } else {
                 $nodeWasFound = true;
 
-                // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
                 $contentReleaseLogger->debug('Rendering document node variant', [
-                    'node' => \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson(),
+                    'node' => NodeAddress::fromNode($node)->toJson(),
                     'nodeIdentifier' => $node->aggregateId->value,
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
@@ -259,13 +261,12 @@ class NodeRenderer
 
                 $tracer = $this->renderTracerProvider->getTracer();
                 $spanParams = [
-                    'node' => \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson(),
-                    'site' => $enumeratedNode->getSiteNodeNameFromContextPath(),
+                    'node' => NodeAddress::fromNode($node)->toJson(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
                     'arguments' => $enumeratedNode->getArguments(),
                 ];
                 $tracer->openSpan(self::SPAN_RENDER_DOCUMENT, $spanParams);
-                $tracer->openSpan(self::SPAN_DOCUMENT_PREFIX . \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($node)->toJson(), $spanParams);
+                $tracer->openSpan(self::SPAN_DOCUMENT_PREFIX . NodeAddress::fromNode($node)->toJson(), $spanParams);
                 try {
                     $this->nodeRenderingExtensionManager->renderDocumentNodeVariant(
                         $node,
@@ -342,20 +343,21 @@ class NodeRenderer
     }
 
     /**
-     * @param EnumeratedNode $enumeratedNode
-     * @return \Neos\ContentRepository\Core\Projection\ContentGraph\Node|null
-     * @throws \Exception
+     * Looks the node up by its identifier, not by the stored address as a whole: the node may have moved since the
+     * enumeration. Visibility follows {@see NodeContextCombinator::siteNodeInContexts()}, so a document which was
+     * hidden after the enumeration is not found.
      */
-    protected function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?\Neos\ContentRepository\Core\Projection\ContentGraph\Node
+    protected function fetchRenderableNode(EnumeratedNode $enumeratedNode): ?Node
     {
-        $site = $this->siteRepository->findOneByNodeName($enumeratedNode->getSiteNodeNameFromContextPath());
+        $nodeAddress = $enumeratedNode->getNodeAddress();
+        $visibilityConstraints = $this->recurseHiddenContent
+            ? NeosVisibilityConstraints::excludeRemoved()
+            : NeosVisibilityConstraints::excludeRemoved()->merge(NeosVisibilityConstraints::excludeDisabled());
 
-        $context = new \Neos\Rector\ContentRepository90\Legacy\LegacyContextStub([
-            'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
-            'currentSite' => $site,
-            'currentDomain' => $site->getFirstActiveDomain(),
-            'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
-        ]);
-        return $context->getNodeByIdentifier($enumeratedNode->getNodeIdentifier());
+        return $this->contentRepositoryRegistry
+            ->get($nodeAddress->contentRepositoryId)
+            ->getContentGraph($nodeAddress->workspaceName)
+            ->getSubgraph($nodeAddress->dimensionSpacePoint, $visibilityConstraints)
+            ->findNodeById(NodeAggregateId::fromString($enumeratedNode->getNodeIdentifier()));
     }
 }

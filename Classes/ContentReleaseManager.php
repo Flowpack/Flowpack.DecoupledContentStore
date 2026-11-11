@@ -89,7 +89,6 @@ class ContentReleaseManager
 
         // the currentContentReleaseId is not used in any pipeline step in this package, but is a common need in other
         // use cases in extensions, e.g. calculating the differences between current and new release
-        // TODO 9.0 migration: Check if you could change your code to work with the WorkspaceName value object instead.
         $this->prunnerApiService->schedulePipeline(
             PipelineName::create(self::CONTENT_RELEASE_PIPELINE_NAME),
             array_merge($additionalVariables, [
@@ -115,7 +114,6 @@ class ContentReleaseManager
         array $additionalVariables = [],
     ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
-        // TODO 9.0 migration: Check if you could change your code to work with the WorkspaceName value object instead.
         $this->prunnerApiService->schedulePipeline(
             PipelineName::create(self::CONTENT_RELEASE_PIPELINE_NAME),
             array_merge($additionalVariables, [
@@ -180,7 +178,6 @@ class ContentReleaseManager
         }
 
         $contentReleaseId = ContentReleaseIdentifier::create();
-        // TODO 9.0 migration: Check if you could change your code to work with the WorkspaceName value object instead.
         $this->prunnerApiService->schedulePipeline(
             PipelineName::create(self::QUICK_CONTENT_RELEASE_PIPELINE_NAME),
             array_merge($additionalVariables, [

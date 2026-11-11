@@ -6,9 +6,7 @@ namespace Flowpack\DecoupledContentStore\NodeRendering;
 
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Generator;
-use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Annotations\Inject;
 use ReflectionClass;
 
 /**
@@ -53,8 +51,6 @@ final class InterruptibleProcessRuntime
 
     private bool $encounteredExitEvent = false;
     private bool $generatorIsPaused = false;
-    #[Inject]
-    protected ContentRepositoryRegistry $contentRepositoryRegistry;
 
     private function __construct(Generator $generator, bool $inTestingMode)
     {
@@ -111,12 +107,7 @@ final class InterruptibleProcessRuntime
         while ($this->generator->valid()) {
             $currentEvent = $this->generator->current();
             if ($currentEvent instanceof ExitEvent) {
-                // TODO 9.0 migration: Make this code aware of multiple Content Repositories.
-
                 $this->encounteredExitEvent = true;
-                // todo wtf is this? rector did that
-//                $contentRepository = $this->contentRepositoryRegistry->get(ContentRepositoryId::fromString('default'));
-//                $contentRepository->getNodeTypeManager() = true;
                 // stop iterating the iterator in all cases
                 return $this->handleExitEvent($currentEvent);
             }

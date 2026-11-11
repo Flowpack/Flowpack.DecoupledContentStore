@@ -5,51 +5,77 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering\Render;
 
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
-use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
-use Neos\Fusion\Core\Cache\RuntimeContentCache;
+use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Mvc\Controller\ControllerContext;
+use Neos\Fusion\Core\FusionConfiguration;
+use Neos\Fusion\Core\FusionGlobals;
+use Neos\Fusion\Core\FusionSourceCodeCollection;
+use Neos\Fusion\Core\Parser;
 use Neos\Fusion\Core\Runtime;
+use Neos\Fusion\Core\RuntimeConfiguration;
+use Neos\Neos\Domain\Model\Site;
+use Neos\Neos\Domain\Service\FusionSourceCodeFactory;
 use Neos\Neos\View\FusionView;
 use ReflectionProperty;
 
 /**
- * This Fusion View improves performance by:
- * - re-using merged Fusion Object Tree throughout multiple renderings
- * - also re-using the Fusion Runtime with all caches.
+ * This Fusion View improves performance by re-using, per site, the merged Fusion configuration and the
+ * Fusion Runtime's path configuration cache across all documents of a content release.
  *
- * This leads to a tremendous speed up; in my local tests the full publish
- * before was about 3h; now it is about 1h10.
+ * The Runtime itself is created per document: its "request" Fusion global is readonly, and the request
+ * differs for every rendered document (URI, format, base URI).
  */
 class CustomFusionView extends FusionView
 {
-    private array $fusionRuntimePerSiteNode = [];
+    public static bool $useCustomSiteRootFusionPatternEntryPointForBehavioralTests = false;
 
-    private ReflectionProperty $controllerContextAccessor;
+    /**
+     * @var array<string, FusionConfiguration>
+     */
+    private array $fusionConfigurationPerSiteNode = [];
 
-    private ReflectionProperty $runtimeContentCacheAccessor;
+    /**
+     * @var array<string, RuntimeConfiguration>
+     */
+    private array $runtimeConfigurationPerSiteNode = [];
 
-    private ReflectionProperty $defaultContextVariablesAccessor;
+    private ReflectionProperty $runtimeConfigurationAccessor;
 
     private bool $contentCacheEnabled = true;
 
-    public static bool $useCustomSiteRootFusionPatternEntryPointForBehavioralTests = false;
+    #[Flow\Inject]
+    protected Parser $fusionParser;
+
+    #[Flow\Inject]
+    protected FusionSourceCodeFactory $fusionSourceCodeFactory;
 
     public function __construct(array $options = [])
     {
         parent::__construct($options);
 
-        $this->controllerContextAccessor = new ReflectionProperty(Runtime::class, 'controllerContext');
-
-        $this->runtimeContentCacheAccessor = new ReflectionProperty(Runtime::class, 'runtimeContentCache');
-
-        $this->defaultContextVariablesAccessor = new ReflectionProperty(Runtime::class, 'defaultContextVariables');
+        $this->fusionRuntime = null;
+        $this->runtimeConfigurationAccessor = new ReflectionProperty(Runtime::class, 'runtimeConfiguration');
     }
 
-    public function initializeObject(): void
+    /**
+     * The view is reused for every document, so the request of the current document has to replace the
+     * previous one (the parent only sets it once).
+     */
+    public function setControllerContext(ControllerContext $controllerContext): void
     {
-        if (self::$useCustomSiteRootFusionPatternEntryPointForBehavioralTests) {
-            // for self-contained tests, we read fusion from another folder.
-            $this->fusionService->setSiteRootFusionPattern('resource://%s/Private/EndToEndTestFusion/Root.fusion');
+        $this->assignedActionRequest = $controllerContext->getRequest();
+    }
+
+    /**
+     * The parent resolves the site node lazily and stores it as the "site" variable; with a reused view
+     * it has to be resolved again for every document, which may belong to another site or dimension.
+     */
+    public function assign(string $key, mixed $value): self
+    {
+        if ($key === 'value') {
+            unset($this->variables['site']);
         }
+        return parent::assign($key, $value);
     }
 
     /**
@@ -86,7 +112,7 @@ class CustomFusionView extends FusionView
      * 2. EXISTING FusionRuntime instances (if we call this method, for whatever reason, already
      * during a rendering). In this case, we can directly set $this->fusionRuntime->setEnableContentCache(false);
      */
-    public function disableCache()
+    public function disableCache(): void
     {
         $this->contentCacheEnabled = false;
 
@@ -98,7 +124,7 @@ class CustomFusionView extends FusionView
     /**
      * See disableCache() method for detailed documentation.
      */
-    public function enableCache()
+    public function enableCache(): void
     {
         $this->contentCacheEnabled = true;
 
@@ -107,53 +133,65 @@ class CustomFusionView extends FusionView
         }
     }
 
-    /**
-     * @return Runtime
-     */
-    protected function getFusionRuntime(Node $currentSiteNode)
+    protected function getFusionRuntime(Node $currentSiteNode): Runtime
     {
-        // $this->fusionRuntime is RESET during a call to self::assign()
-        // so this means for every rendered document, we enter this block again
+        // $this->fusionRuntime is reset by every assign(), so this block runs for every rendered document.
         if ($this->fusionRuntime === null) {
-            $currentSiteNodeContextPath = $currentSiteNode->getContextPath();
+            $siteNodeKey = $currentSiteNode->contentRepositoryId->value . '|' . $currentSiteNode->aggregateId->value;
 
-            if (!isset($this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath])) {
-                // OPTIMIZATION 1: we only want to parse the fusion code ONCE and then reuse it again and again.
-                // This is done by reusing FusionRuntime again and again.
-                $fusionObjectTree = $this->fusionService->getMergedFusionObjectTree($currentSiteNode);
-
-                // ... but we need to watch out, as the FusionRuntime also gets $this->controllerContext passed in,
-                // !!*WHICH CHANGES FOR EVERY DOCUMENT*!!
-                $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath] = new Runtime(
-                    $fusionObjectTree,
-                    $this->controllerContext,
-                );
+            if (!isset($this->fusionConfigurationPerSiteNode[$siteNodeKey])) {
+                $site = $this->siteRepository->findSiteBySiteNode($currentSiteNode);
+                $this->fusionConfigurationPerSiteNode[$siteNodeKey] =
+                    self::$useCustomSiteRootFusionPatternEntryPointForBehavioralTests
+                        ? $this->createEndToEndTestFusionConfiguration($site)
+                        : $this->fusionService->createFusionConfigurationFromSite($site);
             }
-            $this->fusionRuntime = $this->fusionRuntimePerSiteNode[$currentSiteNodeContextPath];
 
-            // Luckily for us, the ControllerContext is only stored at $fusionRuntime->controllerContext;
-            // so we can simply set it for reflection.
-            // HOWEVER, controllerContext->getRequest() is additionally cached in Runtime::defaultContextVariables,
-            // so we need to reset this properly as well (see next block).
-            $this->controllerContextAccessor->setValue($this->fusionRuntime, $this->controllerContext);
-
-            // getDefaultContextVariables() caches the "request" from the controller context lazily.
-            // As we need the updated request (e.g. with a different format or base URI), we need to reset
-            // the defaultContextVariables between renderings.
-            $this->defaultContextVariablesAccessor->setValue($this->fusionRuntime, null);
-
-            // technically, we do NOT need to replace the RuntimeContentCache (it works as well without the next line)
-            // but I felt this would be an additional safeguard against problems with the cache (e.g. content leaking through dimensions or pages)
-            $this->runtimeContentCacheAccessor->setValue(
-                $this->fusionRuntime,
-                new RuntimeContentCache($this->fusionRuntime),
+            $renderingMode = $this->renderingModeService->findByName($this->getOption('renderingModeName'));
+            $this->fusionRuntime = $this->runtimeFactory->createFromConfiguration(
+                $this->fusionConfigurationPerSiteNode[$siteNodeKey],
+                FusionGlobals::fromArray(array_filter([
+                    'request' => $this->assignedActionRequest,
+                    'renderingMode' => $renderingMode,
+                ])),
             );
 
-            // after replacing the RuntimeContentCache, we again need to enable the content cache explicitly.
-            // Otherwise, we do not get any contents into the content store.
+            // The path configuration cache only depends on the Fusion configuration, so it is shared by all
+            // Runtimes of a site instead of being rebuilt for every document.
+            if (isset($this->runtimeConfigurationPerSiteNode[$siteNodeKey])) {
+                $this->runtimeConfigurationAccessor->setValue(
+                    $this->fusionRuntime,
+                    $this->runtimeConfigurationPerSiteNode[$siteNodeKey],
+                );
+            } else {
+                $this->runtimeConfigurationPerSiteNode[$siteNodeKey] =
+                    $this->runtimeConfigurationAccessor->getValue($this->fusionRuntime);
+            }
+
             // We use the property here as the content cache might currently be disabled.
             $this->fusionRuntime->setEnableContentCache($this->contentCacheEnabled);
         }
         return $this->fusionRuntime;
+    }
+
+    /**
+     * Self-contained behavioral tests read the site's Fusion from Private/EndToEndTestFusion instead of
+     * Private/Fusion.
+     */
+    private function createEndToEndTestFusionConfiguration(Site $site): FusionConfiguration
+    {
+        return $this->fusionParser->parseFromSource(
+            $this->fusionSourceCodeFactory
+                ->createFromNodeTypeDefinitions($site->getConfiguration()->contentRepositoryId)
+                ->union($this->fusionSourceCodeFactory->createFromAutoIncludes())
+                ->union(
+                    FusionSourceCodeCollection::fromFilePath(
+                        sprintf(
+                            'resource://%s/Private/EndToEndTestFusion/Root.fusion',
+                            $site->getSiteResourcesPackageKey(),
+                        ),
+                    ),
+                ),
+        );
     }
 }

@@ -68,21 +68,18 @@ Feature: Renamings before rendering, and during a rendering.
 
 
   Background:
-    Given I have the following NodeTypes configuration:
-    """
+    Given using the following content dimensions:
+      | Identifier | Values | Generalizations |
+      | language   | de     | de              |
+    And I have the following NodeTypes configuration:
+    """yaml
     Flowpack.DecoupledContentStore.Test:Document.StartPage:
       superTypes:
-        'Neos.Neos:Document': true
-      properties:
-        uriPathSegment:
-          type: string
+        'Neos.Neos:Site': true
 
     Flowpack.DecoupledContentStore.Test:Document.Page:
       superTypes:
         'Neos.Neos:Document': true
-      properties:
-        uriPathSegment:
-          type: string
 
     Flowpack.DecoupledContentStore.Test:Content.Text:
       superTypes:
@@ -90,22 +87,35 @@ Feature: Renamings before rendering, and during a rendering.
       properties:
         text:
           type: string
-
     """
-    Given I am authenticated with role "Neos.Neos:Editor"
-    Given I have a site for Site Node "test" with site package key "Flowpack.DecoupledContentStore" with domain "test.de"
-    And I have the following nodes:
-      | Identifier                           | Path                     | Node Type                                              | Properties                                                                                                         | HiddenInIndex | Language |
-      | f8e3c037-3e64-4ffd-a059-505dcdcd5bf7 | /sites                   | unstructured                                           | []                                                                                                                 | false         | de       |
-      | fd3fe65c-703f-4c6f-8ab1-cbfc34213117 | /sites/test              | Flowpack.DecoupledContentStore.Test:Document.StartPage | {"title":"Startseite","uriPathSegment":"startseite"}                                                               | false         | de       |
-      | 3acb96ea-f9a4-4b7c-b7fd-b0f069cf4b33 | /sites/test/main         | Neos.Neos:ContentCollection                            | {}                                                                                                                 | false         | de       |
-      | 40e19944-2b5e-43c8-a3eb-c89c6a6ada1a | /sites/test/main/t1      | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Hallo - this is rendered. <a href=\"node://d8d2b4d7-305c-4c25-9823-f34c81df2ec2\">Link to /nested2</a>"} | false         | de       |
-      | d75e5424-8256-42cc-81a4-09e5a00550ed | /sites/test/sub          | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage","uriPathSegment":"nested"}                                                                      | false         | de       |
-      | 222664a1-aeba-45ab-a323-32e7a0b651b0 | /sites/test/sub/main     | Neos.Neos:ContentCollection                            | {}                                                                                                                 | false         | de       |
-      | 89ab6cca-bab2-4578-bce6-c1dcbf6d4d6b | /sites/test/sub/main/t1  | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite <a href=\"node://d8d2b4d7-305c-4c25-9823-f34c81df2ec2\">Link to /nested2</a>"}                | false         | de       |
-      | d8d2b4d7-305c-4c25-9823-f34c81df2ec2 | /sites/test/sub2         | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage2","uriPathSegment":"nested2"}                                                                    | false         | de       |
-      | 875c4cd3-7d95-496f-954a-6f8951566936 | /sites/test/sub2/main    | Neos.Neos:ContentCollection                            | {}                                                                                                                 | false         | de       |
-      | 5a0cbcb2-df21-4c33-b2ae-817e81109951 | /sites/test/sub2/main/t1 | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite2"}                                                                                            | false         | de       |
+    And using identifier "default", I define a content repository
+    And I am in content repository "default"
+    And the command CreateRootWorkspace is executed with payload:
+      | Key                | Value           |
+      | workspaceName      | "live"          |
+      | newContentStreamId | "cs-identifier" |
+    And I am in workspace "live" and dimension space point {"language":"de"}
+    And the command CreateRootNodeAggregateWithNode is executed with payload:
+      | Key             | Value             |
+      | nodeAggregateId | "sites"           |
+      | nodeTypeName    | "Neos.Neos:Sites" |
+    And the following CreateNodeAggregateWithNode commands are executed:
+      | nodeAggregateId                      | parentNodeAggregateId                | nodeTypeName                                           | initialPropertyValues                                                                                              | nodeName |
+      | fd3fe65c-703f-4c6f-8ab1-cbfc34213117 | sites                                | Flowpack.DecoupledContentStore.Test:Document.StartPage | {"title":"Startseite","uriPathSegment":"startseite"}                                                               | test     |
+      | 3acb96ea-f9a4-4b7c-b7fd-b0f069cf4b33 | fd3fe65c-703f-4c6f-8ab1-cbfc34213117 | Neos.Neos:ContentCollection                            | {}                                                                                                                 | main     |
+      | 40e19944-2b5e-43c8-a3eb-c89c6a6ada1a | 3acb96ea-f9a4-4b7c-b7fd-b0f069cf4b33 | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Hallo - this is rendered. <a href=\"node://d8d2b4d7-305c-4c25-9823-f34c81df2ec2\">Link to /nested2</a>"} | t1       |
+      | d75e5424-8256-42cc-81a4-09e5a00550ed | fd3fe65c-703f-4c6f-8ab1-cbfc34213117 | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage","uriPathSegment":"nested"}                                                                      | sub      |
+      | 222664a1-aeba-45ab-a323-32e7a0b651b0 | d75e5424-8256-42cc-81a4-09e5a00550ed | Neos.Neos:ContentCollection                            | {}                                                                                                                 | main     |
+      | 89ab6cca-bab2-4578-bce6-c1dcbf6d4d6b | 222664a1-aeba-45ab-a323-32e7a0b651b0 | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite <a href=\"node://d8d2b4d7-305c-4c25-9823-f34c81df2ec2\">Link to /nested2</a>"}                | t1       |
+      | d8d2b4d7-305c-4c25-9823-f34c81df2ec2 | fd3fe65c-703f-4c6f-8ab1-cbfc34213117 | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage2","uriPathSegment":"nested2"}                                                                    | sub2     |
+      | 875c4cd3-7d95-496f-954a-6f8951566936 | d8d2b4d7-305c-4c25-9823-f34c81df2ec2 | Neos.Neos:ContentCollection                            | {}                                                                                                                 | main     |
+      | 5a0cbcb2-df21-4c33-b2ae-817e81109951 | 875c4cd3-7d95-496f-954a-6f8951566936 | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite2"}                                                                                            | t1       |
+    And the command CreateWorkspace is executed with payload:
+      | Key                | Value                |
+      | workspaceName      | "user-admin"         |
+      | baseWorkspaceName  | "live"               |
+      | newContentStreamId | "user-cs-identifier" |
+    And I have a site for Site Node "test" with site package key "Flowpack.DecoupledContentStore" with domain "test.de"
     And I flush the content cache depending on the modified nodes
 
   Scenario: Deletion of a page BEFORE it is rendered (but after enumeration)
@@ -115,10 +125,11 @@ Feature: Renamings before rendering, and during a rendering.
     Then the enumeration for content release "5" contains 3 nodes
 
     # Preparing: delete "sub2"
-    When I get a node by path "/sites/test/sub2" with the following context:
-      | Workspace | Language |
-      | live      | de       |
-    And I remove the node
+    When I am in workspace "live" and dimension space point {"language":"de"}
+    And the command RemoveNodeAggregate is executed with payload:
+      | Key                          | Value                                  |
+      | nodeAggregateId              | "d8d2b4d7-305c-4c25-9823-f34c81df2ec2" |
+      | nodeVariantSelectionStrategy | "allVariants"                          |
 
     # for filling the render queue:
     When I run the render-orchestrator control loop once for content release "5"
@@ -139,10 +150,11 @@ Feature: Renamings before rendering, and during a rendering.
     Then the enumeration for content release "5" contains 3 nodes
 
     # Preparing: hide "sub2"
-    When I get a node by path "/sites/test/sub2" with the following context:
-      | Workspace | Language |
-      | live      | de       |
-    And I hide the node
+    When I am in workspace "live" and dimension space point {"language":"de"}
+    And the command DisableNodeAggregate is executed with payload:
+      | Key                          | Value                                  |
+      | nodeAggregateId              | "d8d2b4d7-305c-4c25-9823-f34c81df2ec2" |
+      | nodeVariantSelectionStrategy | "allVariants"                          |
 
     # for filling the render queue:
     When I run the render-orchestrator control loop once for content release "5"
@@ -204,11 +216,14 @@ Feature: Renamings before rendering, and during a rendering.
     Then the enumeration for content release "5" contains 3 nodes
 
     # Preparing: rename URI path segment
-    When I get a node by path "/sites/test/sub2" with the following context:
-      | Workspace  | Language |
-      | user-admin | de       |
-    And I set the node property "uriPathSegment" to "foo"
-    And I publish unpublished nodes of workspace "user-admin"
+    When I am in workspace "user-admin" and dimension space point {"language":"de"}
+    And the command SetNodeProperties is executed with payload:
+      | Key             | Value                                  |
+      | nodeAggregateId | "d8d2b4d7-305c-4c25-9823-f34c81df2ec2" |
+      | propertyValues  | {"uriPathSegment": "foo"}              |
+    And the command PublishWorkspace is executed with payload:
+      | Key           | Value        |
+      | workspaceName | "user-admin" |
 
     # for filling the render queue:
     When I run the render-orchestrator control loop once for content release "5"
@@ -241,7 +256,7 @@ Feature: Renamings before rendering, and during a rendering.
     Then I expect the render-orchestrator control loop to exit with status code 0
 
     Then I expect the content release "5" to not contain anything for URI "http://test.de/de/foo"
-    Then I expect the content release "5" to contain the following HTML content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
+    Then I expect the content release "5" to contain the following HTML content for URI "http://test.de/de/" at CSS selector "body .neos-contentcollection":
     """
     BEFOREHallo - this is rendered. <a href="/de/nested2">Link to /nested2</a>AFTER
     """
@@ -252,11 +267,14 @@ Feature: Renamings before rendering, and during a rendering.
     And I expect the content release "5" to have the completion status success
 
     # Preparation: modify Page B's content to ensure it is not in the cache.
-    When I get a node by path "/sites/test/sub2/main/t1" with the following context:
-      | Workspace  | Language |
-      | user-admin | de       |
-    And I set the node property "text" to "nested modified"
-    And I publish unpublished nodes of workspace "user-admin"
+    When I am in workspace "user-admin" and dimension space point {"language":"de"}
+    And the command SetNodeProperties is executed with payload:
+      | Key             | Value                                  |
+      | nodeAggregateId | "5a0cbcb2-df21-4c33-b2ae-817e81109951" |
+      | propertyValues  | {"text": "nested modified"}            |
+    And the command PublishWorkspace is executed with payload:
+      | Key           | Value        |
+      | workspaceName | "user-admin" |
     And I flush the content cache depending on the modified nodes
     And a next content release was triggered
 
@@ -272,11 +290,14 @@ Feature: Renamings before rendering, and during a rendering.
     When I run the render-orchestrator control loop once for content release "6"
 
     # - Rename Uri Path Semgment to "foo" for the sub2 page
-    When I get a node by path "/sites/test/sub2" with the following context:
-      | Workspace  | Language |
-      | user-admin | de       |
-    And I set the node property "uriPathSegment" to "foo"
-    And I publish unpublished nodes of workspace "user-admin"
+    When I am in workspace "user-admin" and dimension space point {"language":"de"}
+    And the command SetNodeProperties is executed with payload:
+      | Key             | Value                                  |
+      | nodeAggregateId | "d8d2b4d7-305c-4c25-9823-f34c81df2ec2" |
+      | propertyValues  | {"uriPathSegment": "foo"}              |
+    And the command PublishWorkspace is executed with payload:
+      | Key           | Value        |
+      | workspaceName | "user-admin" |
     And I flush the content cache depending on the modified nodes
 
     # - Cache is flushed for sub2
@@ -290,7 +311,7 @@ Feature: Renamings before rendering, and during a rendering.
     Then during rendering of content release "6", 0 errors occured
     Then I expect the content release "6" to not contain anything for URI "http://test.de/de/nested2"
     # THIS IS THE BROKEN LINK
-    Then I expect the content release "6" to contain the following HTML content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
+    Then I expect the content release "6" to contain the following HTML content for URI "http://test.de/de/" at CSS selector "body .neos-contentcollection":
     """
     BEFOREHallo - this is rendered. <a href="/de/nested2">Link to /nested2</a>AFTER
     """
@@ -318,7 +339,7 @@ Feature: Renamings before rendering, and during a rendering.
     Then during rendering of content release "7", 0 errors occured
     Then I expect the content release "6" to not contain anything for URI "http://test.de/de/nested2"
     # BROKEN LINK -> fixed
-    Then I expect the content release "7" to contain the following HTML content for URI "http://test.de/de" at CSS selector "body .neos-contentcollection":
+    Then I expect the content release "7" to contain the following HTML content for URI "http://test.de/de/" at CSS selector "body .neos-contentcollection":
     """
     BEFOREHallo - this is rendered. <a href="/de/foo">Link to /nested2</a>AFTER
     """

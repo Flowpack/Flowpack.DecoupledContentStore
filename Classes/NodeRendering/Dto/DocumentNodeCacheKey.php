@@ -5,66 +5,46 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\Flow\Annotations as Flow;
 
 /**
  * Represents the top-level Fusion Cache identifier for a rendered node
- *
- * @Flow\Proxy(false)
  */
-final class DocumentNodeCacheKey
+#[Flow\Proxy(false)]
+final readonly class DocumentNodeCacheKey
 {
-    /**
-     * @var string
-     */
-    protected $nodeIdentifier;
+    private array $arguments;
 
-    /**
-     * @var array
-     */
-    protected $dimensions;
+    private array $dimensions;
 
-    /**
-     * @var string
-     */
-    protected $workspaceName;
-
-    /**
-     * @var array
-     */
-    protected $arguments;
-
-    private function __construct(string $nodeIdentifier, array $dimensions, string $workspaceName, array $arguments)
+    private function __construct(
+        private string $nodeIdentifier,
+        array $dimensions,
+        array $arguments,
+    )
     {
         // we need to make this deterministic
         ksort($arguments);
         ksort($dimensions);
-
-        $this->nodeIdentifier = $nodeIdentifier;
         $this->dimensions = $dimensions;
-        $this->workspaceName = $workspaceName;
         $this->arguments = $arguments;
     }
 
-    public static function fromNodeAndArguments(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $node, array $arguments): self
+    public static function fromNodeAndArguments(Node $node, array $arguments): self
     {
-        // TODO 9.0 migration: Check if you could change your code to work with the NodeAggregateId value object instead.
-        // TODO 9.0 migration: !! Node::getWorkspace() does not make sense anymore concept-wise. In Neos < 9, it pointed to the workspace where the node was *at home at*. Now, the closest we have here is the node identity.
         return new self(
             $node->aggregateId->value,
-            $node->getContext()->getDimensions(),
-            $node->getWorkspace()->getName(),
+            $node->dimensionSpacePoint->coordinates,
             $arguments,
         );
     }
 
-    public static function fromEnumeratedNode(EnumeratedNode $enumeratedNode)
+    public static function fromEnumeratedNode(EnumeratedNode $enumeratedNode): self
     {
         return new self(
             $enumeratedNode->getNodeIdentifier(),
             $enumeratedNode->getDimensionsFromContextPath(),
-            $enumeratedNode->getWorkspaceNameFromContextPath(),
             $enumeratedNode->getArguments(),
         );
     }

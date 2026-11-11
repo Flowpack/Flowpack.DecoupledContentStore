@@ -42,11 +42,12 @@ class LimitEnumerator implements DocumentEnumeratorInterface
         }
         $subgraph = $this->contentRepositoryRegistry->subgraphForNode($documentNode);
 
-        // TODO 9.0 migration: Try to remove the (string) cast and make your code more type-safe.
         if (
             $this->nodePathSegmentFilter !== null
-            && str_contains((string) $subgraph->findNodePath($documentNode->aggregateId), $this->nodePathSegmentFilter)
-            === false
+            && str_contains(
+                $subgraph->retrieveNodePath($documentNode->aggregateId)->serializeToString(),
+                $this->nodePathSegmentFilter,
+            ) === false
         ) {
             return [];
         }

@@ -24,7 +24,7 @@ use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetad
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\Flow\Annotations as Flow;
 use Neos\Fusion\Core\Cache\ContentCache;
-use Neos\Neos\Fusion\Helper\CachingHelper;
+use Neos\Neos\Fusion\Cache\CacheTag;
 
 /**
  * TODO: explain concept of Working Set
@@ -103,9 +103,6 @@ class NodeRenderOrchestrator
 
     #[Flow\Inject]
     protected ContentCache $contentCache;
-
-    #[Flow\Inject]
-    protected CachingHelper $cachingHelper;
 
     #[Flow\InjectConfiguration('nodeRendering.flushDocumentCacheOnRetry')]
     protected bool $flushDocumentCacheOnRetry;
@@ -434,13 +431,12 @@ class NodeRenderOrchestrator
     ): void {
         $tags = [];
         foreach ($nodesScheduledForRendering as $enumeratedNode) {
-            $tags[] =
-                'Node_'
-                . $this->cachingHelper->renderWorkspaceTagForContextNode(
-                    $enumeratedNode->getWorkspaceNameFromContextPath(),
-                )
-                . '_'
-                . $enumeratedNode->getNodeIdentifier();
+            $nodeAddress = $enumeratedNode->getNodeAddress();
+            $tags[] = CacheTag::forNodeAggregate(
+                $nodeAddress->contentRepositoryId,
+                $nodeAddress->workspaceName,
+                $nodeAddress->aggregateId,
+            )->value;
         }
 
         foreach (array_unique($tags) as $tag) {

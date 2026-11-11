@@ -290,6 +290,14 @@ Neos:
         'Flowpack.DecoupledContentStore':
           position: 'before Neos.Neos'
 
+  ContentRepositoryRegistry:
+    presets:
+      'default':
+        contentGraphProjection:
+          catchUpHooks:
+            'Flowpack.DecoupledContentStore:IncrementalContentRelease':
+              factoryObjectName: Flowpack\DecoupledContentStore\IncrementalContentReleaseCatchUpHookFactory
+
   Fusion:
     defaultContext:
       Flowpack.DecoupledContentStore: Flowpack\DecoupledContentStore\Eel\ModuleHelper
