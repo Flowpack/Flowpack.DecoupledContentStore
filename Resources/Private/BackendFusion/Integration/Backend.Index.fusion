@@ -1,3 +1,6 @@
+// TODO Neos.Neos-20251005080230 Line 23: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
+// TODO Neos.Neos-20251005080230 Line 135: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
+// TODO Neos.Neos-20251005080230 Line 136: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
 Flowpack.DecoupledContentStore.BackendController.index = Neos.Fusion:Component {
 
     // Context Variables:

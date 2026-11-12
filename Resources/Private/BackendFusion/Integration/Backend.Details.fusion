@@ -1,3 +1,8 @@
+// TODO Neos.Neos-20251005080230 Line 30: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
+// TODO Neos.Neos-20251005080230 Line 473: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
+// TODO Neos.Neos-20251005080230 Line 481: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
+// TODO Neos.Neos-20251005080230 Line 492: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
+// TODO Neos.Neos-20251005080230 Line 511: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
 Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component {
 
     // Context Variables
@@ -342,7 +347,8 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.StepTask) < prototy
         action = 'details'
         arguments.detailTaskName = ${value}
         arguments.prunnerJobId = ${props.prunnerJobId}
-        addQueryString = true
+        arguments.contentReleaseIdentifier = ${contentReleaseIdentifier.identifier}
+        arguments.contentStore = ${contentStore}
     }
 
 
@@ -362,7 +368,8 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps.AllRenderingErrorsB
         arguments.showAllRenderingErrors = 1
         arguments.detailTaskName = ''
         arguments.prunnerJobId = ${props.prunnerJobId}
-        addQueryString = true
+        arguments.contentReleaseIdentifier = ${contentReleaseIdentifier.identifier}
+        arguments.contentStore = ${contentStore}
     }
 
     renderer = afx`

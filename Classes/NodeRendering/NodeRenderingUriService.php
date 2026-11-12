@@ -9,9 +9,11 @@ use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentRendererI
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\Transfer\Resource\Target\MultisiteFileSystemSymlinkTarget;
 use GuzzleHttp\Psr7\ServerRequest;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindClosestNodeFilter;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Http\BaseUriProvider;
 use Neos\Flow\Http\Helper\RequestInformationHelper;
 use Neos\Flow\Http\ServerRequestAttributes;
@@ -24,7 +26,9 @@ use Neos\Flow\Mvc\Routing\UriBuilder;
 use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Flow\Security\Context as SecurityContext;
 use Neos\Neos\Domain\Model\Site;
-use Neos\Neos\Service\LinkingService;
+use Neos\Neos\Domain\Repository\SiteRepository;
+use Neos\Neos\Domain\Service\NodeTypeNameFactory;
+use Neos\Neos\FrontendRouting\SiteDetection\SiteDetectionResult;
 use Neos\Utility\ObjectAccess;
 
 /**
@@ -33,38 +37,30 @@ use Neos\Utility\ObjectAccess;
  */
 final class NodeRenderingUriService
 {
-    #[Flow\Inject]
-    protected ConfigurationManager $configurationManager;
-
-    /**
-     * NOTE: we need to use EAGER injection here, because in buildControllerContextAndSetBaseUri(), we
-     * directly set a property of the BaseUriProvider using ObjectAccess::setProperty() with forceDirectAccess.
-     */
-    #[Flow\Inject(lazy: false)]
-    protected BaseUriProvider $baseUriProvider;
-
-    #[Flow\Inject]
-    protected LinkingService $linkingService;
-
-    #[Flow\Inject]
-    protected SecurityContext $securityContext;
-
-    #[Flow\Inject]
-    protected ResourceManager $resourceManager;
-
     #[Flow\InjectConfiguration('nodeRendering.useRelativeResourceUris')]
     protected bool $useRelativeResourceUris;
 
+    public function __construct(
+        private readonly BaseUriProvider $baseUriProvider,
+        private readonly SecurityContext $securityContext,
+        private readonly ResourceManager $resourceManager,
+        private readonly ContentRepositoryRegistry $contentRepositoryRegistry,
+        private readonly SiteRepository $siteRepository,
+    ) {}
+
     /**
-     * @param NodeInterface $node
+     * @param Node $node
      * @param array $arguments
      * @return string The resolved URI for the given node
      * @throws \Exception
      */
-    public function buildNodeUri(NodeInterface $node, array $arguments): string
+    public function buildNodeUri(Node $node, array $arguments): string
     {
-        /** @var Site $currentSite */
-        $currentSite = $node->getContext()->getCurrentSite();
+        $currentSite = $this->findSiteForNode($node)
+            ?? throw new Exception(
+                sprintf('No site node found for node %s', $node->aggregateId->value),
+                1762862400,
+            );
         if (!$currentSite->hasActiveDomains()) {
             throw new Exception(sprintf('Site %s has no active domain', $currentSite->getNodeName()), 1666684522);
         }
@@ -89,19 +85,17 @@ final class NodeRenderingUriService
             $arguments,
         );
         $format = $arguments['@format'] ?? 'html';
-        $uri = $this->linkingService->createNodeUri(
-            $baseControllerContext,
-            $node,
-            null,
-            $format,
-            true,
-            $arguments,
-            '',
-            false,
-            [],
-            false,
-        );
-        return self::removeQueryPartFromUri($uri);
+        $uri = $baseControllerContext
+            ->getUriBuilder()
+            ->reset()
+            ->setArguments($arguments)
+            ->setFormat($format)
+            ->setCreateAbsoluteUri(true)
+            ->uriFor('show', ['node' => NodeAddress::fromNode($node)->toJson()], 'Frontend\\Node', 'Neos.Neos');
+
+        // remove query from uri
+        $uriData = explode('?', $uri);
+        return $uriData[0];
     }
 
     /**
@@ -109,7 +103,7 @@ final class NodeRenderingUriService
      */
     public function buildControllerContextAndSetBaseUri(
         string $uri,
-        NodeInterface $node,
+        Node $node,
         array $arguments = [],
     ): ControllerContext
     {
@@ -140,11 +134,9 @@ final class NodeRenderingUriService
      * broken host. Targets that already have an override keep it: callers like DocumentRenderer, or exports that
      * want relative URIs, set it explicitly.
      */
-    private function injectResourceBaseUri(NodeInterface $node): void
+    private function injectResourceBaseUri(Node $node): void
     {
-        /** @var Site|null $currentSite */
-        $currentSite = $node->getContext()->getCurrentSite();
-        $domain = $currentSite?->getFirstActiveDomain();
+        $domain = $this->findSiteForNode($node)?->getFirstActiveDomain();
         if ($domain === null) {
             return;
         }
@@ -159,14 +151,32 @@ final class NodeRenderingUriService
         }
     }
 
-    private function buildFakeRequest(string $uri, NodeInterface $node): ActionRequest
+    public function findSiteForNode(Node $node): ?Site
+    {
+        $siteNode = $this->contentRepositoryRegistry->subgraphForNode($node)->findClosestNode(
+            $node->aggregateId,
+            FindClosestNodeFilter::create(NodeTypeNameFactory::NAME_SITE),
+        );
+
+        return $siteNode === null ? null : $this->siteRepository->findSiteBySiteNode($siteNode);
+    }
+
+    private function buildFakeRequest(string $uri, Node $node): ActionRequest
     {
         $_SERVER['FLOW_REWRITEURLS'] = '1';
 
         $httpRequest = new ServerRequest('GET', $uri);
-        $routingParameters = RouteParameters::createEmpty()->withParameter(
-            'requestUriHost',
-            $httpRequest->getUri()->getHost(),
+        $site = $this->findSiteForNode($node)
+            ?? throw new Exception(
+                sprintf('No site node found for node %s', $node->aggregateId->value),
+                1762862402,
+            );
+        // what the SiteDetectionMiddleware stores for a real request - Neos' frontend routing reads it from here
+        $routingParameters = SiteDetectionResult::create(
+            $site->getNodeName(),
+            $site->getConfiguration()->contentRepositoryId,
+        )->storeInRouteParameters(
+            RouteParameters::createEmpty()->withParameter('requestUriHost', $httpRequest->getUri()->getHost()),
         );
         $httpRequest = $httpRequest->withAttribute(ServerRequestAttributes::ROUTING_PARAMETERS, $routingParameters);
 
@@ -174,33 +184,16 @@ final class NodeRenderingUriService
         $request->setControllerObjectName('Neos\Neos\Controller\Frontend\NodeController');
         $request->setControllerActionName('show');
         $request->setFormat('html');
-        $request->setArgument('node', $node->getContextPath());
+        $request->setArgument('node', NodeAddress::fromNode($node)->toJson());
 
         return $request;
     }
 
-    /**
-     * @param ActionRequest $request
-     * @return UriBuilder
-     * @throws \Neos\Utility\Exception\PropertyNotAccessibleException
-     */
     private function uriBuilderForRequest(ActionRequest $request): UriBuilder
     {
         $uriBuilder = new UriBuilder();
         $uriBuilder->setRequest($request);
 
-        $routesConfiguration = $this->configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_ROUTES);
-        $router = ObjectAccess::getProperty($uriBuilder, 'router', true);
-
-        $router->setRoutesConfiguration($routesConfiguration);
-
         return $uriBuilder;
-    }
-
-    private static function removeQueryPartFromUri(string $uri): string
-    {
-        $uriData = explode('?', $uri);
-
-        return $uriData[0];
     }
 }

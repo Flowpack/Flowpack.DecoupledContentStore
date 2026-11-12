@@ -69,7 +69,7 @@ class ContentReleaseManager
      */
     public function startIncrementalContentRelease(
         ?string $currentContentReleaseId = null,
-        ?Workspace $workspace = null,
+        ?\Neos\ContentRepository\Core\SharedModel\Workspace\Workspace $workspace = null,
         array $additionalVariables = [],
     ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
@@ -96,7 +96,7 @@ class ContentReleaseManager
                 'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
                 'validate' => true,
                 'flushContentCache' => false,
-                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'workspaceName' => $workspace !== null ? $workspace->workspaceName->value : 'live',
                 'accountId' => $this->getAccountId(),
             ]),
         );
@@ -110,7 +110,7 @@ class ContentReleaseManager
     public function startFullContentRelease(
         bool $validate = true,
         ?string $currentContentReleaseId = null,
-        ?Workspace $workspace = null,
+        ?\Neos\ContentRepository\Core\SharedModel\Workspace\Workspace $workspace = null,
         array $additionalVariables = [],
     ): ContentReleaseIdentifier {
         $contentReleaseId = ContentReleaseIdentifier::create();
@@ -121,7 +121,7 @@ class ContentReleaseManager
                 'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
                 'validate' => $validate,
                 'flushContentCache' => true,
-                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'workspaceName' => $workspace !== null ? $workspace->workspaceName->value : 'live',
                 'accountId' => $this->getAccountId(),
             ]),
         );
@@ -142,7 +142,7 @@ class ContentReleaseManager
      */
     public function startQuickContentRelease(
         NodeIdentifiers $nodeIdentifiers,
-        ?Workspace $workspace = null,
+        ?\Neos\ContentRepository\Core\SharedModel\Workspace\Workspace $workspace = null,
         array $additionalVariables = [],
     ): ContentReleaseIdentifier {
         $currentContentReleaseId = $this->resolveCurrentContentReleaseId(null);
@@ -184,7 +184,7 @@ class ContentReleaseManager
                 'contentReleaseId' => $contentReleaseId,
                 'currentContentReleaseId' => $currentContentReleaseId,
                 'quickPublishNodeIdentifiers' => (string) $nodeIdentifiers,
-                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'workspaceName' => $workspace !== null ? $workspace->workspaceName->value : 'live',
                 'accountId' => $this->getAccountId(),
             ]),
         );

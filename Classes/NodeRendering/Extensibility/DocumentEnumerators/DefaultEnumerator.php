@@ -6,13 +6,13 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnu
 
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentEnumeratorInterface;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 
 class DefaultEnumerator implements DocumentEnumeratorInterface
 {
     public function __construct(array $options = []) {}
 
-    public function enumerateDocumentNode(NodeInterface $documentNode): iterable
+    public function enumerateDocumentNode(Node $documentNode): iterable
     {
         return [
             EnumeratedNode::fromNode($documentNode),

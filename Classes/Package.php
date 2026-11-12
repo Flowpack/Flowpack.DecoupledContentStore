@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore;
 
-use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\Flow\Core\Bootstrap;
 use Neos\Flow\Mvc\Controller\ControllerInterface;
 use Neos\Flow\Package\Package as BasePackage;
+use Neos\Media\Domain\Service\AssetService;
 
 class Package extends BasePackage
 {
@@ -19,11 +19,14 @@ class Package extends BasePackage
     {
         $dispatcher = $bootstrap->getSignalSlotDispatcher();
 
+        // Neos.Neos connects its own AssetChangeHandlerForCacheFlushing first (it boots before this package), so the
+        // cache tags are already collected when this slot runs.
         $dispatcher->connect(
-            Workspace::class,
-            'afterNodePublishing',
-            IncrementalContentReleaseHandler::class,
-            'nodePublished',
+            AssetService::class,
+            'assetUpdated',
+            AssetChangeContentReleaseHandler::class,
+            'assetUpdated',
+            false,
         );
 
         // NASTY WORKAROUND - explanation follows.

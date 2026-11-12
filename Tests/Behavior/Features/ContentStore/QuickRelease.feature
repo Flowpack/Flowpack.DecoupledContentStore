@@ -4,11 +4,14 @@
 Feature: Quick Release
 
   Background:
-    Given I have the following NodeTypes configuration:
-    """
+    Given using the following content dimensions:
+      | Identifier | Values | Generalizations |
+      | language   | de     | de              |
+    And I have the following NodeTypes configuration:
+    """yaml
     Flowpack.DecoupledContentStore.Test:Document.StartPage:
       superTypes:
-        'Neos.Neos:Document': true
+        'Neos.Neos:Site': true
 
     Flowpack.DecoupledContentStore.Test:Document.Page:
       superTypes:
@@ -20,22 +23,30 @@ Feature: Quick Release
       properties:
         text:
           type: string
-
     """
-    Given I am authenticated with role "Neos.Neos:Editor"
-    Given I have a site for Site Node "test" with site package key "Flowpack.DecoupledContentStore" with domain "test.de"
-    And I have the following nodes:
-      | Path                     | Node Type                                              | Properties                                           | HiddenInIndex | Language |
-      | /sites                   | unstructured                                           | []                                                   | false         | de       |
-      | /sites/test              | Flowpack.DecoupledContentStore.Test:Document.StartPage | {"title":"Startseite","uriPathSegment":"startseite"} | false         | de       |
-      | /sites/test/main         | Neos.Neos:ContentCollection                            | {}                                                   | false         | de       |
-      | /sites/test/main/t1      | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Hallo - this is rendered."}                | false         | de       |
-      | /sites/test/sub          | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage","uriPathSegment":"nested"}        | false         | de       |
-      | /sites/test/sub/main     | Neos.Neos:ContentCollection                            | {}                                                   | false         | de       |
-      | /sites/test/sub/main/t1  | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite"}                               | false         | de       |
-      | /sites/test/sub2         | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage2","uriPathSegment":"nested2"}      | false         | de       |
-      | /sites/test/sub2/main    | Neos.Neos:ContentCollection                            | {}                                                   | false         | de       |
-      | /sites/test/sub2/main/t1 | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite2"}                              | false         | de       |
+    And using identifier "default", I define a content repository
+    And I am in content repository "default"
+    And the command CreateRootWorkspace is executed with payload:
+      | Key                | Value           |
+      | workspaceName      | "live"          |
+      | newContentStreamId | "cs-identifier" |
+    And I am in workspace "live" and dimension space point {"language":"de"}
+    And the command CreateRootNodeAggregateWithNode is executed with payload:
+      | Key             | Value             |
+      | nodeAggregateId | "sites"           |
+      | nodeTypeName    | "Neos.Neos:Sites" |
+    And the following CreateNodeAggregateWithNode commands are executed:
+      | nodeAggregateId                      | parentNodeAggregateId                | nodeTypeName                                           | initialPropertyValues                                | nodeName |
+      | test                                 | sites                                | Flowpack.DecoupledContentStore.Test:Document.StartPage | {"title":"Startseite","uriPathSegment":"startseite"} | test     |
+      | test-main                            | test                                 | Neos.Neos:ContentCollection                            | {}                                                   | main     |
+      | test-main-t1                         | test-main                            | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Hallo - this is rendered."}                | t1       |
+      | 5b0d6c1e-8a3f-4e27-9c14-7f2a6e9d3b81 | test                                 | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage","uriPathSegment":"nested"}        | sub      |
+      | sub-main                             | 5b0d6c1e-8a3f-4e27-9c14-7f2a6e9d3b81 | Neos.Neos:ContentCollection                            | {}                                                   | main     |
+      | sub-main-t1                          | sub-main                             | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite"}                               | t1       |
+      | sub2                                 | test                                 | Flowpack.DecoupledContentStore.Test:Document.Page      | {"title":"Subpage2","uriPathSegment":"nested2"}      | sub2     |
+      | sub2-main                            | sub2                                 | Neos.Neos:ContentCollection                            | {}                                                   | main     |
+      | sub2-main-t1                         | sub2-main                            | Flowpack.DecoupledContentStore.Test:Content.Text       | {"text": "Unterseite2"}                              | t1       |
+    And I have a site for Site Node "test" with site package key "Flowpack.DecoupledContentStore" with domain "test.de"
     And I flush the content cache depending on the modified nodes
 
     # the release a quick release is built on
@@ -61,7 +72,7 @@ Feature: Quick Release
     And the enumeration for content release "6" contains 0 nodes
 
     # and that enumeration holds nothing but the nodes the quick release was asked to publish
-    When I enumerate the node at path "/sites/test/sub" for content release "6"
+    When I enumerate the node "5b0d6c1e-8a3f-4e27-9c14-7f2a6e9d3b81" for content release "6"
     Then the enumeration for content release "6" contains 1 node
 
   Scenario: A quick release is not rejected for enumerating only what it changed
@@ -70,7 +81,7 @@ Feature: Quick Release
     Given the currently live content release is "5"
     When I create a content release "6"
     And I copy the content release "5" to the content release "6"
-    And I enumerate the node at path "/sites/test/sub" for content release "6"
+    And I enumerate the node "5b0d6c1e-8a3f-4e27-9c14-7f2a6e9d3b81" for content release "6"
     Then validating content release "6" succeeds
 
   Scenario: A quick release is not rejected for the size of a release rendered by two renderers
@@ -81,7 +92,7 @@ Feature: Quick Release
     And the enumeration of content release "5" is duplicated for a second document renderer
     When I create a content release "6"
     And I copy the content release "5" to the content release "6"
-    And I enumerate the node at path "/sites/test/sub" for content release "6"
+    And I enumerate the node "5b0d6c1e-8a3f-4e27-9c14-7f2a6e9d3b81" for content release "6"
     Then validating content release "6" succeeds
 
   Scenario: A node which cannot be found is not published

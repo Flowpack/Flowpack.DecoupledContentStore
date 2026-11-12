@@ -4,43 +4,31 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto;
 
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Utility\NodePaths;
+use Exception;
+use JsonSerializable;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class EnumeratedNode implements \JsonSerializable
+#[Flow\Proxy(false)]
+final class EnumeratedNode implements JsonSerializable
 {
     /**
      * We extract the to-be-rendered dimensions and the current site from the context path. Other than that,
      * it is used NOT for rendering.
      *
      * You are NOT ALLOWED to rely on this stored context path as a whole during rendering, because it might have changed because of a move.
-     *
-     * @var string
      */
-    protected $contextPath;
+    private string $contextPath;
 
     /**
      * We identify the node by its identifier
-     *
-     * @var string
      */
-    protected $nodeIdentifier;
+    private string $nodeIdentifier;
 
-    /**
-     * @var array
-     */
-    protected $arguments;
+    private array $arguments;
 
-    /**
-     * The node type name
-     *
-     * @var string
-     */
-    protected $nodeTypeName;
+    private string $nodeTypeName;
 
     /**
      * The renderer implementation to use for this EnumeratedNode;
@@ -62,22 +50,25 @@ final class EnumeratedNode implements \JsonSerializable
         $this->rendererId = $rendererId;
     }
 
-    public static function fromNode(NodeInterface $node, array $arguments = []): self
+    public static function fromNode(Node $node, array $arguments = []): self
     {
         return new self(
-            $node->getContextPath(),
-            $node->getIdentifier(),
-            $node->getNodeType()->getName(),
+            NodeAddress::fromNode($node)->toJson(),
+            $node->aggregateId->value,
+            $node->nodeTypeName->value,
             $arguments,
             '',
         );
     }
 
+    /**
+     * @throws Exception
+     */
     public static function fromJsonString(string $enumeratedNodeString): self
     {
         $tmp = json_decode($enumeratedNodeString, true);
         if (!is_array($tmp)) {
-            throw new \Exception('EnumeratedNode cannot be constructed from: ' . $enumeratedNodeString);
+            throw new Exception('EnumeratedNode cannot be constructed from: ' . $enumeratedNodeString);
         }
         return new self(
             $tmp['contextPath'],
@@ -99,28 +90,22 @@ final class EnumeratedNode implements \JsonSerializable
         ];
     }
 
-    public function getSiteNodeNameFromContextPath(): string
+    public function getNodeAddress(): NodeAddress
     {
-        if (preg_match('#^/sites/([^/@]*)#', $this->contextPath, $matches)) {
-            return $matches[1];
-        } else {
-            throw new \Exception(
-                'Could not get site node name from context path "' . $this->contextPath . '"',
-                1495535171,
-            );
-        }
+        return NodeAddress::fromJsonString($this->contextPath);
     }
 
+    /**
+     * @return array<string,string>
+     */
     public function getDimensionsFromContextPath(): array
     {
-        $nodePathAndContext = NodePaths::explodeContextPath($this->contextPath);
-        return $nodePathAndContext['dimensions'];
+        return NodeAddress::fromJsonString($this->contextPath)->dimensionSpacePoint->coordinates;
     }
 
     public function getWorkspaceNameFromContextPath(): string
     {
-        $nodePathAndContext = NodePaths::explodeContextPath($this->contextPath);
-        return $nodePathAndContext['workspaceName'];
+        return NodeAddress::fromJsonString($this->contextPath)->workspaceName->value;
     }
 
     public function getNodeIdentifier(): string

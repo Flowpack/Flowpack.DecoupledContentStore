@@ -16,7 +16,6 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStat
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExtensionManager;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\Eel\Exception;
 use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
@@ -126,20 +125,20 @@ class NodeEnumerator
 
             foreach ($combinator->siteNodeInContexts($site, $workspaceName) as $siteNode) {
                 $startTime = microtime(true);
-                $dimensionValues = $siteNode->getContext()->getDimensions();
+                $dimensionValues = $siteNode->dimensionSpacePoint->coordinates;
 
                 $contentReleaseLogger->debug('Publishing dimension combination', [
                     'dimensionValues' => $dimensionValues,
                 ]);
 
                 $nodeQuery = new FlowQuery([$siteNode]);
-                /** @var NodeInterface[] $matchingNodes */
+                /** @var \Neos\ContentRepository\Core\Projection\ContentGraph\Node[] $matchingNodes */
                 $matchingNodes = $nodeQuery->find($nodeTypeFilter)->add($siteNode)->get();
 
                 foreach ($matchingNodes as $nodeToEnumerate) {
-                    $contextPath = $nodeToEnumerate->getContextPath();
+                    $contextPath = \Neos\ContentRepository\Core\SharedModel\Node\NodeAddress::fromNode($nodeToEnumerate)->toJson();
 
-                    $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate, $siteNode);
+                    $skipReason = $this->documentNodeFilter->skipReason($nodeToEnumerate);
                     if ($skipReason !== null) {
                         $contentReleaseLogger->debug('Skipping node from publishing, because it is ' . $skipReason, [
                             'node' => $contextPath,

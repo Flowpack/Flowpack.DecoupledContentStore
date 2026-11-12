@@ -12,12 +12,19 @@ use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\NodeRenderingExte
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\RenderExceptionExtractor;
 use Neos\Cache\Exception\InvalidDataException;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\Cache\Frontend\StringFrontend;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Aop\JoinPointInterface;
+use Neos\Flow\Mvc\ActionRequest;
 use Neos\Fusion\Core\Cache\CacheSegmentParser;
+use Neos\Fusion\Core\Cache\ContentCache;
+use Neos\Fusion\Core\Cache\RuntimeContentCache;
+use Neos\Fusion\Core\Runtime;
 use Neos\Utility\Exception\PropertyNotAccessibleException;
 use Neos\Utility\ObjectAccess;
+use RuntimeException;
 
 /**
  * This aspect creates the root cache entry which maps the URL to the root cache identifier during rendering.
@@ -26,84 +33,64 @@ use Neos\Utility\ObjectAccess;
  * through Batch Rendering (so when {@see DocumentRenderer} has invoked the rendering. This is to keep complexity lower
  * and code paths simpler: The system NEVER re-uses content cache entries created by editors while browsing the page; but
  * ONLY re-uses content cache entries created by previous Batch Renderings.
- *
- * @Flow\Aspect
- * @Flow\Scope("singleton")
  */
+#[Flow\Aspect]
+#[Flow\Scope('singleton')]
 class CacheUrlMappingAspect
 {
     /**
      * are we currently rendering the page from within a Content Release? {@see DocumentRenderer}
-     *
-     * @var bool
      */
-    protected $isActive = false;
+    private bool $isActive = false;
+
+    private ?int $renderTimestamp = null;
+
+    private array $currentEvaluateContext = [];
 
     /**
-     * @var null | int
+     * The cache entry identifier only carries a string identifier of the node, so the node is taken from the Fusion
+     * context of the segment instead.
      */
-    protected $renderTimestamp = null;
+    private ?Node $currentNode = null;
+
+    private ?ActionRequest $actionRequest = null;
+
+    #[Flow\Inject]
+    protected ContentCache $contentCache;
+
+    #[Flow\Inject]
+    protected NodeRenderingExtensionManager $nodeRenderingExtensionManager;
 
     /**
-     * @var array
+     * Injected via Objects.yaml
      */
-    protected $currentEvaluateContext;
+    protected StringFrontend $contentCacheFrontend;
 
-    /**
-     * @var \Neos\Flow\Mvc\Controller\ControllerContext
-     */
-    protected $controllerContext;
+    #[Flow\InjectConfiguration('nodeRendering.urlExcludelistRegex')]
+    protected string|false|null $urlExcludelistRegex = false;
 
-    /**
-     * @Flow\Inject
-     * @var \Neos\Fusion\Core\Cache\ContentCache
-     */
-    protected $contentCache;
-
-    /**
-     * @Flow\Inject
-     * @var NodeRenderingExtensionManager
-     */
-    protected $nodeRenderingExtensionManager;
-
-    /**
-     * @var \Neos\Cache\Frontend\StringFrontend
-     */
-    protected $contentCacheFrontend;
-
-    /**
-     * @Flow\InjectConfiguration(path="nodeRendering.urlExcludelistRegex")
-     * @var string|false
-     */
-    protected $urlExcludelistRegex = false;
-
-    /**
-     * @var ContentReleaseLogger
-     */
-    protected $contentReleaseLogger;
+    private ?ContentReleaseLogger $contentReleaseLogger = null;
 
     /**
      * Did the current document rendering lead to a "doc--..." mapping entry? {@see afterDocumentRendering()}
-     *
-     * @var bool
      */
-    protected $mappingWasWrittenForCurrentDocument = false;
+    private bool $mappingWasWrittenForCurrentDocument = false;
 
-    /**
-     * @Flow\Before("method(Neos\Fusion\Core\Cache\RuntimeContentCache->postProcess())")
-     */
-    public function getCurrentEvaluateAndControllerContext(JoinPointInterface $joinPoint)
+    #[Flow\Before('method(Neos\Fusion\Core\Cache\RuntimeContentCache->postProcess())')]
+    public function getCurrentEvaluateAndControllerContext(JoinPointInterface $joinPoint): void
     {
         $this->currentEvaluateContext = $joinPoint->getMethodArgument('evaluateContext');
-        /** @var \Neos\Fusion\Core\Cache\RuntimeContentCache $runtimeContentCache */
+        /** @var RuntimeContentCache $runtimeContentCache */
         $runtimeContentCache = $joinPoint->getProxy();
-        /** @var \Neos\Fusion\Core\Runtime $runtime */
+        /** @var Runtime $runtime */
         $runtime = ObjectAccess::getProperty($runtimeContentCache, 'runtime', true);
-        $this->controllerContext = $runtime->getControllerContext();
+        $contextNode = $runtime->getCurrentContext()['node'] ?? null;
+        $this->currentNode = $contextNode instanceof Node ? $contextNode : null;
+        $actionRequest = $runtime->fusionGlobals->get('request');
+        $this->actionRequest = $actionRequest instanceof ActionRequest ? $actionRequest : null;
     }
 
     /**
-     * @Flow\After("method(Neos\Fusion\Core\Cache\ContentCache->processCacheSegments())")
      * @throws Exception
      * @throws \JsonException
      * @throws \Neos\Cache\Exception
@@ -111,20 +98,16 @@ class CacheUrlMappingAspect
      * @throws \Neos\Fusion\Exception
      * @throws PropertyNotAccessibleException
      */
+    #[Flow\After('method(Neos\Fusion\Core\Cache\ContentCache->processCacheSegments())')]
     public function storeRootCacheIdentifier(JoinPointInterface $joinPoint): void
     {
         if (!$this->isActive) {
             return;
         }
-        if (
-            !isset($this->currentEvaluateContext['cacheIdentifierValues']['node'])
-            || !$this->currentEvaluateContext['cacheIdentifierValues']['node'] instanceof NodeInterface
-        ) {
+        if (!isset($this->currentEvaluateContext['cacheIdentifierValues']['node']) || $this->currentNode === null) {
             return;
         }
-
-        /** @var NodeInterface $node */
-        $node = $this->currentEvaluateContext['cacheIdentifierValues']['node'];
+        $node = $this->currentNode;
 
         $url = $this->getCurrentUrl();
 
@@ -137,7 +120,7 @@ class CacheUrlMappingAspect
                 'Cache was disabled for '
                 . $url
                 . ' with node '
-                . $node->getContextPath()
+                . NodeAddress::fromNode($node)->toJson()
                 . ', but no exception was handled by the publishing. This could be caused by a missing publishing aware @exceptionHandler in Fusion.'
                 . (
                     $extractedExceptionDto !== null ? "\nException extracted from output: {$extractedExceptionDto}" : ''
@@ -159,7 +142,7 @@ class CacheUrlMappingAspect
 
         $logger = $this->contentReleaseLogger;
         if ($logger === null) {
-            throw new \RuntimeException('TODO Logger not found - should never happen');
+            throw new RuntimeException('TODO Logger not found - should never happen');
         }
         if ($this->urlIsMatchingBlacklist($url)) {
             $logger->info(sprintf(
@@ -191,7 +174,7 @@ class CacheUrlMappingAspect
         $rootCacheValues = $this->nodeRenderingExtensionManager->runDocumentMetadataGenerators(
             $node,
             $arguments,
-            $this->controllerContext,
+            $this->actionRequest,
             $rootCacheValues,
         );
         $this->contentCacheFrontend->set(
@@ -205,11 +188,9 @@ class CacheUrlMappingAspect
     /**
      * @return string
      */
-    protected function getCurrentUrl(): string
+    private function getCurrentUrl(): string
     {
-        /** @var \Neos\Flow\Mvc\ActionRequest $actionRequest */
-        $actionRequest = $this->controllerContext->getRequest();
-        $httpRequest = $actionRequest->getHttpRequest();
+        $httpRequest = $this->actionRequest->getHttpRequest();
         $url = $httpRequest->getUri();
         $url = $url->withQuery('');
 
@@ -217,22 +198,17 @@ class CacheUrlMappingAspect
     }
 
     /**
-     * @param NodeInterface $node
+     * @param Node $node
      */
-    protected function getCurrentArguments(NodeInterface $node): array
+    private function getCurrentArguments(Node $node): array
     {
-        /** @var \Neos\Flow\Mvc\ActionRequest $actionRequest */
-        $actionRequest = $this->controllerContext->getRequest();
-        $arguments = $actionRequest->getArguments();
+        $arguments = $this->actionRequest->getArguments();
         unset($arguments['node']);
         return $arguments;
     }
 
-    /**
-     * @param array $tags
-     * @return array
-     */
-    protected function sanitizeTags($tags)
+
+    private function sanitizeTags(array $tags): array
     {
         foreach ($tags as $key => $value) {
             $tags[$key] = strtr($value, '.:', '_-');

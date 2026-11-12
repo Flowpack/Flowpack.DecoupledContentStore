@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
-use Composer\InstalledVersions;
 use Flowpack\DecoupledContentStore\Command\ContentReleaseValidationCommandController;
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
@@ -18,7 +17,6 @@ use Flowpack\DecoupledContentStore\Exception as DecoupledContentStoreException;
 use Flowpack\DecoupledContentStore\IncrementalContentReleaseHandler;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
-use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -32,6 +30,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
+use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
@@ -39,20 +38,17 @@ use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
 use Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures\StubPrunnerApiService;
 use Neos\Behat\FlowBootstrapTrait;
 use Neos\Behat\FlowEntitiesTrait;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
-use Neos\ContentRepository\Domain\Service\NodeTypeManager;
-use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
-use Neos\Flow\Mvc\ActionRequest;
+use Neos\ContentRepository\Core\ContentRepository;
+use Neos\ContentRepository\Core\Factory\ContentRepositoryServiceFactoryInterface;
+use Neos\ContentRepository\Core\Factory\ContentRepositoryServiceInterface;
+use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
+use Neos\ContentRepository\TestSuite\Behavior\Features\Bootstrap\CRBehavioralTestsSubjectProvider;
+use Neos\ContentRepository\TestSuite\Behavior\Features\Bootstrap\CRTestSuiteTrait;
+use Neos\ContentRepository\TestSuite\Fakes\FakeContentDimensionSourceFactory;
+use Neos\ContentRepository\TestSuite\Fakes\FakeNodeTypeManagerFactory;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-use Neos\Flow\Security\Account;
-use Neos\Flow\Security\Authentication\AuthenticationProviderManager;
-use Neos\Flow\Security\Authentication\Provider\TestingProvider;
-use Neos\Flow\Security\Authentication\TokenAndProviderFactoryInterface;
-use Neos\Flow\Security\Authentication\TokenInterface;
-use Neos\Flow\Security\Context as SecurityContext;
-use Neos\Flow\Security\Policy\PolicyService;
 use Neos\Neos\Domain\Model\Domain;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\DomainRepository;
@@ -61,16 +57,8 @@ use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Neos\Utility\Arrays;
 use Neos\Utility\ObjectAccess;
 use PHPUnit\Framework\Assert;
-use Psr\Http\Message\ServerRequestFactoryInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Yaml\Yaml;
-
-// The content repository keeps its step definitions in a directory no autoloader knows about, so the file has to be
-// included by hand. Composer knows where the package was installed, which holds wherever this package itself sits -
-// inside a Neos installation as well as in a checkout of its own.
-require_once
-    InstalledVersions::getInstallPath('neos/content-repository')
-        . '/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php';
 
 /**
  * Features context
@@ -79,34 +67,48 @@ class FeatureContext implements Context
 {
     use FlowBootstrapTrait;
     use FlowEntitiesTrait;
-    use NodeOperationsTrait;
+    use CRTestSuiteTrait;
+    use CRBehavioralTestsSubjectProvider;
 
     /**
-     * The step definitions of the content repository run their steps in a sub process where this is TRUE, which none
-     * of the features here ask for.
+     * Node types every scenario needs, so that the features only declare their own.
      */
-    protected $isolated = false;
+    private const BASE_NODE_TYPES = <<<'YAML'
+                      'Neos.ContentRepository:Root': {}
+                      'Neos.Neos:Sites':
+                        superTypes:
+                          'Neos.ContentRepository:Root': true
+                      'Neos.Neos:Document':
+                        properties:
+                          title:
+                            type: string
+                          uriPathSegment:
+                            type: string
+                      'Neos.Neos:Site':
+                        superTypes:
+                          'Neos.Neos:Document': true
+                      'Neos.Neos:Content': {}
+                      'Neos.Neos:ContentCollection': {}
+                      YAML;
 
-    /**
-     * @var ObjectManagerInterface
-     */
-    protected $objectManager;
+    protected ObjectManagerInterface $objectManager;
 
-    private SecurityContext $securityContext;
-    private ActionRequest $securityActionRequest;
-    private AuthenticationProviderManager $authenticationManager;
-    private TestingProvider $testingProvider;
-    private PolicyService $policyService;
+    protected ContentRepositoryRegistry $contentRepositoryRegistry;
 
     private ?InterruptibleProcessRuntime $renderOrchestratorProcess;
     private ?InterruptibleProcessRuntimeEventInterface $renderOrchestratorProcessLastEvent;
     private StubPrunnerApiService $stubPrunnerApiService;
     private BufferedOutput $renderOrchestratorProcessBufferedOutput;
 
+    /**
+     * @var array<string,mixed>
+     */
+    private array $nodeTypesConfiguration = [];
+
     public function __construct()
     {
         $this->objectManager = self::bootstrapFlow()->getObjectManager();
-        $this->setupSecurity();
+        $this->contentRepositoryRegistry = $this->getObject(ContentRepositoryRegistry::class);
 
         // for testing, we use Private/EndToEndTestFusion as fusion folder to load.
         CustomFusionView::$useCustomSiteRootFusionPatternEntryPointForBehavioralTests = true;
@@ -118,78 +120,47 @@ class FeatureContext implements Context
     }
 
     /**
-     * @AfterScenario @fixtures
+     * Every scenario builds its site from scratch, under the same node identifiers - so nothing a previous scenario
+     * left behind in these singletons may survive into the next one.
+     *
+     * @BeforeScenario
      */
-    public function resetNodeTypeManagerFully()
+    public function resetRuntimeState(): void
     {
-        $nodeTypeManager = $this->getObjectManager()->get(NodeTypeManager::class);
-        // This is a WORKAROUND, and should be done in NodeTypeManager::overrideNodeTypes().
-        ObjectAccess::setProperty($nodeTypeManager, 'cachedSubNodeTypes', [], true);
+        FakeContentDimensionSourceFactory::reset();
+        FakeNodeTypeManagerFactory::reset();
+        $this->nodeTypesConfiguration = [];
+
+        $documentRenderer = $this->objectManager->get(DocumentRenderer::class);
+        $customFusionView = ObjectAccess::getProperty($documentRenderer, 'fusionView', true);
+        ObjectAccess::setProperty($customFusionView, 'fusionConfigurationPerSiteNode', [], true);
+
+        $this->stubPrunnerApiService->calls = [];
+        $incrementalContentReleaseHandler = $this->objectManager->get(IncrementalContentReleaseHandler::class);
+        ObjectAccess::setProperty($incrementalContentReleaseHandler, 'nodePublishedInThisRequest', false, true);
+
+        $this->objectManager->get(PersistenceManagerInterface::class)->clearState();
     }
 
-    /**
-     * @return ObjectManagerInterface
-     */
     public function getObjectManager(): ObjectManagerInterface
     {
         return $this->objectManager;
     }
 
-    /**
-     * Persist any changes - part of what the content repository's step definitions expect from their context.
-     */
-    public function persistAll(): void
-    {
-        $persistenceManager = $this->getObject(PersistenceManagerInterface::class);
-        $persistenceManager->persistAll();
-        $persistenceManager->clearState();
-
-        // roles are read through the policy service, which holds on to them across a database reset
-        $this->policyService->reset();
+    protected function getContentRepositoryService(
+        ContentRepositoryServiceFactoryInterface $factory,
+    ): ContentRepositoryServiceInterface {
+        return $this->contentRepositoryRegistry->buildService($this->currentContentRepository->id, $factory);
     }
 
-    /**
-     * The authentication a scenario gets through "I am authenticated with role" needs a security context which has
-     * a request, and a TestingProvider to hand the account to.
-     */
-    private function setupSecurity(): void
+    protected function createContentRepository(ContentRepositoryId $contentRepositoryId): ContentRepository
     {
-        $this->policyService = $this->getObject(PolicyService::class);
-        $this->authenticationManager = $this->getObject(AuthenticationProviderManager::class);
+        $this->contentRepositoryRegistry->resetFactoryInstance($contentRepositoryId);
+        $contentRepository = $this->contentRepositoryRegistry->get($contentRepositoryId);
+        FakeContentDimensionSourceFactory::reset();
+        FakeNodeTypeManagerFactory::reset();
 
-        // asking for the providers is what builds them, and with them the singleton TestingProvider
-        $providers = $this->getObject(TokenAndProviderFactoryInterface::class)->getProviders();
-        $this->testingProvider = $providers['TestingProvider'];
-
-        $httpRequest = $this->getObject(ServerRequestFactoryInterface::class)
-            ->createServerRequest('GET', 'http://localhost/');
-        $this->securityActionRequest = ActionRequest::fromHttpRequest($httpRequest);
-
-        $this->securityContext = $this->getObject(SecurityContext::class);
-        $this->securityContext->clearContext();
-        $this->securityContext->setRequest($this->securityActionRequest);
-    }
-
-    /**
-     * @Given /^I am authenticated with role "([^"]*)"$/
-     */
-    public function iAmAuthenticatedWithRole(string $roleIdentifier): void
-    {
-        $roles = [];
-        foreach (Arrays::trimExplode(',', $roleIdentifier) as $roleName) {
-            $roles[] = $this->policyService->getRole($roleName);
-        }
-
-        $account = new Account();
-        $account->setAccountIdentifier('TestAccount');
-        $account->setRoles($roles);
-
-        $this->testingProvider->setAuthenticationStatus(TokenInterface::AUTHENTICATION_SUCCESSFUL);
-        $this->testingProvider->setAccount($account);
-
-        $this->securityContext->clearContext();
-        $this->securityContext->setRequest($this->securityActionRequest);
-        $this->authenticationManager->authenticate();
+        return $contentRepository;
     }
 
     /**
@@ -225,7 +196,9 @@ class FeatureContext implements Context
         $domainRepository = $this->objectManager->get(DomainRepository::class);
         $domainRepository->add($domain);
 
-        $this->persistAll();
+        $persistenceManager = $this->objectManager->get(PersistenceManagerInterface::class);
+        $persistenceManager->persistAll();
+        $persistenceManager->clearState();
     }
 
     /**
@@ -334,11 +307,11 @@ class FeatureContext implements Context
     }
 
     /**
-     * @When I enumerate the node at path :path for content release :contentReleaseIdentifier
+     * @When I enumerate the node :nodeIdentifiers for content release :contentReleaseIdentifier
      */
-    public function iEnumerateTheNodeAtPathForContentRelease($path, $contentReleaseIdentifier)
+    public function iEnumerateTheNodeForContentRelease($nodeIdentifiers, $contentReleaseIdentifier)
     {
-        $this->enumerateGivenNodes($this->nodeIdentifierForPath($path), $contentReleaseIdentifier);
+        $this->enumerateGivenNodes($nodeIdentifiers, $contentReleaseIdentifier);
     }
 
     /**
@@ -371,25 +344,6 @@ class FeatureContext implements Context
         } finally {
             echo $bufferedOutput->fetch();
         }
-    }
-
-    /**
-     * The fixtures do not spell out node identifiers, and a quick release is asked for exactly those.
-     */
-    private function nodeIdentifierForPath(string $path): string
-    {
-        $combinator = $this->getObjectManager()->get(NodeContextCombinator::class);
-
-        foreach ($combinator->sites() as $site) {
-            foreach ($combinator->siteNodeInContexts($site, 'live') as $siteNode) {
-                $node = $siteNode->getContext()->getNode($path);
-                if ($node instanceof NodeInterface) {
-                    return $node->getIdentifier();
-                }
-            }
-        }
-
-        Assert::fail('Could not find a node at path ' . $path);
     }
 
     /**
@@ -592,43 +546,32 @@ class FeatureContext implements Context
         Assert::assertCount((int) $expectedNumberOfErrors, $renderingErrors);
     }
 
-    private const DEFAULT_NODETYPES_CONFIG = <<<EOF
-        unstructured:
-          abstract: true
-
-        Neos.Neos:FallbackNode:
-          abstract: true
-
-        Neos.Neos:Document:
-          abstract: true
-
-        Neos.Neos:Content:
-          abstract: true
-
-        Neos.Neos:ContentCollection:
-          abstract: true
-
-
-        EOF;
-
     /**
+     * The first variant goes before "I define a content repository", the additional one rebuilds the content
+     * repository with the extended node types.
+     *
      * @Given /^I have the following (additional |)NodeTypes configuration:$/
      */
-    public function iHaveTheFollowingNodetypesConfiguration($additional, $nodeTypesConfiguration)
+    public function iHaveTheFollowingNodetypesConfiguration($additional, PyStringNode $nodeTypesConfiguration)
     {
-        if (strlen($additional) > 0) {
-            $configuration = Arrays::arrayMergeRecursiveOverrule(
-                $this->nodeTypesConfiguration,
-                Yaml::parse($nodeTypesConfiguration->getRaw()),
+        $givenConfiguration = Yaml::parse($nodeTypesConfiguration->getRaw()) ?? [];
+        if ($additional === '') {
+            $this->nodeTypesConfiguration = Arrays::arrayMergeRecursiveOverrule(
+                Yaml::parse(self::BASE_NODE_TYPES),
+                $givenConfiguration,
             );
-        } else {
-            $combined = self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw();
-            $this->nodeTypesConfiguration = Yaml::parse(
-                self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw(),
-            );
-            $configuration = $this->nodeTypesConfiguration;
+            FakeNodeTypeManagerFactory::setConfiguration($this->nodeTypesConfiguration);
+            return;
         }
-        $this->getObjectManager()->get(NodeTypeManager::class)->overrideNodeTypes($configuration);
+
+        $this->nodeTypesConfiguration = Arrays::arrayMergeRecursiveOverrule(
+            $this->nodeTypesConfiguration,
+            $givenConfiguration,
+        );
+        $this->iChangeTheNodeTypesInContentRepositoryTo(
+            $this->currentContentRepository->id->value,
+            new PyStringNode([Yaml::dump($this->nodeTypesConfiguration, 10)], 0),
+        );
     }
 
     /**
@@ -697,14 +640,14 @@ class FeatureContext implements Context
     }
 
     /**
+     * Flushes what the content cache flusher collected to flush at the end of a request - the tags of the changed
+     * nodes are flushed during the catch-up already.
+     *
      * @Given /^I flush the content cache depending on the modified nodes$/
      */
     public function iFlushTheContentCacheDependingOnTheModifiedNodes()
     {
-        $contentCacheFlusher = $this->getObjectManager()->get(ContentCacheFlusher::class);
-
-        $contentCacheFlusher->shutdownObject();
-        ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', [], true);
+        $this->getObjectManager()->get(ContentCacheFlusher::class)->flushCollectedTags();
     }
 
     /**
@@ -748,25 +691,5 @@ class FeatureContext implements Context
         // reset all invocations
         $this->stubPrunnerApiService->calls = [];
         ObjectAccess::setProperty($incrementalContentReleaseHandler, 'nodePublishedInThisRequest', false, true);
-    }
-
-    /**
-     * @When I publish unpublished nodes of workspace :workspaceName
-     */
-    public function iPublishUnpublishedNodesOfWorkspace($workspaceName)
-    {
-        $publishingService = $this->getPublishingService();
-        $workspaceRepository = $this->getObjectManager()->get(WorkspaceRepository::class);
-        assert($workspaceRepository instanceof WorkspaceRepository);
-        $workspace = $workspaceRepository->findByIdentifier($workspaceName);
-
-        $unpublishedNodes = $publishingService->getUnpublishedNodes($workspace);
-        // NOTE: we explicitly need to specify the target workspace here, otherwise, the *node's workspace base workspace*
-        // $node->getWorkspace()->getBaseWorkspace() is used in PublishingService.
-        // This is WRONG I believe, I guess we would need $node->getContext()->getWorkspace()->getBaseWorkspace().
-        // By passing in the workspace explicitly here, we circumvent the issue.
-        $publishingService->publishNodes($unpublishedNodes, $workspace->getBaseWorkspace());
-        $this->objectManager->get(PersistenceManagerInterface::class)->persistAll();
-        $this->resetNodeInstances();
     }
 }

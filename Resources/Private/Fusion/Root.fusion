@@ -50,10 +50,3 @@ root.@cache.entryTags.2 >
 documentRendering.@cache.entryTags.2 >
 
 
-
-# bugfix for "when images change, trigger correct cache flushes" (see FixedAssetHandlingInContentCacheFlusherAspect for explanation)
-prototype(Neos.Neos:ImageUri) {
-    @class = 'Flowpack\\DecoupledContentStore\\Fusion\\ImageUriImplementation'
-}
-
-
