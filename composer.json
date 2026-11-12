@@ -5,7 +5,7 @@
   "name": "flowpack/decoupledcontentstore",
   "require": {
     "php": "^8.4",
-    "neos/neos": "~9.2",
+    "neos/neos": "^9.0",
     "albertofem/rsync-lib": "~1.0",
     "flowpack/prunner": "^1.4.1",
     "symfony/console": "^5.1 || ^6.0 || ^7.0 || ^8.0"

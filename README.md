@@ -21,7 +21,7 @@ open-source way, based on the learnings of the first iteration. Especially the r
 | 2.x                                   | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. |
 | 3.x                                   | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to make configuration more readable.                                    |
 | 4.x                                   | 8.x                 | ☑️        | ️️️️⛔️️️️️ ️ ️                   | Bumped minimum PHP version to 8.2.                                                                      |
-| 5.x           (current `main` branch) | 9.2                 | ☑️️        | current active release | Bumped minimum PHP version to 8.4. Currently used in production in bigger sites.                        |
+| 5.x           (current `main` branch) | 9.x                 | ☑️️        | current active release | Bumped minimum PHP version to 8.4. Currently used in production in bigger sites.                        |
 
 ## Upgrade guides
 
