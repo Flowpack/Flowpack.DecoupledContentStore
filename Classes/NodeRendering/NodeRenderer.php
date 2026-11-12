@@ -23,6 +23,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerProvider;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Generator;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Filter\FindAncestorNodesFilter;
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
@@ -30,6 +31,7 @@ use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Property\Exception as PropertyException;
+use Neos\Neos\Domain\NodeLabel\NodeLabelGeneratorInterface;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 use RuntimeException;
 
@@ -76,6 +78,7 @@ final readonly class NodeRenderer
         private NodeRenderingExtensionManager $nodeRenderingExtensionManager,
         private RenderTracerProvider $renderTracerProvider,
         private ContentRepositoryRegistry $contentRepositoryRegistry,
+        private NodeLabelGeneratorInterface $nodeLabelGenerator,
         #[Flow\InjectConfiguration('nodeRendering.recurseHiddenContent')]
         protected bool $recurseHiddenContent,
     ) {}
@@ -216,6 +219,7 @@ final readonly class NodeRenderer
 
                 $contentReleaseLogger->debug('Rendering document node variant', [
                     'node' => NodeAddress::fromNode($node)->toJson(),
+                    'nodeLabel' => $this->renderLabelPath($node),
                     'nodeIdentifier' => $node->aggregateId->value,
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
@@ -323,5 +327,26 @@ final readonly class NodeRenderer
             ->getContentGraph($nodeAddress->workspaceName)
             ->getSubgraph($nodeAddress->dimensionSpacePoint, $visibilityConstraints)
             ->findNodeById(NodeAggregateId::fromString($enumeratedNode->getNodeIdentifier()));
+    }
+
+    /**
+     * Node labels from the site node down to $node, matching the clicks needed in the Neos document tree.
+     */
+    private function renderLabelPath(Node $node): string
+    {
+        $ancestors = $this->contentRepositoryRegistry
+            ->subgraphForNode($node)
+            ->findAncestorNodes($node->aggregateId, FindAncestorNodesFilter::create())
+            ->reverse();
+
+        $labels = [];
+        foreach ($ancestors as $ancestor) {
+            if (!$ancestor->classification->isRoot()) {
+                $labels[] = $this->nodeLabelGenerator->getLabel($ancestor);
+            }
+        }
+        $labels[] = $this->nodeLabelGenerator->getLabel($node);
+
+        return implode(' > ', $labels);
     }
 }

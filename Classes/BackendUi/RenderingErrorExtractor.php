@@ -78,7 +78,7 @@ final readonly class RenderingErrorExtractor
      *
      * NodeRenderer logs a DEBUG line "Rendering document node variant" before
      * each render and a logException(...) entry on failure; both include the
-     * node identifier in the JSON payload. The very last "node":"..." match in
+     * node identifier in the JSON payload, the DEBUG line also the label path from the site node down. The very last "node":"..." match in
      * the log is therefore the most likely failing node, whether the worker
      * threw an exception or got killed mid-render.
      */
@@ -89,7 +89,7 @@ final readonly class RenderingErrorExtractor
         }
 
         if (!preg_match_all(
-            '/"node"\s*:\s*"((?:\\\\.|[^"\\\\])*)"(?:\s*,\s*"nodeUri"\s*:\s*"((?:\\\\.|[^"\\\\])*)")?/',
+            '/"node"\s*:\s*"((?:\\\\.|[^"\\\\])*)"(?:\s*,\s*"nodeLabel"\s*:\s*"((?:\\\\.|[^"\\\\])*)")?(?:\s*,\s*"nodeUri"\s*:\s*"((?:\\\\.|[^"\\\\])*)")?/',
             $log,
             $matches,
             PREG_SET_ORDER,
@@ -98,9 +98,12 @@ final readonly class RenderingErrorExtractor
         }
 
         $last = end($matches);
-        $node = $this->decodeJsonString($last[1]);
-        $uri = isset($last[2]) ? $this->decodeJsonString($last[2]) : '';
-        return $uri !== '' ? sprintf('%s | %s', $node, $uri) : $node;
+        $parts = [
+            $this->decodeJsonString($last[2] ?? ''),
+            $this->decodeJsonString($last[1]),
+            $this->decodeJsonString($last[3] ?? ''),
+        ];
+        return implode(' | ', array_filter($parts, static fn(string $part): bool => $part !== ''));
     }
 
     private function decodeJsonString(string $raw): string
