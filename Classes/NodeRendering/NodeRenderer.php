@@ -28,6 +28,7 @@ use Neos\ContentRepository\Core\SharedModel\Node\NodeAggregateId;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
+use Neos\Neos\Domain\NodeLabel\NodeLabelGeneratorInterface;
 use Neos\Neos\Domain\SubtreeTagging\NeosVisibilityConstraints;
 
 /**
@@ -120,6 +121,10 @@ class NodeRenderer
 
     #[Flow\InjectConfiguration('nodeRendering.recurseHiddenContent')]
     protected bool $recurseHiddenContent;
+
+    public function __construct(
+        private readonly NodeLabelGeneratorInterface $nodeLabelGenerator,
+    ) {}
 
     public function render(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -252,6 +257,7 @@ class NodeRenderer
 
                 $contentReleaseLogger->debug('Rendering document node variant', [
                     'node' => NodeAddress::fromNode($node)->toJson(),
+                    'nodeLabel' => $this->nodeLabelGenerator->getLabel($node),
                     'nodeIdentifier' => $node->aggregateId->value,
                     'workspaceName' => $enumeratedNode->getWorkspaceNameFromContextPath(),
                     'dimensions' => $enumeratedNode->getDimensionsFromContextPath(),
