@@ -9,9 +9,9 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheValues;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Mvc\Controller\ControllerContext;
+use Neos\Flow\Mvc\ActionRequest;
 
 /**
  * @Flow\Scope("singleton")
@@ -57,7 +57,7 @@ class NodeRenderingExtensionManager
     /**
      * @return iterable<EnumeratedNode>
      */
-    public function enumerateDocumentNode(\Neos\ContentRepository\Core\Projection\ContentGraph\Node $documentNode): iterable
+    public function enumerateDocumentNode(Node $documentNode): iterable
     {
         if (!isset($this->documentEnumerators)) {
             $this->documentEnumerators = self::instantiateExtensions(
@@ -85,7 +85,7 @@ class NodeRenderingExtensionManager
     }
 
     public function renderDocumentNodeVariant(
-        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
+        Node $node,
         EnumeratedNode $enumeratedNode,
         ContentReleaseLogger $contentReleaseLogger,
     ): void {
@@ -113,16 +113,16 @@ class NodeRenderingExtensionManager
     /**
      * Execute Document Metadata Generators to modify $cacheValues
      *
-     * @param \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node
+     * @param Node $node
      * @param array $arguments
-     * @param ControllerContext $controllerContext
+     * @param ActionRequest $actionRequest
      * @param DocumentNodeCacheValues $cacheValues
      * @return DocumentNodeCacheValues
      */
     public function runDocumentMetadataGenerators(
-        \Neos\ContentRepository\Core\Projection\ContentGraph\Node $node,
+        Node $node,
         array $arguments,
-        ControllerContext $controllerContext,
+        ActionRequest $actionRequest,
         DocumentNodeCacheValues $cacheValues,
     ): DocumentNodeCacheValues {
         if (!isset($this->documentMetadataGenerators)) {
@@ -136,7 +136,7 @@ class NodeRenderingExtensionManager
             $cacheValues = $documentMetadataGenerator->generateMetadata(
                 $node,
                 $arguments,
-                $controllerContext,
+                $actionRequest,
                 $cacheValues,
             );
         }
