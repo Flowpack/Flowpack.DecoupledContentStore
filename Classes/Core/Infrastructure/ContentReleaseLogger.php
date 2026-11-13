@@ -7,8 +7,10 @@ namespace Flowpack\DecoupledContentStore\Core\Infrastructure;
 use Exception;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
+use Neos\Error\Messages\Result;
 use Neos\Flow\Cli\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 
 final readonly class ContentReleaseLogger
 {
@@ -82,11 +84,32 @@ final readonly class ContentReleaseLogger
                 . $message
                 . "\n\n"
                 . $exception->getMessage()
+                . $this->formatValidationErrors($exception)
                 . "\n\n"
                 . $exception->getTraceAsString()
                 . "\n\n"
                 . json_encode($additionalPayload),
         );
+    }
+
+    /**
+     * Some exceptions (e.g. Fusion PropType validation) keep their details in a validation Result
+     * instead of the message; without this the log only says that validation failed, not which property.
+     */
+    private function formatValidationErrors(Throwable $exception): string
+    {
+        $lines = '';
+        for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if (!method_exists($current, 'getResult') || !$current->getResult() instanceof Result) {
+                continue;
+            }
+            foreach ($current->getResult()->getFlattenedErrors() as $propertyPath => $errors) {
+                foreach ($errors as $error) {
+                    $lines .= "\n  " . $propertyPath . ': ' . $error->render();
+                }
+            }
+        }
+        return $lines;
     }
 
     /**
