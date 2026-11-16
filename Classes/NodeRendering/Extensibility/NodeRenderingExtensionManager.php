@@ -12,6 +12,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContent
 use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\ActionRequest;
+use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use RuntimeException;
 
 #[Flow\Scope('singleton')]
@@ -46,6 +47,7 @@ final class NodeRenderingExtensionManager
      * @param array<string, mixed> $configuredDocumentMetadataGenerators
      */
     public function __construct(
+        private readonly ObjectManagerInterface $objectManager,
         #[Flow\InjectConfiguration('extensions.documentRenderers')]
         protected readonly array $configuredDocumentRenderers,
         #[Flow\InjectConfiguration('extensions.documentMetadataGenerators')]
@@ -57,7 +59,7 @@ final class NodeRenderingExtensionManager
      */
     public function enumerateDocumentNode(Node $documentNode): iterable
     {
-        $this->documentEnumerators ??= self::instantiateExtensions(
+        $this->documentEnumerators ??= $this->instantiateExtensions(
             $this->configuredDocumentRenderers,
             DocumentEnumeratorInterface::class,
             'enumeratorClassName',
@@ -91,7 +93,7 @@ final class NodeRenderingExtensionManager
 
     private function rendererFor(EnumeratedNode $enumeratedNode): DocumentRendererInterface
     {
-        $this->documentRenderers ??= self::instantiateExtensions(
+        $this->documentRenderers ??= $this->instantiateExtensions(
             $this->configuredDocumentRenderers,
             DocumentRendererInterface::class,
             'rendererClassName',
@@ -120,7 +122,7 @@ final class NodeRenderingExtensionManager
         ActionRequest $actionRequest,
         DocumentNodeCacheValues $cacheValues,
     ): DocumentNodeCacheValues {
-        $this->documentMetadataGenerators ??= self::instantiateExtensions(
+        $this->documentMetadataGenerators ??= $this->instantiateExtensions(
             $this->configuredDocumentMetadataGenerators,
             DocumentMetadataGeneratorInterface::class,
         );
@@ -148,7 +150,7 @@ final class NodeRenderingExtensionManager
         RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
         ContentReleaseLogger $logger,
     ): void {
-        $this->contentReleaseWriters[$enumeratedNode->rendererId] ??= self::instantiateExtensions(
+        $this->contentReleaseWriters[$enumeratedNode->rendererId] ??= $this->instantiateExtensions(
             $this->configuredDocumentRenderers[$enumeratedNode->rendererId]['contentReleaseWriters'],
             ContentReleaseWriterInterface::class,
             optionsKey: 'options',
@@ -163,7 +165,12 @@ final class NodeRenderingExtensionManager
         }
     }
 
-    private static function instantiateExtensions(
+    /**
+     * Instances come from the object manager, so extensions can use constructor injection. Configured options are
+     * passed as the first constructor argument, Flow autowires the remaining ones. Without configured options nothing
+     * is passed, so an extension which takes options must default them.
+     */
+    private function instantiateExtensions(
         array $configuration,
         string $extensionInterfaceName,
         string $classNameKey = 'className',
@@ -176,10 +183,11 @@ final class NodeRenderingExtensionManager
                 continue;
             }
             $className = $extensionConfig[$classNameKey];
-            if ($optionsKey !== null) {
-                $instance = new $className($extensionConfig[$optionsKey] ?? []);
+            $options = $optionsKey !== null ? $extensionConfig[$optionsKey] ?? null : null;
+            if ($options !== null) {
+                $instance = $this->objectManager->get($className, $options);
             } else {
-                $instance = new $className();
+                $instance = $this->objectManager->get($className);
             }
             if (!$instance instanceof $extensionInterfaceName) {
                 throw new RuntimeException(
