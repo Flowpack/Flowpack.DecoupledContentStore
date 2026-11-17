@@ -12,116 +12,22 @@ use Neos\Flow\Annotations as Flow;
 #[Flow\Proxy(false)]
 final readonly class ContentReleaseDetails
 {
-    private ContentReleaseIdentifier $contentReleaseIdentifier;
-    private ?Job $job;
-    private int $enumeratedDocumentNodesCount;
-    private int $renderingErrorCount;
-    private bool $isActive;
-    private ?float $contentReleaseSize;
-    private bool $isRemoved;
-
     /**
-     * @var Job[]
+     * @param RenderingStatistics[] $renderingStatistics
+     * @param string[] $renderingErrors errors registered during rendering and validation, each "<exception message> - <JSON of additional data>"
+     * @param Job[] $manualTransferJobs
+     * @param float|null $contentReleaseSize size in megabytes, or NULL if it was not determined (yet)
+     * @param bool $isRemoved a removed release is no longer registered, so it can neither be switched to nor transferred - only the keys it keeps after removal are left, and its enumeration is gone
      */
-    private array $manualTransferJobs;
-
-    /**
-     * @var RenderingStatistics[]
-     */
-    private array $renderingStatistics;
-
     public function __construct(
-        ContentReleaseIdentifier $contentReleaseIdentifier,
-        ?Job $job,
-        int $enumeratedDocumentNodesCount,
-        array $renderingStatistics,
-        int $renderingErrorCount,
-        bool $isActive,
-        array $manualTransferJobIds,
-        ?float $contentReleaseSize = null,
-        bool $isRemoved = false,
-    ) {
-        $this->contentReleaseIdentifier = $contentReleaseIdentifier;
-        $this->job = $job;
-        $this->enumeratedDocumentNodesCount = $enumeratedDocumentNodesCount;
-        $this->renderingStatistics = $renderingStatistics;
-        $this->renderingErrorCount = $renderingErrorCount;
-        $this->isActive = $isActive;
-        $this->manualTransferJobs = $manualTransferJobIds;
-        $this->contentReleaseSize = $contentReleaseSize;
-        $this->isRemoved = $isRemoved;
-    }
-
-    /**
-     * @return float|null size of the content release in megabytes, or NULL if it was not determined (yet)
-     */
-    public function getContentReleaseSize(): ?float
-    {
-        return $this->contentReleaseSize;
-    }
-
-    /**
-     * @return ContentReleaseIdentifier
-     */
-    public function getContentReleaseIdentifier(): ContentReleaseIdentifier
-    {
-        return $this->contentReleaseIdentifier;
-    }
-
-    /**
-     * @return Job|null
-     */
-    public function getJob(): ?Job
-    {
-        return $this->job;
-    }
-
-    /**
-     * @return int
-     */
-    public function getEnumeratedDocumentNodesCount(): int
-    {
-        return $this->enumeratedDocumentNodesCount;
-    }
-
-    /**
-     * @return RenderingStatistics[]
-     */
-    public function getRenderingStatistics(): array
-    {
-        return $this->renderingStatistics;
-    }
-
-    /**
-     * @return int
-     */
-    public function getRenderingErrorCount(): int
-    {
-        return $this->renderingErrorCount;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isActive(): bool
-    {
-        return $this->isActive;
-    }
-
-    /**
-     * @return Job[]
-     */
-    public function getManualTransferJobs(): array
-    {
-        return $this->manualTransferJobs;
-    }
-
-    /**
-     * A removed release is no longer registered, so it can neither be switched to nor transferred - only the keys it
-     * keeps after removal are left, and its enumeration is gone.
-     */
-    public function isRemoved(): bool
-    {
-        return $this->isRemoved;
-    }
+        public ContentReleaseIdentifier $contentReleaseIdentifier,
+        public ?Job $job,
+        public int $enumeratedDocumentNodesCount,
+        public array $renderingStatistics,
+        public array $renderingErrors,
+        public bool $isActive,
+        public array $manualTransferJobs,
+        public ?float $contentReleaseSize = null,
+        public bool $isRemoved = false,
+    ) {}
 }

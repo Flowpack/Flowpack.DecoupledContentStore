@@ -151,9 +151,7 @@ final readonly class BackendUiDataService
             static fn(ContentReleaseIdentifier $id): string => $id->getIdentifier(),
             $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier),
         );
-        $removedReleaseJobs = $jobs->filter(static function (Job $job) use (
-            $registeredReleaseIds,
-        ): bool {
+        $removedReleaseJobs = $jobs->filter(static function (Job $job) use ($registeredReleaseIds): bool {
             $releasePipelines = [
                 ContentReleaseManager::CONTENT_RELEASE_PIPELINE_NAME,
                 ContentReleaseManager::QUICK_CONTENT_RELEASE_PIPELINE_NAME,
@@ -215,9 +213,9 @@ final readonly class BackendUiDataService
         $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->prunnerJobId->toJobId());
 
         $manualTransferJobs = count($contentReleaseMetadata->manualTransferJobIds) > 0
-            ? array_map(function (PrunnerJobId $item): ?Job {
+            ? array_filter(array_map(function (PrunnerJobId $item): ?Job {
                 return $this->prunnerApiService->loadJobDetail($item->toJobId());
-            }, $contentReleaseMetadata->manualTransferJobIds)
+            }, $contentReleaseMetadata->manualTransferJobIds))
             : [];
 
         $renderingStatistics = array_map(
@@ -230,10 +228,10 @@ final readonly class BackendUiDataService
             ),
         );
 
-        $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors(
+        $renderingErrors = $this->redisRenderingErrorManager->getRenderingErrors(
             $contentReleaseIdentifier,
             $redisInstanceIdentifier,
-        ));
+        );
 
         $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier);
 
@@ -242,7 +240,7 @@ final readonly class BackendUiDataService
             $contentReleaseJob,
             $this->redisEnumerationRepository->count($contentReleaseIdentifier),
             $renderingStatistics,
-            $renderingErrorCount,
+            $renderingErrors,
             $contentReleaseIdentifier->equals($currentReleaseIdentifier),
             $manualTransferJobs,
             $contentReleaseMetadata->contentReleaseSize,

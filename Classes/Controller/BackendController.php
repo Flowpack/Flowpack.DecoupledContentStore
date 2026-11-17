@@ -125,12 +125,12 @@ final class BackendController extends ActionController
             );
         }
         $this->view->assign('removedReleaseJob', $removedReleaseJob);
-        $job = $detailsData?->getJob() ?? $removedReleaseJob;
+        $job = $detailsData->job ?? $removedReleaseJob;
 
         if ($detailTaskName !== '') {
             $this->view->assign('detailTaskName', $detailTaskName);
             $this->view->assign('jobLogs', $this->prunnerApiService->loadJobLogs(
-                $prunnerJobId ? PrunnerJobId::fromString($prunnerJobId)->toJobId() : $detailsData->getJob()->getId(),
+                $prunnerJobId ? PrunnerJobId::fromString($prunnerJobId)->toJobId() : $detailsData->job->getId(),
                 $detailTaskName,
             ));
         } elseif ($showAllRenderingErrors && $job !== null) {

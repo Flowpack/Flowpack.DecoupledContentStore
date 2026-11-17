@@ -1,8 +1,3 @@
-// TODO Neos.Neos-20251005080230 Line 30: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
-// TODO Neos.Neos-20251005080230 Line 473: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
-// TODO Neos.Neos-20251005080230 Line 481: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
-// TODO Neos.Neos-20251005080230 Line 492: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
-// TODO Neos.Neos-20251005080230 Line 511: You may need to rewrite "VARIABLE.identifier" to "VARIABLE.aggregateId". We did not auto-apply this migration because we cannot be sure whether the variable is a Node.
 Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component {
 
     // Context Variables
@@ -32,7 +27,7 @@ Flowpack.DecoupledContentStore.BackendController.details = Neos.Fusion:Component
             <Neos.Fusion:Fragment @if.hasData={detailsData || removedReleaseJob}>
               {" "}
               <span class="neos-badge" style="vertical-align: super;" title="content store" data-neos-toggle="tooltip">{contentStore}</span>
-              <span @if.isRemoved={detailsData.removed || removedReleaseJob} class="neos-badge neos-badge-warning" style="vertical-align: super;">removed</span>
+              <span @if.isRemoved={detailsData.isRemoved || removedReleaseJob} class="neos-badge neos-badge-warning" style="vertical-align: super;">removed</span>
               <p @if.onlyJobIsLeft={removedReleaseJob} class="mt-4">
                 This release has been removed, and the details it kept in Redis have expired as well. Only its prunner job and logs are left.
               </p>
@@ -263,7 +258,7 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Enumerated Pages">
-                    {detailsData.removed ? '-' : detailsData.enumeratedDocumentNodesCount}
+                    {detailsData.isRemoved ? '-' : detailsData.enumeratedDocumentNodesCount}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
@@ -277,7 +272,10 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Errors">
-                    {detailsData.renderingErrorCount}
+                    <a @if.hasErrors={!Array.isEmpty(detailsData.renderingErrors)} href="#registered-errors" class="underline" title="Show registered errors">
+                        {Array.length(detailsData.renderingErrors)}
+                    </a>
+                    <Neos.Fusion:Fragment @if.noErrors={Array.isEmpty(detailsData.renderingErrors)}>{Array.length(detailsData.renderingErrors)}</Neos.Fusion:Fragment>
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
@@ -287,10 +285,17 @@ prototype(Flowpack.DecoupledContentStore:ContentReleaseSteps) < prototype(Neos.F
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
             <Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
                 <Flowpack.DecoupledContentStore:ContentReleaseStats.Stat title="Is currently live?">
-                    {detailsData.active ? detailsData.active : "-"}
+                    {detailsData.isActive ? detailsData.isActive : "-"}
                 </Flowpack.DecoupledContentStore:ContentReleaseStats.Stat>
             </Flowpack.DecoupledContentStore:ContentReleaseStats.StatsBox>
         </dl>
+
+        <div @if.hasErrors={props.showStats && detailsData.renderingErrors} id="registered-errors">
+            <h2 class="text-3xl py-5">Registered errors</h2>
+            <Neos.Fusion:Loop items={detailsData.renderingErrors} itemName="renderingError">
+                <pre class="text-gray-900 bg-gray-100 p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap mb-2">{String.htmlSpecialChars(renderingError)}</pre>
+            </Neos.Fusion:Loop>
+        </div>
     `
 }
 
@@ -514,7 +519,7 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
                 <i class="fa fa-sync"></i> Reload
             </Neos.Fusion:Link.Action>
 
-            <Neos.Fusion:Fragment @if.isRegistered={detailsData && !detailsData.removed}>
+            <Neos.Fusion:Fragment @if.isRegistered={detailsData && !detailsData.isRemoved}>
                 <button form="postHelper" formaction={props._removeUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
                     Remove release
                 </button>

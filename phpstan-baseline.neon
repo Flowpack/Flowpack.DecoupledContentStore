@@ -55,18 +55,6 @@ parameters:
 			path: Classes/BackendUi/BackendUiDataService.php
 
 		-
-			message: '#^Method Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\:\:__construct\(\) has parameter \$manualTransferJobIds with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: Classes/BackendUi/Dto/ContentReleaseDetails.php
-
-		-
-			message: '#^Method Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\:\:__construct\(\) has parameter \$renderingStatistics with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: Classes/BackendUi/Dto/ContentReleaseDetails.php
-
-		-
 			message: '#^Language construct isset\(\) should not be used\.$#'
 			identifier: ergebnis.noIsset
 			count: 1
@@ -121,13 +109,13 @@ parameters:
 			path: Classes/ContentReleaseManager.php
 
 		-
-			message: '#^Cannot call method getId\(\) on Flowpack\\Prunner\\Dto\\Job\|null\.$#'
-			identifier: method.nonObject
+			message: '#^Cannot access property \$job on Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\|null\.$#'
+			identifier: property.nonObject
 			count: 1
 			path: Classes/Controller/BackendController.php
 
 		-
-			message: '#^Cannot call method getJob\(\) on Flowpack\\DecoupledContentStore\\BackendUi\\Dto\\ContentReleaseDetails\|null\.$#'
+			message: '#^Cannot call method getId\(\) on Flowpack\\Prunner\\Dto\\Job\|null\.$#'
 			identifier: method.nonObject
 			count: 1
 			path: Classes/Controller/BackendController.php
