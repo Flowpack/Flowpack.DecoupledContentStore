@@ -7,7 +7,7 @@ namespace Flowpack\DecoupledContentStore\Core\Infrastructure;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Neos\Flow\Annotations as Flow;
 
-class RedisStatisticsEventOutput implements StatisticsEventOutputInterface
+final class RedisStatisticsEventOutput implements StatisticsEventOutputInterface
 {
     #[Flow\Inject]
     protected RedisStatisticsEventService $redisStatisticsEventService;

@@ -4,33 +4,37 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Core\Infrastructure;
 
+use Exception as PhpException;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Exception;
 use Neos\Flow\Annotations as Flow;
+use Redis;
+use RedisException;
+use RuntimeException;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisClientManager
+#[Flow\Scope('singleton')]
+final class RedisClientManager
 {
     /**
-     * @Flow\InjectConfiguration("redisContentStores")
-     * @var array
+     * @var array<Redis>
      */
-    protected $configuration;
+    private array $redisInstances = [];
 
     /**
-     * @var array<\Redis>
+     * @param array<string, mixed> $configuration
      */
-    protected array $redisInstances = [];
+    public function __construct(
+        #[Flow\InjectConfiguration('redisContentStores')]
+        protected readonly array $configuration,
+    ) {}
 
     /**
      * @throws Exception
      */
-    protected function connect(RedisInstanceIdentifier $redisInstanceIdentifier): \Redis
+    private function connect(RedisInstanceIdentifier $redisInstanceIdentifier): Redis
     {
         $instanceConfig = $this->configuration[$redisInstanceIdentifier->getIdentifier()];
-        $redis = new \Redis();
+        $redis = new Redis();
         try {
             $connected =
                 $redis->connect(
@@ -38,7 +42,7 @@ class RedisClientManager
                     (int) ($instanceConfig['port'] ?? 6379),
                     $instanceConfig['timeout'] ?? 0,
                 ) && $redis->select($instanceConfig['database'] ?? 0);
-        } catch (\Exception $exception) {
+        } catch (PhpException $exception) {
             throw new Exception(
                 sprintf(
                     'Could not connect to Redis server %s:%d. Detailed reason: see nested exception.',
@@ -66,9 +70,9 @@ class RedisClientManager
     /**
      * Get the Redis instance and check for an existing connection
      *
-     * @return \Redis
+     * @return Redis
      */
-    public function getRedis(RedisInstanceIdentifier $redisInstanceIdentifier): \Redis
+    public function getRedis(RedisInstanceIdentifier $redisInstanceIdentifier): Redis
     {
         if (!isset($this->redisInstances[$redisInstanceIdentifier->getIdentifier()])) {
             $this->redisInstances[$redisInstanceIdentifier->getIdentifier()] = $this->connect($redisInstanceIdentifier);
@@ -81,7 +85,7 @@ class RedisClientManager
                     $this->redisInstances[$redisInstanceIdentifier->getIdentifier()] =
                         $this->connect($redisInstanceIdentifier);
             }
-        } catch (\RedisException $e) {
+        } catch (RedisException $e) {
             $redis =
                 $this->redisInstances[$redisInstanceIdentifier->getIdentifier()] =
                     $this->connect($redisInstanceIdentifier);
@@ -89,7 +93,7 @@ class RedisClientManager
         return $redis;
     }
 
-    public function getPrimaryRedis(): \Redis
+    public function getPrimaryRedis(): Redis
     {
         return $this->getRedis(RedisInstanceIdentifier::primary());
     }
@@ -97,7 +101,7 @@ class RedisClientManager
     public function getRetentionCount(RedisInstanceIdentifier $redisInstanceIdentifier): int
     {
         if (!isset($this->configuration[$redisInstanceIdentifier->getIdentifier()]['contentReleaseRetentionCount'])) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 'Did not find a configured contentReleaseRetentionCount for Redis '
                     . $redisInstanceIdentifier->getIdentifier(),
             );

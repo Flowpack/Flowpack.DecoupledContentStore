@@ -10,16 +10,16 @@ use Flowpack\DecoupledContentStore\Exception;
 use Neos\Flow\Annotations as Flow;
 use Neos\Utility\Files;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RemoteResourceSynchronizer
+#[Flow\Scope('singleton')]
+final readonly class RemoteResourceSynchronizer
 {
     /**
-     * @Flow\InjectConfiguration(path="resourceSync.targets")
-     * @var array
+     * @param array<mixed> $targets
      */
-    protected $targets = array();
+    public function __construct(
+        #[Flow\InjectConfiguration('resourceSync.targets')]
+        protected array $targets,
+    ) {}
 
     /**
      * @throws Exception

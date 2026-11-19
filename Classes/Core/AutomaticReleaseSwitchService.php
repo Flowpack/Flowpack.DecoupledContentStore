@@ -20,16 +20,16 @@ use Neos\Flow\Security\Context;
  * remove it.
  */
 #[Flow\Scope('singleton')]
-class AutomaticReleaseSwitchService
+final readonly class AutomaticReleaseSwitchService
 {
-    private const REDIS_KEY = 'contentStore:automaticReleasesPaused';
+    private const string REDIS_KEY = 'contentStore:automaticReleasesPaused';
 
     /**
      * HINCRBY creates the hash it counts in, so counting has to be conditional on the switch still being set: a
      * resume between the caller's isPaused() check and the count would otherwise leave a key behind which holds
      * nothing but a counter. That key lives outside the per-release key space, so pruning never clears it.
      */
-    private const COUNT_SUPPRESSED_RELEASE_LUA_SCRIPT = '
+    private const string COUNT_SUPPRESSED_RELEASE_LUA_SCRIPT = '
         local pauseStateKey = KEYS[1]
 
         if redis.call("HEXISTS", pauseStateKey, "pausedAt") == 1 then
@@ -37,11 +37,10 @@ class AutomaticReleaseSwitchService
         end
     ';
 
-    #[Flow\Inject]
-    protected RedisClientManager $redisClientManager;
-
-    #[Flow\Inject]
-    protected Context $securityContext;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private Context $securityContext,
+    ) {}
 
     public function isPaused(): bool
     {
@@ -67,7 +66,7 @@ class AutomaticReleaseSwitchService
         }
 
         $this->redisClientManager->getPrimaryRedis()->hMset(self::REDIS_KEY, [
-            'pausedAt' => (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+            'pausedAt' => new DateTimeImmutable()->format(DateTimeInterface::ATOM),
             'accountId' => $this->getAccountId() ?? '',
             'suppressedReleaseCount' => 0,
         ]);

@@ -21,50 +21,31 @@ use Flowpack\DecoupledContentStore\NodeRendering\NodeRenderingUriService;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
+use Neos\ContentRepository\Core\SharedModel\Node\NodeAddress;
 use Neos\Flow\Annotations as Flow;
 use Neos\Fusion\Core\Cache\ContentCache;
-use Neos\Neos\Fusion\Helper\CachingHelper;
+use Neos\Neos\Fusion\Cache\CacheTag;
 
 /**
  * Writes the enumeration of a quick content release, which holds the given document nodes instead of every document
  * there is: everything else comes from the release this one was copied from.
  */
 #[Flow\Scope('singleton')]
-final class QuickPublishNodeEnumerator
+final readonly class QuickPublishNodeEnumerator
 {
-    #[Flow\Inject]
-    protected RedisEnumerationRepository $redisEnumerationRepository;
-
-    #[Flow\Inject]
-    protected RedisContentReleaseService $redisContentReleaseService;
-
-    #[Flow\Inject]
-    protected ConcurrentBuildLockService $concurrentBuildLockService;
-
-    #[Flow\Inject]
-    protected NodeRenderingExtensionManager $nodeRenderingExtensionManager;
-
-    #[Flow\Inject]
-    protected NodeContextCombinator $nodeContextCombinator;
-
-    #[Flow\Inject]
-    protected NodeEnumerator $nodeEnumerator;
-
-    #[Flow\Inject]
-    protected DocumentNodeFilter $documentNodeFilter;
-
-    #[Flow\Inject]
-    protected ContentCache $contentCache;
-
-    #[Flow\Inject]
-    protected CachingHelper $cachingHelper;
-
-    #[Flow\Inject]
-    protected NodeRenderingUriService $nodeRenderingUriService;
-
-    #[Flow\Inject]
-    protected ContentReleaseScope $contentReleaseScope;
+    public function __construct(
+        private RedisEnumerationRepository $redisEnumerationRepository,
+        private RedisContentReleaseService $redisContentReleaseService,
+        private ConcurrentBuildLockService $concurrentBuildLockService,
+        private NodeRenderingExtensionManager $nodeRenderingExtensionManager,
+        private NodeContextCombinator $nodeContextCombinator,
+        private NodeEnumerator $nodeEnumerator,
+        private DocumentNodeFilter $documentNodeFilter,
+        private ContentCache $contentCache,
+        private NodeRenderingUriService $nodeRenderingUriService,
+        private ContentReleaseScope $contentReleaseScope,
+    ) {}
 
     /**
      * @throws Exception if nothing is left to render
@@ -102,7 +83,7 @@ final class QuickPublishNodeEnumerator
         $nodesToRender = $this->enumerateGivenNodes(
             $nodeIdentifiers,
             $contentReleaseLogger,
-            $newMetadata->getWorkspaceName() ?? 'live',
+            $newMetadata->workspaceName,
         );
 
         // a quick release which renders nothing publishes exactly the release it was copied from - which looks like
@@ -145,7 +126,7 @@ final class QuickPublishNodeEnumerator
      * marks the security context as initialized as a side effect, which would change what the node lookups of the
      * remaining identifiers are allowed to see.
      *
-     * @param array<int, array{0: NodeInterface, 1: EnumeratedNode}> $nodesToRender
+     * @param array<int, array{0: Node, 1: EnumeratedNode}> $nodesToRender
      */
     private function writeChangedUrls(
         array $nodesToRender,
@@ -167,7 +148,7 @@ final class QuickPublishNodeEnumerator
     /**
      * The node variants to render, skipping every given identifier which must not or cannot be published.
      *
-     * @return array<int, array{0: NodeInterface, 1: EnumeratedNode}>
+     * @return array<int, array{0: Node, 1: EnumeratedNode}>
      */
     private function enumerateGivenNodes(
         NodeIdentifiers $nodeIdentifiers,
@@ -179,17 +160,16 @@ final class QuickPublishNodeEnumerator
         foreach ($nodeIdentifiers as $nodeIdentifier) {
             $contentCacheFlushed = false;
 
-            $variants = $this->nodeContextCombinator->nodeVariantsWithSiteNode($nodeIdentifier, $workspaceName);
-            foreach ($variants as [$siteNode, $nodeToEnumerate]) {
+            foreach ($this->nodeContextCombinator->nodeVariants($nodeIdentifier, $workspaceName) as $nodeToEnumerate) {
                 if (!$contentCacheFlushed) {
                     // the tags carry the node identifier and the workspace, so one flush covers every dimension
                     $this->flushContentCacheForNode($nodeToEnumerate, $nodeIdentifier, $contentReleaseLogger);
                     $contentCacheFlushed = true;
                 }
 
-                $contextPath = $nodeToEnumerate->getContextPath();
+                $contextPath = NodeAddress::fromNode($nodeToEnumerate)->toJson();
 
-                $skipReason = $this->documentNodeFilter->skipReasonForNamedNode($nodeToEnumerate, $siteNode);
+                $skipReason = $this->documentNodeFilter->skipReasonForNamedNode($nodeToEnumerate);
                 if ($skipReason !== null) {
                     // warn rather than debug: somebody asked for this node by hand and will not see it change
                     $contentReleaseLogger->warn('Skipping node from publishing, because it is ' . $skipReason, [
@@ -212,10 +192,9 @@ final class QuickPublishNodeEnumerator
                 // lists an identifier which resolves nowhere as one row among the others, so somebody publishing
                 // five documents of which one was deleted in the meantime gets the other four. A list in which
                 // nothing at all can be published still fails, in enumerateGivenNodesAndStoreInRedis()
-                $contentReleaseLogger->warn(
-                    'Skipping node from publishing, because it is not found in any site and dimension',
-                    ['node' => $nodeIdentifier],
-                );
+                $contentReleaseLogger->warn('Skipping node from publishing, because it is not found in any site and dimension', [
+                    'node' => $nodeIdentifier,
+                ]);
             }
         }
 
@@ -228,14 +207,13 @@ final class QuickPublishNodeEnumerator
      * it copied - the editor's change would be missing without a single error anywhere.
      */
     private function flushContentCacheForNode(
-        NodeInterface $node,
+        Node $node,
         string $nodeIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
     ): void {
-        $flushedEntriesCount = 0;
-        foreach ($this->cachingHelper->nodeTag($node) as $tag) {
-            $flushedEntriesCount += $this->contentCache->flushByTag($tag);
-        }
+        // Neos.Caching.nodeTag() also returns the workspace-wide tag, so flushing all of its tags would empty the
+        // whole live content cache.
+        $flushedEntriesCount = $this->contentCache->flushByTag(CacheTag::forNodeAggregateFromNode($node)->value);
 
         $contentReleaseLogger->info(sprintf(
             'Flushed %d content cache entries for node %s before re-rendering it',

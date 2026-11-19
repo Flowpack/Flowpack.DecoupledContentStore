@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Tracing;
 
+use RuntimeException;
 use Sandstorm\Plumber\Core\Domain\Model\EmptyProfilingRun;
 
 /**
@@ -29,8 +30,7 @@ final class PlumberTracer implements RenderTracerInterface
     public function __construct(
         private readonly EmptyProfilingRun $profilingRun,
         private readonly float $minimumDurationMs,
-    ) {
-    }
+    ) {}
 
     public function openSpan(string $name, array $params = []): void
     {
@@ -41,12 +41,12 @@ final class PlumberTracer implements RenderTracerInterface
     {
         $span = array_pop($this->openSpans);
         if ($span === null) {
-            throw new \RuntimeException('closeSpan() was called without a matching openSpan()', 1756200002);
+            throw new RuntimeException('closeSpan() was called without a matching openSpan()', 1756200002);
         }
 
         [$name, $params, $startTimestamp] = $span;
         $stopTimestamp = microtime(true);
-        if (($stopTimestamp - $startTimestamp) * 1000 < $this->minimumDurationMs) {
+        if ((($stopTimestamp - $startTimestamp) * 1000) < $this->minimumDurationMs) {
             return;
         }
 

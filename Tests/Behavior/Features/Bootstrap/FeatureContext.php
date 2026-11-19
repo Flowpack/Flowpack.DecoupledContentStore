@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 use Behat\Behat\Context\Context;
+use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 use Behat\Gherkin\Node\PyStringNode;
-use Composer\InstalledVersions;
 use Flowpack\DecoupledContentStore\Command\ContentReleaseValidationCommandController;
-use Flowpack\DecoupledContentStore\ContentReleaseManager;
 use Flowpack\DecoupledContentStore\Core\ConcurrentBuildLockService;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
@@ -18,7 +17,6 @@ use Flowpack\DecoupledContentStore\Exception as DecoupledContentStoreException;
 use Flowpack\DecoupledContentStore\IncrementalContentReleaseHandler;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Repository\RedisEnumerationRepository;
-use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Service\NodeContextCombinator;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisRenderingErrorManager;
@@ -32,27 +30,26 @@ use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\ExitEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\QueueEmptyEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents\RenderingQueueFilledEvent;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\CustomFusionView;
+use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Flowpack\DecoupledContentStore\QuickPublish\Dto\NodeIdentifiers;
 use Flowpack\DecoupledContentStore\QuickPublish\Infrastructure\RedisReleaseCopyService;
 use Flowpack\DecoupledContentStore\QuickPublish\QuickPublishNodeEnumerator;
 use Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures\StubPrunnerApiService;
+use Flowpack\Prunner\PrunnerApiService;
 use Neos\Behat\FlowBootstrapTrait;
 use Neos\Behat\FlowEntitiesTrait;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
-use Neos\ContentRepository\Domain\Service\NodeTypeManager;
-use Neos\ContentRepository\Tests\Behavior\Features\Bootstrap\NodeOperationsTrait;
-use Neos\Flow\Mvc\ActionRequest;
+use Neos\ContentRepository\Core\ContentRepository;
+use Neos\ContentRepository\Core\Factory\ContentRepositoryServiceFactoryInterface;
+use Neos\ContentRepository\Core\Factory\ContentRepositoryServiceInterface;
+use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
+use Neos\ContentRepository\TestSuite\Behavior\Features\Bootstrap\CRBehavioralTestsSubjectProvider;
+use Neos\ContentRepository\TestSuite\Behavior\Features\Bootstrap\CRTestSuiteTrait;
+use Neos\ContentRepository\TestSuite\Fakes\FakeContentDimensionSourceFactory;
+use Neos\ContentRepository\TestSuite\Fakes\FakeNodeTypeManagerFactory;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
-use Neos\Flow\Security\Account;
-use Neos\Flow\Security\Authentication\AuthenticationProviderManager;
-use Neos\Flow\Security\Authentication\Provider\TestingProvider;
-use Neos\Flow\Security\Authentication\TokenAndProviderFactoryInterface;
-use Neos\Flow\Security\Authentication\TokenInterface;
-use Neos\Flow\Security\Context as SecurityContext;
-use Neos\Flow\Security\Policy\PolicyService;
 use Neos\Neos\Domain\Model\Domain;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\DomainRepository;
@@ -61,141 +58,120 @@ use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Neos\Utility\Arrays;
 use Neos\Utility\ObjectAccess;
 use PHPUnit\Framework\Assert;
-use Psr\Http\Message\ServerRequestFactoryInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Yaml\Yaml;
-
-// The content repository keeps its step definitions in a directory no autoloader knows about, so the file has to be
-// included by hand. Composer knows where the package was installed, which holds wherever this package itself sits -
-// inside a Neos installation as well as in a checkout of its own.
-require_once
-    InstalledVersions::getInstallPath('neos/content-repository')
-        . '/Tests/Behavior/Features/Bootstrap/NodeOperationsTrait.php';
 
 /**
  * Features context
  */
-class FeatureContext implements Context
+final class FeatureContext implements Context
 {
     use FlowBootstrapTrait;
     use FlowEntitiesTrait;
-    use NodeOperationsTrait;
+    use CRTestSuiteTrait;
+    use CRBehavioralTestsSubjectProvider;
 
     /**
-     * The step definitions of the content repository run their steps in a sub process where this is TRUE, which none
-     * of the features here ask for.
+     * Node types every scenario needs, so that the features only declare their own.
      */
-    protected $isolated = false;
+    private const string BASE_NODE_TYPES = <<<'YAML'
+        'Neos.ContentRepository:Root': {}
+        'Neos.Neos:Sites':
+          superTypes:
+            'Neos.ContentRepository:Root': true
+        'Neos.Neos:Document':
+          properties:
+            title:
+              type: string
+            uriPathSegment:
+              type: string
+        'Neos.Neos:Site':
+          superTypes:
+            'Neos.Neos:Document': true
+        'Neos.Neos:Content': {}
+        'Neos.Neos:ContentCollection': {}
+        YAML;
 
-    /**
-     * @var ObjectManagerInterface
-     */
-    protected $objectManager;
+    protected ObjectManagerInterface $objectManager;
 
-    private SecurityContext $securityContext;
-    private ActionRequest $securityActionRequest;
-    private AuthenticationProviderManager $authenticationManager;
-    private TestingProvider $testingProvider;
-    private PolicyService $policyService;
+    protected ContentRepositoryRegistry $contentRepositoryRegistry;
 
     private ?InterruptibleProcessRuntime $renderOrchestratorProcess;
     private ?InterruptibleProcessRuntimeEventInterface $renderOrchestratorProcessLastEvent;
-    private StubPrunnerApiService $stubPrunnerApiService;
+    private readonly StubPrunnerApiService $stubPrunnerApiService;
     private BufferedOutput $renderOrchestratorProcessBufferedOutput;
+
+    /**
+     * @var array<string,mixed>
+     */
+    private array $nodeTypesConfiguration = [];
 
     public function __construct()
     {
         $this->objectManager = self::bootstrapFlow()->getObjectManager();
-        $this->setupSecurity();
+        $this->contentRepositoryRegistry = $this->getObject(ContentRepositoryRegistry::class);
 
         // for testing, we use Private/EndToEndTestFusion as fusion folder to load.
         CustomFusionView::$useCustomSiteRootFusionPatternEntryPointForBehavioralTests = true;
 
-        $contentReleaseManager = $this->objectManager->get(ContentReleaseManager::class);
-        assert($contentReleaseManager instanceof ContentReleaseManager);
-        $this->stubPrunnerApiService = new StubPrunnerApiService();
-        ObjectAccess::setProperty($contentReleaseManager, 'prunnerApiService', $this->stubPrunnerApiService, true);
+        // Behat builds the context per scenario, while the singletons which receive the stub live for the whole run -
+        // so it is registered once, before anything depending on it is built, and every scenario reuses it.
+        $prunnerApiService = $this->objectManager->get(PrunnerApiService::class);
+        if (!$prunnerApiService instanceof StubPrunnerApiService) {
+            $prunnerApiService = new StubPrunnerApiService();
+            $this->objectManager->setInstance(PrunnerApiService::class, $prunnerApiService);
+        }
+        $this->stubPrunnerApiService = $prunnerApiService;
     }
 
     /**
-     * @AfterScenario @fixtures
+     * Every scenario builds its site from scratch, under the same node identifiers - so nothing a previous scenario
+     * left behind in these singletons may survive into the next one.
+     *
+     * @BeforeScenario
      */
-    public function resetNodeTypeManagerFully()
+    public function resetRuntimeState(): void
     {
-        $nodeTypeManager = $this->getObjectManager()->get(NodeTypeManager::class);
-        // This is a WORKAROUND, and should be done in NodeTypeManager::overrideNodeTypes().
-        ObjectAccess::setProperty($nodeTypeManager, 'cachedSubNodeTypes', [], true);
+        FakeContentDimensionSourceFactory::reset();
+        FakeNodeTypeManagerFactory::reset();
+        $this->nodeTypesConfiguration = [];
+
+        $documentRenderer = $this->objectManager->get(DocumentRenderer::class);
+        $customFusionView = ObjectAccess::getProperty($documentRenderer, 'fusionView', true);
+        ObjectAccess::setProperty($customFusionView, 'fusionConfigurationPerSiteNode', [], true);
+
+        $this->stubPrunnerApiService->calls = [];
+        $incrementalContentReleaseHandler = $this->objectManager->get(IncrementalContentReleaseHandler::class);
+        ObjectAccess::setProperty($incrementalContentReleaseHandler, 'nodePublishedInThisRequest', false, true);
+
+        $this->objectManager->get(PersistenceManagerInterface::class)->clearState();
     }
 
-    /**
-     * @return ObjectManagerInterface
-     */
     public function getObjectManager(): ObjectManagerInterface
     {
         return $this->objectManager;
     }
 
-    /**
-     * Persist any changes - part of what the content repository's step definitions expect from their context.
-     */
-    public function persistAll(): void
-    {
-        $persistenceManager = $this->getObject(PersistenceManagerInterface::class);
-        $persistenceManager->persistAll();
-        $persistenceManager->clearState();
-
-        // roles are read through the policy service, which holds on to them across a database reset
-        $this->policyService->reset();
+    protected function getContentRepositoryService(
+        ContentRepositoryServiceFactoryInterface $factory,
+    ): ContentRepositoryServiceInterface {
+        return $this->contentRepositoryRegistry->buildService($this->currentContentRepository->id, $factory);
     }
 
-    /**
-     * The authentication a scenario gets through "I am authenticated with role" needs a security context which has
-     * a request, and a TestingProvider to hand the account to.
-     */
-    private function setupSecurity(): void
+    protected function createContentRepository(ContentRepositoryId $contentRepositoryId): ContentRepository
     {
-        $this->policyService = $this->getObject(PolicyService::class);
-        $this->authenticationManager = $this->getObject(AuthenticationProviderManager::class);
+        $this->contentRepositoryRegistry->resetFactoryInstance($contentRepositoryId);
+        $contentRepository = $this->contentRepositoryRegistry->get($contentRepositoryId);
+        FakeContentDimensionSourceFactory::reset();
+        FakeNodeTypeManagerFactory::reset();
 
-        // asking for the providers is what builds them, and with them the singleton TestingProvider
-        $providers = $this->getObject(TokenAndProviderFactoryInterface::class)->getProviders();
-        $this->testingProvider = $providers['TestingProvider'];
-
-        $httpRequest = $this->getObject(ServerRequestFactoryInterface::class)
-            ->createServerRequest('GET', 'http://localhost/');
-        $this->securityActionRequest = ActionRequest::fromHttpRequest($httpRequest);
-
-        $this->securityContext = $this->getObject(SecurityContext::class);
-        $this->securityContext->clearContext();
-        $this->securityContext->setRequest($this->securityActionRequest);
-    }
-
-    /**
-     * @Given /^I am authenticated with role "([^"]*)"$/
-     */
-    public function iAmAuthenticatedWithRole(string $roleIdentifier): void
-    {
-        $roles = [];
-        foreach (Arrays::trimExplode(',', $roleIdentifier) as $roleName) {
-            $roles[] = $this->policyService->getRole($roleName);
-        }
-
-        $account = new Account();
-        $account->setAccountIdentifier('TestAccount');
-        $account->setRoles($roles);
-
-        $this->testingProvider->setAuthenticationStatus(TokenInterface::AUTHENTICATION_SUCCESSFUL);
-        $this->testingProvider->setAccount($account);
-
-        $this->securityContext->clearContext();
-        $this->securityContext->setRequest($this->securityActionRequest);
-        $this->authenticationManager->authenticate();
+        return $contentRepository;
     }
 
     /**
      * @BeforeScenario @resetRedis
      */
-    public function resetRedis($event): void
+    public function resetRedis(BeforeScenarioScope $event): void
     {
         /** @var RedisClientManager $redisClientManager */
         $redisClientManager = $this->objectManager->get(RedisClientManager::class);
@@ -205,7 +181,7 @@ class FeatureContext implements Context
     /**
      * @Given I have a site for Site Node :siteNodeName with site package key :sitePackageKey with domain :domainName
      */
-    public function iHaveASite($siteNodeName, $sitePackageKey, $domainName)
+    public function iHaveASite(string $siteNodeName, string $sitePackageKey, string $domainName): void
     {
         $site = new Site($siteNodeName);
         $site->setState(Site::STATE_ONLINE);
@@ -225,13 +201,15 @@ class FeatureContext implements Context
         $domainRepository = $this->objectManager->get(DomainRepository::class);
         $domainRepository->add($domain);
 
-        $this->persistAll();
+        $persistenceManager = $this->objectManager->get(PersistenceManagerInterface::class);
+        $persistenceManager->persistAll();
+        $persistenceManager->clearState();
     }
 
     /**
      * @When I create a content release :contentReleaseIdentifier
      */
-    public function iCreateAContentRelease($contentReleaseIdentifier)
+    public function iCreateAContentRelease(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->getObjectManager()->get(RedisContentReleaseService::class);
@@ -247,7 +225,7 @@ class FeatureContext implements Context
     /**
      * @When I enumerate all nodes for content release :contentReleaseIdentifier
      */
-    public function iEnumerateAllNodesForContentRelease($contentReleaseIdentifier)
+    public function iEnumerateAllNodesForContentRelease(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $nodeEnumerator = $this->getObjectManager()->get(NodeEnumerator::class);
@@ -263,7 +241,7 @@ class FeatureContext implements Context
      *
      * @Given the currently live content release is :contentReleaseIdentifier
      */
-    public function theCurrentlyLiveContentReleaseIs($contentReleaseIdentifier)
+    public function theCurrentlyLiveContentReleaseIs(string $contentReleaseIdentifier): void
     {
         $redisClientManager = $this->getObjectManager()->get(RedisClientManager::class);
         $redisClientManager->getPrimaryRedis()->set('contentStore:current', $contentReleaseIdentifier);
@@ -272,7 +250,7 @@ class FeatureContext implements Context
     /**
      * @Then validating content release :contentReleaseIdentifier succeeds
      */
-    public function validatingContentReleaseSucceeds($contentReleaseIdentifier)
+    public function validatingContentReleaseSucceeds(string $contentReleaseIdentifier): void
     {
         // the command ends the process when it considers the release invalid, so getting past this line is half of
         // the assertion - the other half is that it did not mark the release as broken on the way
@@ -291,16 +269,20 @@ class FeatureContext implements Context
     /**
      * @When I copy the content release :sourceContentReleaseIdentifier to the content release :targetContentReleaseIdentifier
      */
-    public function iCopyTheContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier)
-    {
+    public function iCopyTheContentRelease(
+        string $sourceContentReleaseIdentifier,
+        string $targetContentReleaseIdentifier,
+    ): void {
         $this->copyContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier);
     }
 
     /**
      * @Then copying the content release :sourceContentReleaseIdentifier to the content release :targetContentReleaseIdentifier is refused
      */
-    public function copyingTheContentReleaseIsRefused($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier)
-    {
+    public function copyingTheContentReleaseIsRefused(
+        string $sourceContentReleaseIdentifier,
+        string $targetContentReleaseIdentifier,
+    ): void {
         try {
             $this->copyContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier);
         } catch (DecoupledContentStoreException $exception) {
@@ -310,8 +292,10 @@ class FeatureContext implements Context
         Assert::fail('Copying content release ' . $sourceContentReleaseIdentifier . ' should have been refused.');
     }
 
-    private function copyContentRelease($sourceContentReleaseIdentifier, $targetContentReleaseIdentifier): void
-    {
+    private function copyContentRelease(
+        string $sourceContentReleaseIdentifier,
+        string $targetContentReleaseIdentifier,
+    ): void {
         $sourceContentReleaseIdentifier = ContentReleaseIdentifier::fromString($sourceContentReleaseIdentifier);
         $targetContentReleaseIdentifier = ContentReleaseIdentifier::fromString($targetContentReleaseIdentifier);
         $redisReleaseCopyService = $this->getObjectManager()->get(RedisReleaseCopyService::class);
@@ -334,17 +318,17 @@ class FeatureContext implements Context
     }
 
     /**
-     * @When I enumerate the node at path :path for content release :contentReleaseIdentifier
+     * @When I enumerate the node :nodeIdentifiers for content release :contentReleaseIdentifier
      */
-    public function iEnumerateTheNodeAtPathForContentRelease($path, $contentReleaseIdentifier)
+    public function iEnumerateTheNodeForContentRelease(string $nodeIdentifiers, string $contentReleaseIdentifier): void
     {
-        $this->enumerateGivenNodes($this->nodeIdentifierForPath($path), $contentReleaseIdentifier);
+        $this->enumerateGivenNodes($nodeIdentifiers, $contentReleaseIdentifier);
     }
 
     /**
      * @Then enumerating the node :nodeIdentifiers for content release :contentReleaseIdentifier is refused
      */
-    public function enumeratingTheNodeIsRefused($nodeIdentifiers, $contentReleaseIdentifier)
+    public function enumeratingTheNodeIsRefused(string $nodeIdentifiers, string $contentReleaseIdentifier): void
     {
         try {
             $this->enumerateGivenNodes($nodeIdentifiers, $contentReleaseIdentifier);
@@ -355,7 +339,7 @@ class FeatureContext implements Context
         Assert::fail('Enumerating ' . $nodeIdentifiers . ' should have been refused.');
     }
 
-    private function enumerateGivenNodes($nodeIdentifiers, $contentReleaseIdentifier): void
+    private function enumerateGivenNodes(string $nodeIdentifiers, string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $quickPublishNodeEnumerator = $this->getObjectManager()->get(QuickPublishNodeEnumerator::class);
@@ -374,35 +358,16 @@ class FeatureContext implements Context
     }
 
     /**
-     * The fixtures do not spell out node identifiers, and a quick release is asked for exactly those.
-     */
-    private function nodeIdentifierForPath(string $path): string
-    {
-        $combinator = $this->getObjectManager()->get(NodeContextCombinator::class);
-
-        foreach ($combinator->sites() as $site) {
-            foreach ($combinator->siteNodeInContexts($site, 'live') as $siteNode) {
-                $node = $siteNode->getContext()->getNode($path);
-                if ($node instanceof NodeInterface) {
-                    return $node->getIdentifier();
-                }
-            }
-        }
-
-        Assert::fail('Could not find a node at path ' . $path);
-    }
-
-    /**
      * @Then the enumeration for content release :contentReleaseIdentifier contains :expectedCount node
      * @Then the enumeration for content release :contentReleaseIdentifier contains :expectedCount nodes
      */
-    public function theEnumerationContainsNode($contentReleaseIdentifier, $expectedCount)
+    public function theEnumerationContainsNode(string $contentReleaseIdentifier, string $expectedCount): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisEnumerationRepository = $this->getObjectManager()->get(RedisEnumerationRepository::class);
         $iterable = $redisEnumerationRepository->findAll($contentReleaseIdentifier);
         $enumerationAsArray = iterator_to_array(
-            (function () use ($iterable) {
+            (function () use ($iterable): Generator {
                 yield from $iterable;
             })(),
         );
@@ -418,17 +383,16 @@ class FeatureContext implements Context
      *
      * @Given the enumeration of content release :contentReleaseIdentifier is duplicated for a second document renderer
      */
-    public function theEnumerationIsDuplicatedForASecondDocumentRenderer($contentReleaseIdentifier)
+    public function theEnumerationIsDuplicatedForASecondDocumentRenderer(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisEnumerationRepository = $this->getObjectManager()->get(RedisEnumerationRepository::class);
 
         $enumerationOfSecondRenderer = [];
         foreach ($redisEnumerationRepository->findAll($contentReleaseIdentifier) as $enumeratedNode) {
-            $enumerationOfSecondRenderer[] = EnumeratedNode::fromJsonString((string) json_encode(array_merge(
-                $enumeratedNode->jsonSerialize(),
-                ['rendererId' => 'secondRenderer'],
-            )));
+            $enumerationOfSecondRenderer[] = EnumeratedNode::fromJsonString((string) json_encode(array_merge($enumeratedNode->jsonSerialize(), [
+                'rendererId' => 'secondRenderer',
+            ])));
         }
 
         $redisEnumerationRepository->addDocumentNodesToEnumeration(
@@ -440,7 +404,7 @@ class FeatureContext implements Context
     /**
      * @When I run the render-orchestrator control loop once for content release :contentReleaseIdentifier
      */
-    public function iRunTheRenderOrchestratorControlLoopOnceForContentRelease($contentReleaseIdentifier)
+    public function iRunTheRenderOrchestratorControlLoopOnceForContentRelease(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $nodeRenderOrchestrator = $this->getObjectManager()->get(NodeRenderOrchestrator::class);
@@ -454,7 +418,9 @@ class FeatureContext implements Context
             $contentReleaseIdentifier,
             $contentReleaseLogger,
         ));
-        $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
+        $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(
+            RenderingQueueFilledEvent::class,
+        );
 
         echo $this->renderOrchestratorProcessBufferedOutput->fetch();
     }
@@ -462,16 +428,18 @@ class FeatureContext implements Context
     /**
      * @When I continue running the render-orchestrator control loop
      */
-    public function iContinueRunningTheRenderOrchestratorControlLoop()
+    public function iContinueRunningTheRenderOrchestratorControlLoop(): void
     {
-        $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(RenderingQueueFilledEvent::class);
+        $this->renderOrchestratorProcessLastEvent = $this->renderOrchestratorProcess->runUntilEventEncountered(
+            RenderingQueueFilledEvent::class,
+        );
         echo $this->renderOrchestratorProcessBufferedOutput->fetch();
     }
 
     /**
      * @Then I expect the render-orchestrator control loop to exit with status code :expectedStatusCode
      */
-    public function iExpectTheRenderOrchestratorControlLoopToExitWithStatusCode($expectedStatusCode)
+    public function iExpectTheRenderOrchestratorControlLoopToExitWithStatusCode(string $expectedStatusCode): void
     {
         Assert::assertNotNull(
             $this->renderOrchestratorProcessLastEvent,
@@ -493,35 +461,33 @@ class FeatureContext implements Context
     /**
      * @Then I expect the content release :contentReleaseIdentifier to have the completion status failed
      */
-    public function iExpectTheContentReleaseToHaveTheCompletionStatusFailed($contentReleaseIdentifier)
+    public function iExpectTheContentReleaseToHaveTheCompletionStatusFailed(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
         assert($redisContentReleaseService instanceof RedisContentReleaseService);
-        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)
-            ->getStatus();
-        Assert::isTrue($renderStatus->isFailed(), 'Completion Status should be failed');
-        Assert::isFalse($renderStatus->isSuccessful(), 'Completion Status should not be successful');
+        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->status;
+        Assert::assertTrue($renderStatus->isFailed(), 'Completion Status should be failed');
+        Assert::assertFalse($renderStatus->isSuccessful(), 'Completion Status should not be successful');
     }
 
     /**
      * @Then I expect the content release :contentReleaseIdentifier to have the completion status success
      */
-    public function iExpectTheContentReleaseToHaveTheCompletionStatusSuccess($contentReleaseIdentifier)
+    public function iExpectTheContentReleaseToHaveTheCompletionStatusSuccess(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisContentReleaseService = $this->objectManager->get(RedisContentReleaseService::class);
         assert($redisContentReleaseService instanceof RedisContentReleaseService);
-        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)
-            ->getStatus();
-        Assert::isTrue($renderStatus->isSuccessful(), 'Completion Status should be success');
-        Assert::isFalse($renderStatus->isFailed(), 'Completion Status should not be failed');
+        $renderStatus = $redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier)->status;
+        Assert::assertTrue($renderStatus->isSuccessful(), 'Completion Status should be success');
+        Assert::assertFalse($renderStatus->isFailed(), 'Completion Status should not be failed');
     }
 
     /**
      * @When I run the renderer for content release :contentReleaseIdentifier until the queue is empty
      */
-    public function iRunTheRendererForContentReleaseUntilTheQueueIsEmpty($contentReleaseIdentifier)
+    public function iRunTheRendererForContentReleaseUntilTheQueueIsEmpty(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $nodeRenderer = $this->getObjectManager()->get(NodeRenderer::class);
@@ -542,8 +508,10 @@ class FeatureContext implements Context
     /**
      * @When I run the renderer for content release :contentReleaseIdentifier for :expectedRenderCount renders
      */
-    public function iRunTheRendererForContentReleaseForRenders($contentReleaseIdentifier, $expectedRenderCount)
-    {
+    public function iRunTheRendererForContentReleaseForRenders(
+        string $contentReleaseIdentifier,
+        string $expectedRenderCount,
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $nodeRenderer = $this->getObjectManager()->get(NodeRenderer::class);
 
@@ -566,7 +534,7 @@ class FeatureContext implements Context
     /**
      * @Then during rendering of content release :contentReleaseIdentifier, no errors occured
      */
-    public function duringRenderingOfContentReleaseNoErrorsOccured($contentReleaseIdentifier)
+    public function duringRenderingOfContentReleaseNoErrorsOccured(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisRenderingErrorManager = $this->getObjectManager()->get(RedisRenderingErrorManager::class);
@@ -579,8 +547,10 @@ class FeatureContext implements Context
     /**
      * @Then /^during rendering of content release "([^"].*)", ([0-9]+) errors? occured$/
      */
-    public function duringRenderingOfContentReleaseSomeErrorsOccured($contentReleaseIdentifier, $expectedNumberOfErrors)
-    {
+    public function duringRenderingOfContentReleaseSomeErrorsOccured(
+        string $contentReleaseIdentifier,
+        string $expectedNumberOfErrors,
+    ): void {
         if ($expectedNumberOfErrors === 'no') {
             $this->duringRenderingOfContentReleaseNoErrorsOccured($contentReleaseIdentifier);
             return;
@@ -592,54 +562,45 @@ class FeatureContext implements Context
         Assert::assertCount((int) $expectedNumberOfErrors, $renderingErrors);
     }
 
-    private const DEFAULT_NODETYPES_CONFIG = <<<EOF
-        unstructured:
-          abstract: true
-
-        Neos.Neos:FallbackNode:
-          abstract: true
-
-        Neos.Neos:Document:
-          abstract: true
-
-        Neos.Neos:Content:
-          abstract: true
-
-        Neos.Neos:ContentCollection:
-          abstract: true
-
-
-        EOF;
-
     /**
+     * The first variant goes before "I define a content repository", the additional one rebuilds the content
+     * repository with the extended node types.
+     *
      * @Given /^I have the following (additional |)NodeTypes configuration:$/
      */
-    public function iHaveTheFollowingNodetypesConfiguration($additional, $nodeTypesConfiguration)
-    {
-        if (strlen($additional) > 0) {
-            $configuration = Arrays::arrayMergeRecursiveOverrule(
-                $this->nodeTypesConfiguration,
-                Yaml::parse($nodeTypesConfiguration->getRaw()),
+    public function iHaveTheFollowingNodetypesConfiguration(
+        string $additional,
+        PyStringNode $nodeTypesConfiguration,
+    ): void {
+        $givenConfiguration = Yaml::parse($nodeTypesConfiguration->getRaw()) ?? [];
+        if ($additional === '') {
+            $this->nodeTypesConfiguration = Arrays::arrayMergeRecursiveOverrule(
+                Yaml::parse(self::BASE_NODE_TYPES),
+                $givenConfiguration,
             );
-        } else {
-            $combined = self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw();
-            $this->nodeTypesConfiguration = Yaml::parse(
-                self::DEFAULT_NODETYPES_CONFIG . $nodeTypesConfiguration->getRaw(),
-            );
-            $configuration = $this->nodeTypesConfiguration;
+            FakeNodeTypeManagerFactory::setConfiguration($this->nodeTypesConfiguration);
+            return;
         }
-        $this->getObjectManager()->get(NodeTypeManager::class)->overrideNodeTypes($configuration);
+
+        $this->nodeTypesConfiguration = Arrays::arrayMergeRecursiveOverrule(
+            $this->nodeTypesConfiguration,
+            $givenConfiguration,
+        );
+        $this->iChangeTheNodeTypesInContentRepositoryTo($this->currentContentRepository->id->value, new PyStringNode(
+            [Yaml::dump($this->nodeTypesConfiguration, 10)],
+            0,
+        ));
     }
 
     /**
      * @Then I expect the content release :contentReleaseIdentifier to contain the following content for URI :uri at CSS selector :cssSelector:
      */
     public function iExpectTheContentReleaseToContainTheFollowingContentForUriAtCssSelector(
-        $contentReleaseIdentifier,
-        $uri,
-        $cssSelector,
+        string $contentReleaseIdentifier,
+        string $uri,
+        string $cssSelector,
         PyStringNode $expected,
-    ) {
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
         $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
@@ -660,11 +621,11 @@ class FeatureContext implements Context
      * @Then I expect the content release :contentReleaseIdentifier to contain the following HTML content for URI :uri at CSS selector :cssSelector:
      */
     public function iExpectTheContentReleaseToContainTheFollowingHtmlContentForUriAtCssSelector(
-        $contentReleaseIdentifier,
-        $uri,
-        $cssSelector,
+        string $contentReleaseIdentifier,
+        string $uri,
+        string $cssSelector,
         PyStringNode $expected,
-    ) {
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
         $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
@@ -684,8 +645,10 @@ class FeatureContext implements Context
     /**
      * @Then I expect the content release :contentReleaseIdentifier to not contain anything for URI :uri
      */
-    public function iExpectTheContentReleaseToNotContainAnythingForUri($contentReleaseIdentifier, $uri)
-    {
+    public function iExpectTheContentReleaseToNotContainAnythingForUri(
+        string $contentReleaseIdentifier,
+        string $uri,
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisClient = $this->getObjectManager()->get(RedisClientManager::class);
         $redisKeyService = $this->getObjectManager()->get(RedisKeyService::class);
@@ -697,21 +660,21 @@ class FeatureContext implements Context
     }
 
     /**
+     * Flushes what the content cache flusher collected to flush at the end of a request - the tags of the changed
+     * nodes are flushed during the catch-up already.
+     *
      * @Given /^I flush the content cache depending on the modified nodes$/
      */
-    public function iFlushTheContentCacheDependingOnTheModifiedNodes()
+    public function iFlushTheContentCacheDependingOnTheModifiedNodes(): void
     {
-        $contentCacheFlusher = $this->getObjectManager()->get(ContentCacheFlusher::class);
-
-        $contentCacheFlusher->shutdownObject();
-        ObjectAccess::setProperty($contentCacheFlusher, 'tagsToFlush', [], true);
+        $this->getObjectManager()->get(ContentCacheFlusher::class)->flushCollectedTags();
     }
 
     /**
      * @Then the rendering queue for content release :contentReleaseIdentifier contains :expectedCount document
      * @Then the rendering queue for content release :contentReleaseIdentifier contains :expectedCount documents
      */
-    public function theRenderingQueueContainsDocument($contentReleaseIdentifier, $expectedCount)
+    public function theRenderingQueueContainsDocument(string $contentReleaseIdentifier, string $expectedCount): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $redisRenderingQueue = $this->getObjectManager()->get(RedisRenderingQueue::class);
@@ -723,7 +686,7 @@ class FeatureContext implements Context
     /**
      * @Then a next content release was triggered
      */
-    public function aNextContentReleaseWasTriggered()
+    public function aNextContentReleaseWasTriggered(): void
     {
         $incrementalContentReleaseHandler = $this->objectManager->get(IncrementalContentReleaseHandler::class);
         $incrementalContentReleaseHandler->startContentReleaseIfNodesWerePublishedBefore();
@@ -738,7 +701,7 @@ class FeatureContext implements Context
     /**
      * @Then no next content release was triggered
      */
-    public function noNextContentReleaseWasTriggered()
+    public function noNextContentReleaseWasTriggered(): void
     {
         $incrementalContentReleaseHandler = $this->objectManager->get(IncrementalContentReleaseHandler::class);
         $incrementalContentReleaseHandler->startContentReleaseIfNodesWerePublishedBefore();
@@ -748,25 +711,5 @@ class FeatureContext implements Context
         // reset all invocations
         $this->stubPrunnerApiService->calls = [];
         ObjectAccess::setProperty($incrementalContentReleaseHandler, 'nodePublishedInThisRequest', false, true);
-    }
-
-    /**
-     * @When I publish unpublished nodes of workspace :workspaceName
-     */
-    public function iPublishUnpublishedNodesOfWorkspace($workspaceName)
-    {
-        $publishingService = $this->getPublishingService();
-        $workspaceRepository = $this->getObjectManager()->get(WorkspaceRepository::class);
-        assert($workspaceRepository instanceof WorkspaceRepository);
-        $workspace = $workspaceRepository->findByIdentifier($workspaceName);
-
-        $unpublishedNodes = $publishingService->getUnpublishedNodes($workspace);
-        // NOTE: we explicitly need to specify the target workspace here, otherwise, the *node's workspace base workspace*
-        // $node->getWorkspace()->getBaseWorkspace() is used in PublishingService.
-        // This is WRONG I believe, I guess we would need $node->getContext()->getWorkspace()->getBaseWorkspace().
-        // By passing in the workspace explicitly here, we circumvent the issue.
-        $publishingService->publishNodes($unpublishedNodes, $workspace->getBaseWorkspace());
-        $this->objectManager->get(PersistenceManagerInterface::class)->persistAll();
-        $this->resetNodeInstances();
     }
 }

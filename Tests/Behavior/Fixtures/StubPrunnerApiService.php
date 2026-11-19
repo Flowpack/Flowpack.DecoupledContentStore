@@ -9,7 +9,7 @@ use Flowpack\Prunner\ValueObject\JobId;
 use Flowpack\Prunner\ValueObject\PipelineName;
 use Flowpack\Prunner\ValueObject\QueuePartitionName;
 
-class StubPrunnerApiService extends PrunnerApiService
+final class StubPrunnerApiService extends PrunnerApiService
 {
     public array $calls = [];
 

@@ -7,10 +7,8 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\ProcessEvents;
 use Flowpack\DecoupledContentStore\NodeRendering\InterruptibleProcessRuntimeEventInterface;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class QueueEmptyEvent implements InterruptibleProcessRuntimeEventInterface
+#[Flow\Proxy(false)]
+final readonly class QueueEmptyEvent implements InterruptibleProcessRuntimeEventInterface
 {
     public static function create(): self
     {

@@ -6,18 +6,17 @@ namespace Flowpack\DecoupledContentStore\Command;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\RedisPruneService;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
-class ContentStorePruneCommandController extends CommandController
+final class ContentStorePruneCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var RedisPruneService
-     */
-    protected $redisPruneService;
+    public function __construct(
+        private readonly RedisPruneService $redisPruneService,
+    ) {
+        parent::__construct();
+    }
 
-    public function pruneRedisInstanceCommand(string $redisInstanceIdentifier)
+    public function pruneRedisInstanceCommand(string $redisInstanceIdentifier): void
     {
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
 

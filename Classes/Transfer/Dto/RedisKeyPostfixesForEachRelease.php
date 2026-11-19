@@ -6,12 +6,12 @@ namespace Flowpack\DecoupledContentStore\Transfer\Dto;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 
-class RedisKeyPostfixesForEachRelease
+final readonly class RedisKeyPostfixesForEachRelease
 {
     /**
      * @var RedisKeyPostfixForEachRelease[]
      */
-    protected array $redisKeyPostfixes;
+    private array $redisKeyPostfixes;
 
     /**
      * @param RedisKeyPostfixForEachRelease[] $redisKeyPostfixes

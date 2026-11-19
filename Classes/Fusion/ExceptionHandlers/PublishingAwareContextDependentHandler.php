@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Fusion\ExceptionHandlers;
 
+use Exception;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
-use Neos\Flow\Annotations as Flow;
+use Neos\Fusion\Core\ExceptionHandlers\ContextDependentHandler;
 
-class PublishingAwareContextDependentHandler extends \Neos\Fusion\Core\ExceptionHandlers\ContextDependentHandler
+final class PublishingAwareContextDependentHandler extends ContextDependentHandler
 {
-    /**
-     * @Flow\Inject
-     * @var DocumentRenderer
-     */
-    protected $documentRenderer;
+    public function __construct(
+        private readonly DocumentRenderer $documentRenderer,
+    ) {}
 
     /**
      * {@inheritdoc}
+     * @throws Exception
      */
-    protected function handle($fusionPath, \Exception $exception, $referenceCode)
+    protected function handle($fusionPath, Exception $exception, $referenceCode): string
     {
         if ($this->documentRenderer->isRendering()) {
             throw $exception;

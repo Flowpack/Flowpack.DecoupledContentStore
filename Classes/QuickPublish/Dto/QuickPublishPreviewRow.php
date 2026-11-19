@@ -13,7 +13,7 @@ use Neos\Flow\Annotations as Flow;
  * identifiers wants to see which of them is the wrong one, not just that one of them is.
  */
 #[Flow\Proxy(false)]
-final class QuickPublishPreviewRow
+final readonly class QuickPublishPreviewRow
 {
     private string $nodeIdentifier;
 

@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\BackendUi\FusionObjects;
 
+use Neos\Error\Messages\Message;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\FlashMessage\FlashMessageService;
 use Neos\Fusion\FusionObjects\AbstractFusionObject;
 
-class RetrieveFlashMessagesImplementation extends AbstractFusionObject
+final class RetrieveFlashMessagesImplementation extends AbstractFusionObject
 {
-    /**
-     * @Flow\Inject
-     * @var FlashMessageService
-     */
-    protected $flashMessageService;
+    #[Flow\Inject]
+    protected FlashMessageService $flashMessageService;
 
-    public function evaluate()
+    /**
+     * @return Message[]
+     */
+    public function evaluate(): array
     {
         return $this->flashMessageService
             ->getFlashMessageContainerForRequest($this->runtime->getControllerContext()->getRequest())

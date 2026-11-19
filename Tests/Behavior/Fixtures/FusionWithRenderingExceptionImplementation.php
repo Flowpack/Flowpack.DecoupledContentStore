@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Tests\Behavior\Fixtures;
 
 use Neos\Fusion\FusionObjects\AbstractFusionObject;
+use RuntimeException;
 
-class FusionWithRenderingExceptionImplementation extends AbstractFusionObject
+final class FusionWithRenderingExceptionImplementation extends AbstractFusionObject
 {
-    public function evaluate()
+    public function evaluate(): never
     {
-        throw new \RuntimeException('We always fail');
+        throw new RuntimeException('We always fail');
     }
 }

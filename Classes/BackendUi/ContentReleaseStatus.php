@@ -35,7 +35,7 @@ enum ContentReleaseStatus: string
         if ($job->isCanceled()) {
             return self::CANCELED;
         }
-        if ($job->isErrored() || ($metadata?->getStatus()->isFailed() ?? false)) {
+        if ($job->isErrored() || ($metadata?->status->isFailed() ?? false)) {
             return self::FAILED;
         }
         if ($job->isCompleted()) {
@@ -51,10 +51,10 @@ enum ContentReleaseStatus: string
      */
     public static function jobGone(ContentReleaseMetadata $metadata): self
     {
-        if ($metadata->getStatus()->isFailed()) {
+        if ($metadata->status->isFailed()) {
             return self::FAILED;
         }
-        return $metadata->getSwitchTime() !== null ? self::SUCCESS : self::ABORTED;
+        return $metadata->switchTime !== null ? self::SUCCESS : self::ABORTED;
     }
 
     /**

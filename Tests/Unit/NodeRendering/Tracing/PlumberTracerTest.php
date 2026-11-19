@@ -10,6 +10,7 @@ use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\Tracing\RenderTracerProvider;
 use Neos\Flow\Tests\UnitTestCase;
 use ReflectionProperty;
+use RuntimeException;
 use Sandstorm\Plumber\Core\Domain\Model\ProfilingRun;
 use Sandstorm\Plumber\Core\Profiler;
 
@@ -82,17 +83,16 @@ final class PlumberTracerTest extends UnitTestCase
         $profiler->stop();
         $profiler->setConfigurationProvider(static fn() => ['profilePath' => 'php://memory']);
 
-        $tracer = (new PlumberTracerFactory())->build([]);
+        $tracer = new PlumberTracerFactory()->build([]);
         $tracer->mark('rendering started');
 
         $run = $profiler->stop();
-        self::assertInstanceOf(ProfilingRun::class, $run);
-        self::assertSame(['rendering started'], array_column($run->getTimestamps(), 'name'));
+        self::assertSame(['rendering started'], array_column($run?->getTimestamps() ?? [], 'name'));
     }
 
     public function testAFactoryWhichDoesNotImplementTheInterfaceIsRejected(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->buildProvider(['factoryObjectName' => \stdClass::class])->getTracer();
     }
 
@@ -181,7 +181,7 @@ final class PlumberTracerTest extends UnitTestCase
         $profiler->stop();
         $profiler->setConfigurationProvider(static fn(): array => ['profilePath' => $profilePath]);
 
-        $tracer = (new PlumberTracerFactory())->build(['minimumDocumentDurationMs' => 0]);
+        $tracer = new PlumberTracerFactory()->build(['minimumDocumentDurationMs' => 0]);
         $tracer->openSpan('anything');
         $tracer->closeSpan();
 
@@ -194,8 +194,8 @@ final class PlumberTracerTest extends UnitTestCase
 
     public function testClosingMoreSpansThanWereOpenedIsAnError(): void
     {
-        $this->expectException(\RuntimeException::class);
-        (new PlumberTracer(new ProfilingRun(), 0.0))->closeSpan();
+        $this->expectException(RuntimeException::class);
+        new PlumberTracer(new ProfilingRun(), 0.0)->closeSpan();
     }
 
     public function testTheRunIsTaggedWithTheContentReleaseItRendersFor(): void
@@ -210,10 +210,7 @@ final class PlumberTracerTest extends UnitTestCase
         ]);
 
         self::assertSame(['contentRelease:1756123456'], $run->getTags());
-        self::assertSame(
-            ['Content Release' => '1756123456', 'Renderer' => 'htmlViaFusion'],
-            $run->getOptions(),
-        );
+        self::assertSame(['Content Release' => '1756123456', 'Renderer' => 'htmlViaFusion'], $run->getOptions());
     }
 
     /**
@@ -222,11 +219,7 @@ final class PlumberTracerTest extends UnitTestCase
      */
     private function buildProvider(?array $configuration): RenderTracerProvider
     {
-        $provider = new RenderTracerProvider();
-        $reflection = new ReflectionProperty(RenderTracerProvider::class, 'configuration');
-        $reflection->setValue($provider, $configuration);
-
-        return $provider;
+        return new RenderTracerProvider($configuration);
     }
 
     /**

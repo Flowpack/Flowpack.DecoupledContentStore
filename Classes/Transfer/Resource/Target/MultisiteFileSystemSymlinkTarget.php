@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Transfer\Resource\Target;
 
+use Neos\Flow\ResourceManagement\Collection;
 use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Flow\ResourceManagement\Target\FileSystemSymlinkTarget;
+use Neos\Utility\Exception\PropertyNotAccessibleException;
 
-class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
+final class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
 {
     /**
      * @var string
@@ -21,17 +23,17 @@ class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
      * a "current" base URI. It's also needed to render nodes for multiple sites.
      *
      * @param string $baseUri
-     * @throws \Neos\Utility\Exception\PropertyNotAccessibleException
+     * @throws PropertyNotAccessibleException
      */
     public static function injectBaseUriIntoRelevantResourcePublishingTargets(
         string $baseUri,
         ResourceManager $resourceManager,
-    ) {
+    ): void {
         // Make sure the base URI ends with a slash
         $baseUri = rtrim($baseUri, '/') . '/';
 
         $collections = $resourceManager->getCollections();
-        /** @var \Neos\Flow\ResourceManagement\Collection $collection */
+        /** @var Collection $collection */
         foreach ($collections as $collection) {
             $target = $collection->getTarget();
             if ($target instanceof MultisiteFileSystemSymlinkTarget) {
@@ -43,7 +45,7 @@ class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
     /**
      * @return string
      */
-    protected function getResourcesBaseUri()
+    protected function getResourcesBaseUri(): string
     {
         if ($this->overrideHttpBaseUri === null) {
             return parent::getResourcesBaseUri();
@@ -59,7 +61,7 @@ class MultisiteFileSystemSymlinkTarget extends FileSystemSymlinkTarget
     /**
      * @param string $overrideHttpBaseUri
      */
-    public function setOverrideHttpBaseUri(string $overrideHttpBaseUri)
+    public function setOverrideHttpBaseUri(string $overrideHttpBaseUri): void
     {
         $this->overrideHttpBaseUri = $overrideHttpBaseUri;
     }

@@ -18,25 +18,15 @@ use Ramsey\Uuid\Uuid;
  *
  * This is extensible to control the format of the content releases, and to add additional metadata.
  */
-class LegacyWriter implements ContentReleaseWriterInterface
+final class LegacyWriter implements ContentReleaseWriterInterface
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
+    #[Flow\Inject]
+    protected RedisClientManager $redisClientManager;
 
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
+    #[Flow\Inject]
+    protected RedisKeyService $redisKeyService;
 
-    /**
-     * @Flow\Inject
-     * @var \Neos\Fusion\Core\Cache\ContentCache
-     */
-    protected $contentCache;
+    public function __construct(array $options = []) {}
 
     public function processRenderedDocument(
         ContentReleaseIdentifier $contentReleaseIdentifier,

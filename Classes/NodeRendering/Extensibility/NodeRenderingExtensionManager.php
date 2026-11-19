@@ -9,65 +9,63 @@ use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\DocumentNodeCacheValues;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContentCache;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Mvc\Controller\ControllerContext;
+use Neos\Flow\Mvc\ActionRequest;
+use Neos\Flow\ObjectManagement\ObjectManagerInterface;
+use RuntimeException;
 
-/**
- * @Flow\Scope("singleton")
- */
-class NodeRenderingExtensionManager
+#[Flow\Scope('singleton')]
+final class NodeRenderingExtensionManager
 {
     /**
-     * @Flow\InjectConfiguration("extensions.documentRenderers")
-     * @var array
-     */
-    protected $configuredDocumentRenderers;
-
-    /**
      * cache of the instantiated objects which are configured at {@see configuredDocumentRenderers}.enumeratorClassName
-     * @var DocumentEnumeratorInterface[]
+     * @var DocumentEnumeratorInterface[]|null
      */
-    protected $documentEnumerators;
+    private ?array $documentEnumerators = null;
 
     /**
      * cache of the instantiated objects which are configured at {@see configuredDocumentRenderers}.rendererClassName
-     * @var DocumentRendererInterface[]
+     * @var DocumentRendererInterface[]|null
      */
-    protected $documentRenderers;
+    private ?array $documentRenderers = null;
 
     /**
      * cache of the instantiated objects which are configured at {@see configuredDocumentRenderers}.contentReleaseWriters
      * @var ContentReleaseWriterInterface[][]
      */
-    protected $contentReleaseWriters;
-
-    /**
-     * @Flow\InjectConfiguration("extensions.documentMetadataGenerators")
-     * @var array
-     */
-    protected $configuredDocumentMetadataGenerators;
+    private array $contentReleaseWriters = [];
 
     /**
      * cache of the instanciated objects which are configured at {@see $configuredDocumentMetadataGenerators}
-     * @var DocumentMetadataGeneratorInterface[]
+     * @var DocumentMetadataGeneratorInterface[]|null
      */
-    protected $documentMetadataGenerators;
+    private ?array $documentMetadataGenerators = null;
+
+    /**
+     * @param array<string, mixed> $configuredDocumentRenderers
+     * @param array<string, mixed> $configuredDocumentMetadataGenerators
+     */
+    public function __construct(
+        private readonly ObjectManagerInterface $objectManager,
+        #[Flow\InjectConfiguration('extensions.documentRenderers')]
+        protected readonly array $configuredDocumentRenderers,
+        #[Flow\InjectConfiguration('extensions.documentMetadataGenerators')]
+        protected readonly array $configuredDocumentMetadataGenerators,
+    ) {}
 
     /**
      * @return iterable<EnumeratedNode>
      */
-    public function enumerateDocumentNode(NodeInterface $documentNode): iterable
+    public function enumerateDocumentNode(Node $documentNode): iterable
     {
-        if (!isset($this->documentEnumerators)) {
-            $this->documentEnumerators = self::instantiateExtensions(
-                $this->configuredDocumentRenderers,
-                DocumentEnumeratorInterface::class,
-                'enumeratorClassName',
-                'enumeratorOptions',
-                true,
-            );
-        }
+        $this->documentEnumerators ??= $this->instantiateExtensions(
+            $this->configuredDocumentRenderers,
+            DocumentEnumeratorInterface::class,
+            'enumeratorClassName',
+            'enumeratorOptions',
+            true,
+        );
         foreach ($this->documentEnumerators as $rendererId => $documentEnumerator) {
             foreach ($documentEnumerator->enumerateDocumentNode($documentNode) as $enumeratedNode) {
                 assert($enumeratedNode instanceof EnumeratedNode);
@@ -77,33 +75,32 @@ class NodeRenderingExtensionManager
         }
     }
 
-    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(EnumeratedNode $enumeratedNode): RenderedDocumentFromContentCache
-    {
+    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(
+        EnumeratedNode $enumeratedNode,
+    ): RenderedDocumentFromContentCache {
         return $this->rendererFor($enumeratedNode)->tryToExtractRenderingForEnumeratedNodeFromContentCache(
             $enumeratedNode,
         );
     }
 
     public function renderDocumentNodeVariant(
-        NodeInterface $node,
+        Node $node,
         EnumeratedNode $enumeratedNode,
         ContentReleaseLogger $contentReleaseLogger,
     ): void {
         $this->rendererFor($enumeratedNode)->renderDocumentNodeVariant($node, $enumeratedNode, $contentReleaseLogger);
     }
 
-    protected function rendererFor(EnumeratedNode $enumeratedNode): DocumentRendererInterface
+    private function rendererFor(EnumeratedNode $enumeratedNode): DocumentRendererInterface
     {
-        if (!isset($this->documentRenderers)) {
-            $this->documentRenderers = self::instantiateExtensions(
-                $this->configuredDocumentRenderers,
-                DocumentRendererInterface::class,
-                'rendererClassName',
-                preserveKey: true,
-            );
-        }
+        $this->documentRenderers ??= $this->instantiateExtensions(
+            $this->configuredDocumentRenderers,
+            DocumentRendererInterface::class,
+            'rendererClassName',
+            preserveKey: true,
+        );
         if (!array_key_exists($enumeratedNode->rendererId, $this->documentRenderers)) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 'No renderer found for renderer ID ' . $enumeratedNode->rendererId . ' - should never happen!',
             );
         }
@@ -113,30 +110,28 @@ class NodeRenderingExtensionManager
     /**
      * Execute Document Metadata Generators to modify $cacheValues
      *
-     * @param NodeInterface $node
+     * @param Node $node
      * @param array $arguments
-     * @param ControllerContext $controllerContext
+     * @param ActionRequest $actionRequest
      * @param DocumentNodeCacheValues $cacheValues
      * @return DocumentNodeCacheValues
      */
     public function runDocumentMetadataGenerators(
-        NodeInterface $node,
+        Node $node,
         array $arguments,
-        ControllerContext $controllerContext,
+        ActionRequest $actionRequest,
         DocumentNodeCacheValues $cacheValues,
     ): DocumentNodeCacheValues {
-        if (!isset($this->documentMetadataGenerators)) {
-            $this->documentMetadataGenerators = self::instantiateExtensions(
-                $this->configuredDocumentMetadataGenerators,
-                DocumentMetadataGeneratorInterface::class,
-            );
-        }
+        $this->documentMetadataGenerators ??= $this->instantiateExtensions(
+            $this->configuredDocumentMetadataGenerators,
+            DocumentMetadataGeneratorInterface::class,
+        );
         foreach ($this->documentMetadataGenerators as $documentMetadataGenerator) {
             assert($documentMetadataGenerator instanceof DocumentMetadataGeneratorInterface);
             $cacheValues = $documentMetadataGenerator->generateMetadata(
                 $node,
                 $arguments,
-                $controllerContext,
+                $actionRequest,
                 $cacheValues,
             );
         }
@@ -155,13 +150,11 @@ class NodeRenderingExtensionManager
         RenderedDocumentFromContentCache $renderedDocumentFromContentCache,
         ContentReleaseLogger $logger,
     ): void {
-        if (!isset($this->contentReleaseWriters[$enumeratedNode->rendererId])) {
-            $this->contentReleaseWriters[$enumeratedNode->rendererId] = self::instantiateExtensions(
-                $this->configuredDocumentRenderers[$enumeratedNode->rendererId]['contentReleaseWriters'],
-                ContentReleaseWriterInterface::class,
-                optionsKey: 'options',
-            );
-        }
+        $this->contentReleaseWriters[$enumeratedNode->rendererId] ??= $this->instantiateExtensions(
+            $this->configuredDocumentRenderers[$enumeratedNode->rendererId]['contentReleaseWriters'],
+            ContentReleaseWriterInterface::class,
+            optionsKey: 'options',
+        );
         foreach ($this->contentReleaseWriters[$enumeratedNode->rendererId] as $contentReleaseWriter) {
             assert($contentReleaseWriter instanceof ContentReleaseWriterInterface);
             $contentReleaseWriter->processRenderedDocument(
@@ -172,7 +165,12 @@ class NodeRenderingExtensionManager
         }
     }
 
-    private static function instantiateExtensions(
+    /**
+     * Instances come from the object manager, so extensions can use constructor injection. Configured options are
+     * passed as the first constructor argument, Flow autowires the remaining ones. Without configured options nothing
+     * is passed, so an extension which takes options must default them.
+     */
+    private function instantiateExtensions(
         array $configuration,
         string $extensionInterfaceName,
         string $classNameKey = 'className',
@@ -185,13 +183,14 @@ class NodeRenderingExtensionManager
                 continue;
             }
             $className = $extensionConfig[$classNameKey];
-            if ($optionsKey !== null) {
-                $instance = new $className($extensionConfig[$optionsKey] ?? []);
+            $options = $optionsKey !== null ? $extensionConfig[$optionsKey] ?? null : null;
+            if ($options !== null) {
+                $instance = $this->objectManager->get($className, $options);
             } else {
-                $instance = new $className();
+                $instance = $this->objectManager->get($className);
             }
             if (!$instance instanceof $extensionInterfaceName) {
-                throw new \RuntimeException(
+                throw new RuntimeException(
                     'Extension ' . get_class($instance) . ' does not implement ' . $extensionInterfaceName,
                 );
             }

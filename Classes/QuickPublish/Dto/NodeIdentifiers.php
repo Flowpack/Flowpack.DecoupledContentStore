@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\QuickPublish\Dto;
 
 use Flowpack\DecoupledContentStore\Exception;
+use IteratorAggregate;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
+use Traversable;
 
 /**
  * The node identifiers a quick content release was asked to publish.
@@ -17,9 +20,9 @@ use Neos\Flow\Annotations as Flow;
  * @implements \IteratorAggregate<int, string>
  */
 #[Flow\Proxy(false)]
-final class NodeIdentifiers implements \IteratorAggregate, \JsonSerializable
+final readonly class NodeIdentifiers implements IteratorAggregate, JsonSerializable
 {
-    private const IDENTIFIER_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
+    private const string IDENTIFIER_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
 
     /**
      * @var array<int, string>
@@ -86,9 +89,9 @@ final class NodeIdentifiers implements \IteratorAggregate, \JsonSerializable
     }
 
     /**
-     * @return \Traversable<int, string>
+     * @return Traversable<int, string>
      */
-    public function getIterator(): \Traversable
+    public function getIterator(): Traversable
     {
         yield from $this->identifiers;
     }

@@ -13,9 +13,9 @@ use Neos\Flow\Annotations as Flow;
  * A node identifier is a UUID, and it is the only UUID in any of those strings.
  */
 #[Flow\Proxy(false)]
-final class NodeIdentifierExtractor
+final readonly class NodeIdentifierExtractor
 {
-    private const NODE_IDENTIFIER_PATTERN = '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i';
+    private const string NODE_IDENTIFIER_PATTERN = '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i';
 
     public static function fromText(?string $text): ?string
     {

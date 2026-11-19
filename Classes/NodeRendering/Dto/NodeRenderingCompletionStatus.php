@@ -4,27 +4,24 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
+use InvalidArgumentException;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class NodeRenderingCompletionStatus implements \JsonSerializable
+#[Flow\Proxy(false)]
+final readonly class NodeRenderingCompletionStatus implements JsonSerializable
 {
-    private const SCHEDULED = 'scheduled';
-    private const RUNNING = 'running';
-    private const SUCCESS = 'success';
-    private const FAILED = 'failed';
+    private const string SCHEDULED = 'scheduled';
+    private const string RUNNING = 'running';
+    private const string SUCCESS = 'success';
+    private const string FAILED = 'failed';
 
-    /**
-     * @var string
-     */
-    private $status;
+    private string $status;
 
     private function __construct(string $status)
     {
         if (!in_array($status, [self::SCHEDULED, self::RUNNING, self::SUCCESS, self::FAILED])) {
-            throw new \InvalidArgumentException('NodeRenderingCompletionStatus "' . $status . '" not found.');
+            throw new InvalidArgumentException('NodeRenderingCompletionStatus "' . $status . '" not found.');
         }
         $this->status = $status;
     }
@@ -54,7 +51,7 @@ final class NodeRenderingCompletionStatus implements \JsonSerializable
         return new self(self::FAILED);
     }
 
-    public static function fromJsonString($jsonString): self
+    public static function fromJsonString(string $jsonString): self
     {
         return new self(json_decode($jsonString, true));
     }

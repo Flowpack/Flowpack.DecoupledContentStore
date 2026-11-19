@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\BackendUi;
 
 use Flowpack\DecoupledContentStore\Core\AutomaticReleaseSwitchService;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Flow\Annotations as Flow;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 use Neos\Flow\I18n\Translator;
 use Neos\Neos\Service\DataSource\AbstractDataSource;
 
@@ -30,20 +29,17 @@ final class AutomaticReleaseStatusDataSource extends AbstractDataSource
      */
     protected static $identifier = 'flowpack-decoupledcontentstore-automatic-release-status';
 
-    #[Flow\Inject]
-    protected AutomaticReleaseSwitchService $automaticReleaseSwitchService;
-
-    #[Flow\Inject]
-    protected Translator $translator;
-
-    #[Flow\Inject]
-    protected BackendDateFormatter $backendDateFormatter;
+    public function __construct(
+        private readonly AutomaticReleaseSwitchService $automaticReleaseSwitchService,
+        private readonly Translator $translator,
+        private readonly BackendDateFormatter $backendDateFormatter,
+    ) {}
 
     /**
      * @param array<mixed> $arguments
      * @return array<string, mixed>
      */
-    public function getData(?NodeInterface $node = null, array $arguments = []): array
+    public function getData(?Node $node = null, array $arguments = []): array
     {
         $pauseState = $this->automaticReleaseSwitchService->getPauseState();
 

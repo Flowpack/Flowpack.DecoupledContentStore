@@ -11,32 +11,25 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContent
 use Flowpack\DecoupledContentStore\NodeRendering\Extensibility\DocumentRendererInterface;
 use Flowpack\DecoupledContentStore\NodeRendering\Infrastructure\RedisContentCacheReader;
 use Flowpack\DecoupledContentStore\NodeRendering\Render\DocumentRenderer;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\Flow\Annotations as Flow;
+use Neos\ContentRepository\Core\Projection\ContentGraph\Node;
 
-class FusionHtmlRenderer implements DocumentRendererInterface
+final readonly class FusionHtmlRenderer implements DocumentRendererInterface
 {
-    /**
-     * @Flow\Inject
-     * @var RedisContentCacheReader
-     */
-    protected $redisContentCacheReader;
+    public function __construct(
+        private RedisContentCacheReader $redisContentCacheReader,
+        private DocumentRenderer $documentRenderer,
+    ) {}
 
-    /**
-     * @Flow\Inject
-     * @var DocumentRenderer
-     */
-    protected $documentRenderer;
-
-    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(EnumeratedNode $enumeratedNode): RenderedDocumentFromContentCache
-    {
+    public function tryToExtractRenderingForEnumeratedNodeFromContentCache(
+        EnumeratedNode $enumeratedNode,
+    ): RenderedDocumentFromContentCache {
         return $this->redisContentCacheReader->tryToExtractRenderingForEnumeratedNodeFromContentCache(DocumentNodeCacheKey::fromEnumeratedNode(
             $enumeratedNode,
         ));
     }
 
     public function renderDocumentNodeVariant(
-        NodeInterface $node,
+        Node $node,
         EnumeratedNode $enumeratedNode,
         ContentReleaseLogger $contentReleaseLogger,
     ): void {

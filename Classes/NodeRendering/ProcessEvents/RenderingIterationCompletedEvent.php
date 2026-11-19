@@ -10,10 +10,9 @@ use Neos\Flow\Annotations as Flow;
 
 /**
  * Notification that the rendering iteration was completed once. Emitted from {@see NodeRenderOrchestrator}
- *
- * @Flow\Proxy(false)
  */
-final class RenderingIterationCompletedEvent implements InterruptibleProcessRuntimeEventInterface
+#[Flow\Proxy(false)]
+final readonly class RenderingIterationCompletedEvent implements InterruptibleProcessRuntimeEventInterface
 {
     public static function create(): self
     {

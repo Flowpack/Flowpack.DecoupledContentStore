@@ -22,11 +22,7 @@ final readonly class RenderingIteration implements JsonSerializable
 
     public static function fromRenderingStatistics(int $iteration, RenderingStatistics $renderingStatistics): self
     {
-        return new self(
-            $iteration,
-            $renderingStatistics->getTotalJobs(),
-            $renderingStatistics->getRenderedJobs(),
-        );
+        return new self($iteration, $renderingStatistics->getTotalJobs(), $renderingStatistics->getRenderedJobs());
     }
 
     /**

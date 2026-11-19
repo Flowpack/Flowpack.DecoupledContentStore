@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Tests\Unit\Metrics\Dto;
 
+use DateTimeImmutable;
+use DateTimeInterface;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\WorkerErrorLog;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\PrunnerJobId;
@@ -18,19 +20,16 @@ use Neos\Flow\Tests\UnitTestCase;
  */
 final class ContentReleaseMetricsTest extends UnitTestCase
 {
-    private const RELEASE_ID = '20260904120000';
-    private const NODE_IDENTIFIER = 'de3b7ec6-b9d1-40d1-91ae-a9c1a4d47dab';
+    private const string RELEASE_ID = '20260904120000';
+    private const string NODE_IDENTIFIER = 'de3b7ec6-b9d1-40d1-91ae-a9c1a4d47dab';
 
     public function testIterationsAreCountedAndNumberedInOrder(): void
     {
-        $metrics = $this->createMetrics(
-            [
-                RenderingStatistics::create(0, 120, []),
-                RenderingStatistics::create(0, 8, []),
-                RenderingStatistics::create(0, 0, []),
-            ],
-            [],
-        );
+        $metrics = $this->createMetrics([
+            RenderingStatistics::create(0, 120, []),
+            RenderingStatistics::create(0, 8, []),
+            RenderingStatistics::create(0, 0, []),
+        ], []);
 
         self::assertSame(3, $metrics->iterationCount);
         self::assertSame(
@@ -46,10 +45,10 @@ final class ContentReleaseMetricsTest extends UnitTestCase
 
     public function testNewlyRenderedDocumentsAreTheOnesTheFirstIterationScheduled(): void
     {
-        $metrics = $this->createMetrics(
-            [RenderingStatistics::create(0, 12, []), RenderingStatistics::create(0, 0, [])],
-            [],
-        );
+        $metrics = $this->createMetrics([
+            RenderingStatistics::create(0, 12, []),
+            RenderingStatistics::create(0, 0, []),
+        ], []);
 
         self::assertSame(500, $metrics->documentCount);
         self::assertSame(12, $metrics->newlyRenderedDocumentCount);
@@ -68,8 +67,8 @@ final class ContentReleaseMetricsTest extends UnitTestCase
     {
         $metadata = ContentReleaseMetadata::create(
             PrunnerJobId::fromString('job-1'),
-            new \DateTimeImmutable('2026-09-04T12:00:00+00:00'),
-        )->withEndTime(new \DateTimeImmutable('2026-09-04T12:03:20+00:00'));
+            new DateTimeImmutable('2026-09-04T12:00:00+00:00'),
+        )->withEndTime(new DateTimeImmutable('2026-09-04T12:03:20+00:00'));
 
         $metrics = ContentReleaseMetrics::create(
             ContentReleaseIdentifier::fromString(self::RELEASE_ID),
@@ -78,7 +77,7 @@ final class ContentReleaseMetricsTest extends UnitTestCase
             [],
             [],
             [],
-            new \DateTimeImmutable('2026-09-04T13:00:00+00:00'),
+            new DateTimeImmutable('2026-09-04T13:00:00+00:00'),
         );
 
         self::assertSame(200, $metrics->durationSeconds);
@@ -88,7 +87,7 @@ final class ContentReleaseMetricsTest extends UnitTestCase
     public function testDurationOfAnAbortedReleaseIsMeasuredUpToTheReportingTime(): void
     {
         // an aborted release never gets an end time written
-        $metrics = $this->createMetrics([], [], new \DateTimeImmutable('2026-09-04T12:01:00+00:00'));
+        $metrics = $this->createMetrics([], [], new DateTimeImmutable('2026-09-04T12:01:00+00:00'));
 
         self::assertNull($metrics->endTime);
         self::assertSame(60, $metrics->durationSeconds);
@@ -96,9 +95,13 @@ final class ContentReleaseMetricsTest extends UnitTestCase
 
     public function testRenderingErrorIsSplitIntoMessageAndNode(): void
     {
-        $rawEntry = 'Exception while rendering - '
+        $rawEntry =
+            'Exception while rendering - '
             . json_encode([
-                'node' => 'Louis.Site:Document.Page ' . self::NODE_IDENTIFIER . ' (/sites/louis@live;language=de) - htmlViaFusion',
+                'node' =>
+                    'Louis.Site:Document.Page '
+                        . self::NODE_IDENTIFIER
+                        . ' (/sites/louis@live;language=de) - htmlViaFusion',
                 'nodeUri' => 'https://de.louis.de/foo',
             ]);
 
@@ -197,20 +200,20 @@ final class ContentReleaseMetricsTest extends UnitTestCase
     private function createMetrics(
         array $renderingStatistics,
         array $rawRenderingErrors,
-        ?\DateTimeInterface $now = null,
+        ?DateTimeInterface $now = null,
         ?array $workerErrorLogs = [],
     ): ContentReleaseMetrics {
         return ContentReleaseMetrics::create(
             ContentReleaseIdentifier::fromString(self::RELEASE_ID),
             ContentReleaseMetadata::create(
                 PrunnerJobId::fromString('job-1'),
-                new \DateTimeImmutable('2026-09-04T12:00:00+00:00'),
+                new DateTimeImmutable('2026-09-04T12:00:00+00:00'),
             ),
             500,
             $renderingStatistics,
             $rawRenderingErrors,
             $workerErrorLogs,
-            $now ?? new \DateTimeImmutable('2026-09-04T12:00:00+00:00'),
+            $now ?? new DateTimeImmutable('2026-09-04T12:00:00+00:00'),
         );
     }
 }

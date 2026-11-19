@@ -13,24 +13,15 @@ use Flowpack\DecoupledContentStore\NodeEnumeration\Domain\Dto\EnumeratedNode;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisEnumerationRepository
+#[Flow\Scope('singleton')]
+final readonly class RedisEnumerationRepository
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+    ) {}
 
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
-
-    public function clearDocumentNodesEnumeration(ContentReleaseIdentifier $releaseIdentifier)
+    public function clearDocumentNodesEnumeration(ContentReleaseIdentifier $releaseIdentifier): void
     {
         $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix(
             $releaseIdentifier,
@@ -41,8 +32,8 @@ class RedisEnumerationRepository
     public function addDocumentNodesToEnumeration(
         ContentReleaseIdentifier $releaseIdentifier,
         EnumeratedNode ...$enumeration,
-    ) {
-        $convertedEnumeration = array_map(function (EnumeratedNode $node) {
+    ): void {
+        $convertedEnumeration = array_map(function (EnumeratedNode $node): string|false {
             return json_encode($node);
         }, $enumeration);
         $this->redisClientManager->getPrimaryRedis()->rPush(

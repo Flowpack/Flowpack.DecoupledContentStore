@@ -26,25 +26,16 @@ use Throwable;
  * which keeps them longer than Redis keeps the release.
  */
 #[Flow\Scope('singleton')]
-class ContentReleaseMetricsService
+final readonly class ContentReleaseMetricsService
 {
-    #[Flow\Inject]
-    protected RedisContentReleaseService $redisContentReleaseService;
-
-    #[Flow\Inject]
-    protected RedisEnumerationRepository $redisEnumerationRepository;
-
-    #[Flow\Inject]
-    protected RedisRenderingTimeStatisticsStore $redisRenderingStatisticsStore;
-
-    #[Flow\Inject]
-    protected RedisRenderingErrorManager $redisRenderingErrorManager;
-
-    #[Flow\Inject]
-    protected WorkerErrorLogAggregator $workerErrorLogAggregator;
-
-    #[Flow\Inject]
-    protected PrunnerApiService $prunnerApiService;
+    public function __construct(
+        private RedisContentReleaseService $redisContentReleaseService,
+        private RedisEnumerationRepository $redisEnumerationRepository,
+        private RedisRenderingTimeStatisticsStore $redisRenderingStatisticsStore,
+        private RedisRenderingErrorManager $redisRenderingErrorManager,
+        private WorkerErrorLogAggregator $workerErrorLogAggregator,
+        private PrunnerApiService $prunnerApiService,
+    ) {}
 
     /**
      * Returns NULL when the release has no metadata - it was never created, or it has already been pruned.
@@ -94,7 +85,7 @@ class ContentReleaseMetricsService
     private function collectWorkerErrorLogs(ContentReleaseMetadata $metadata): ?array
     {
         try {
-            $job = $this->prunnerApiService->loadJobDetail($metadata->getPrunnerJobId()->toJobId());
+            $job = $this->prunnerApiService->loadJobDetail($metadata->prunnerJobId->toJobId());
             if ($job === null) {
                 return null;
             }

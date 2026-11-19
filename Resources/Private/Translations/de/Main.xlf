@@ -89,6 +89,11 @@
 				<source>Content release {0} was started and publishes the pages you named.</source>
                 <target state="final">Content-Release {0} wurde gestartet und veröffentlicht die genannten Seiten.</target>
 			</trans-unit>
+            <!-- {0}: the content store identifier -->
+            <trans-unit id="manualSwitch.disabled.flashMessage" xml:space="preserve" approved="yes">
+				<source>Switching content releases on {0} is disabled in this environment.</source>
+                <target state="final">Das Umschalten von Content-Releases auf {0} ist in dieser Umgebung deaktiviert.</target>
+			</trans-unit>
 		</body>
 	</file>
 </xliff>

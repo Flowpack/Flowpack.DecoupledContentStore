@@ -21,7 +21,11 @@ prototype(Neos.Neos:Page) {
 	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwarePageHandler'
 }
 
-prototype(Neos.Neos:Breadcrumb) {
+prototype(Neos.Neos:BreadcrumbMenu) {
+	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareContextDependentHandler'
+}
+
+prototype(Neos.Neos:DimensionsMenu) {
 	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareContextDependentHandler'
 }
 
@@ -37,6 +41,11 @@ prototype(Neos.Neos:ContentComponent) {
 	@exceptionHandler = 'Flowpack\\DecoupledContentStore\\Fusion\\ExceptionHandlers\\PublishingAwareNodeWrappingHandler'
 }
 
+# Tags the cache with the rendered asset, see Flowpack\DecoupledContentStore\Fusion\ImageUriImplementation
+prototype(Neos.Neos:ImageUri) {
+	@class = 'Flowpack\\DecoupledContentStore\\Fusion\\ImageUriImplementation'
+}
+
 prototype(Flowpack.DecoupledContentStore:DocumentRendering) < prototype(Neos.Fusion:Case)
 
 documentRendering < root
@@ -48,12 +57,5 @@ documentRendering = Flowpack.DecoupledContentStore:DocumentRendering
 # HINT: Because the Flowpack.DecoupledContentStore package copies the `root` key to `documentRendering`, we need to apply the fix twice.
 root.@cache.entryTags.2 >
 documentRendering.@cache.entryTags.2 >
-
-
-
-# bugfix for "when images change, trigger correct cache flushes" (see FixedAssetHandlingInContentCacheFlusherAspect for explanation)
-prototype(Neos.Neos:ImageUri) {
-    @class = 'Flowpack\\DecoupledContentStore\\Fusion\\ImageUriImplementation'
-}
 
 

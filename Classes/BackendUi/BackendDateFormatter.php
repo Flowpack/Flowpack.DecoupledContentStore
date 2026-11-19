@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\BackendUi;
 
+use DateTimeInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\I18n\Cldr\Reader\DatesReader;
 use Neos\Flow\I18n\Formatter\DatetimeFormatter;
@@ -17,15 +18,14 @@ use Neos\Flow\I18n\Service as LocalizationService;
  * configuration for us.
  */
 #[Flow\Scope('singleton')]
-class BackendDateFormatter
+final readonly class BackendDateFormatter
 {
-    #[Flow\Inject]
-    protected LocalizationService $localizationService;
+    public function __construct(
+        private LocalizationService $localizationService,
+        private DatetimeFormatter $datetimeFormatter,
+    ) {}
 
-    #[Flow\Inject]
-    protected DatetimeFormatter $datetimeFormatter;
-
-    public function format(\DateTimeInterface $dateTime): string
+    public function format(DateTimeInterface $dateTime): string
     {
         return $this->datetimeFormatter->formatDateTime(
             $dateTime,

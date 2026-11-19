@@ -13,7 +13,7 @@ use Neos\Flow\Annotations as Flow;
  * State of the switch which suppresses automatically triggered content releases.
  */
 #[Flow\Proxy(false)]
-final class AutomaticReleasePauseState
+final readonly class AutomaticReleasePauseState
 {
     private DateTimeImmutable $pausedAt;
 

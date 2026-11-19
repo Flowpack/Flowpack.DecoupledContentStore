@@ -8,30 +8,34 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwitchService;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
 /**
  * Commands for the SWITCH stage in the pipeline. Not meant to be called manually.
  */
-class ContentReleaseSwitchCommandController extends CommandController
+final class ContentReleaseSwitchCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var RedisReleaseSwitchService
-     */
-    protected $redisReleaseSwitchService;
+    public function __construct(
+        private readonly RedisReleaseSwitchService $redisReleaseSwitchService,
+    ) {
+        parent::__construct();
+    }
 
-    public function switchActiveContentReleaseCommand(string $redisInstanceIdentifier, string $contentReleaseIdentifier)
-    {
+    public function switchActiveContentReleaseCommand(
+        string $redisInstanceIdentifier,
+        string $contentReleaseIdentifier,
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
-        $this->redisReleaseSwitchService->switchContentRelease(
+        $switched = $this->redisReleaseSwitchService->switchContentRelease(
             $redisInstanceIdentifier,
             $contentReleaseIdentifier,
             $logger,
         );
+        if (!$switched) {
+            $this->quit(1);
+        }
     }
 }

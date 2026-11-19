@@ -16,12 +16,12 @@ open-source way, based on the learnings of the first iteration. Especially the r
 
 ## Versioning Scheme
 
-| Package Version             | Neos / Flow Version | Released? | Supported              | Remarks                                                                                                 |
-|-----------------------------|---------------------|-----------|------------------------|---------------------------------------------------------------------------------------------------------|
-| 2.x                         | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. |
-| 3.x                         | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to make configuration more readable.                                    |
-| 4.x (current `main` branch) | 8.x                 | ☑️        | current active release | Bumped minimum PHP version to 8.2   . Currently used in production in bigger sites.                     |
-| 5.x                         | 9.x                 | ⛔️        | ⛔️                     | Coming #soon                                                                                            |
+| Package Version                       | Neos / Flow Version | Released? | Supported              | Remarks                                                                                                 |
+|---------------------------------------|---------------------|-----------|------------------------|---------------------------------------------------------------------------------------------------------|
+| 2.x                                   | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to support **different renderers** and more flexible rendering overall. |
+| 3.x                                   | 8.x                 | ☑️        | ⛔️️️                     | Breaking configuration changes, to make configuration more readable.                                    |
+| 4.x                                   | 8.x                 | ☑️        | ️️️️⛔️️️️️ ️ ️                   | Bumped minimum PHP version to 8.2.                                                                      |
+| 5.x           (current `main` branch) | 9.x                 | ☑️️        | current active release | Bumped minimum PHP version to 8.4. Currently used in production in bigger sites.                        |
 
 ## Upgrade guides
 
@@ -248,6 +248,20 @@ To enable this feature, do the following:
             database: 11
     ```
 
+   Two optional keys per content store control switching it by hand in the backend module:
+
+    ```yaml
+          staging:
+            # false hides the switch and transfer buttons for this store and refuses the request (default: true),
+            # e.g. from an environment variable: '%env(bool):ENABLE_STAGING%'
+            manualSwitchEnabled: true
+            # shown as a notice after a release was switched or transferred to this store by hand (default: none)
+            manualSwitchNotice: 'Also start the import on the staging site.'
+    ```
+
+   They only apply to the backend module; the `contentReleaseSwitch:switchActiveContentRelease` command and the
+   pipelines ignore them.
+
 2. In `pipelines.yml`, underneath `4) TRANSFER`, comment-in and adjust the `transfer_content` task.
 
 3. In `pipelines.yml`, underneath `5) TRANSFER`, comment-in the additional
@@ -446,12 +460,17 @@ the package grants to `Neos.Neos:Administrator`. It is separate from the module 
 editors watch the module can still restrict who may stop everybody's publishes from going live. The read-only status the
 content-module warning uses is outside the target, so editors can see the banner.
 
+Everything in the module which changes what the delivery layer serves sits behind the
+`Flowpack.DecoupledContentStore:ReleaseSwitch` privilege target, also granted to `Neos.Neos:Administrator`: switching a
+content store to a release, *Transfer and switch on …*, toggling the config epoch, removing a release and pruning a
+content store. Grant it to another role to let that role do these.
+
 ### Publishing single documents
 
 With automatic releases paused, the module offers *Quick publish pages*. Paste the node identifiers of the documents to
 publish, one per line. The confirmation page then shows one row per dimension variant with its title, path, dimensions,
 node type and a link into the Neos backend, and flags every row which will **not** be published — a page which is
-hidden, orphaned, of a node type outside `nodeRendering.nodeTypeWhitelist`, or an identifier which resolves nowhere at
+hidden, of a node type outside `nodeRendering.nodeTypeWhitelist`, or an identifier which resolves nowhere at
 all. Check those before you continue: a page you meant to fix would otherwise silently stay as it is.
 
 The identifiers are checked against the identifier format before they are used anywhere. They end up inside a shell
@@ -584,16 +603,22 @@ final content release. Read the next section how this works.
 You can completely define how a content release is laid out in Redis for consumption by your delivery layer.
 
 By implementing a custom `ContentReleaseWriter`, you can specify how the rendered content is stored in Redis.
+`ContentReleaseWriterInterface` includes the constructor `__construct(array $options = [])`, which receives the
+writer's configured `options`; inject other dependencies with `#[Flow\Inject]` on properties.
 
-Again, this is registered in `Settings.yaml`:
+Writers are registered per document renderer in `Settings.yaml`; `options` is optional:
 
 ```yaml
 Flowpack:
   DecoupledContentStore:
     extensions:
-      contentReleaseWriters:
-        'yourMetadataReleaseWriter':
-          className: 'Your\Extra\MetadataWriter'
+      documentRenderers:
+        htmlViaFusion:
+          contentReleaseWriters:
+            'yourMetadataReleaseWriter':
+              className: 'Your\Extra\MetadataWriter'
+              options:
+                yourOption: 'value'
 ```
 
 ### Writing Custom Data to the Content Release
@@ -645,28 +670,48 @@ Implement the slot and enumerate additional nodes depending on the node type:
 
 ```php
 <?php
-class NodeListsEnumerator
+final readonly class NodeListsEnumerator
 {
-    public function enumerateNodeLists(EnumeratedNode $enumeratedNode, ContentReleaseIdentifier $releaseIdentifier, ContentReleaseLogger $logger)
-    {
-        $nodeTypeName = $enumeratedNode->getNodeTypeName();
-        $nodeType = $this->nodeTypeManager->getNodeType($nodeTypeName);
-        if ($nodeType->isOfType('Vendor.Site:Document.Blog.Folder')) {
-            // Get the node and count the number of pages to render
-            // $pageCount = ...
+    public function __construct(
+        private ContentRepositoryRegistry $contentRepositoryRegistry,
+        private RedisEnumerationRepository $redisEnumerationRepository,
+    ) {}
 
-            $pageCount = ceil($postCount / (float)$this->perPage);
-            if ($pageCount <= 1) {
-                return;
-            }
-
-            // Start after the first page, because the first page will be the document without arguments
-            for ($page = 2; $page <= $pageCount; $page++) {
-                $enumeratedNodes[] = EnumeratedNode::fromNode($documentNode, ['page' => $page]);
-            }
-
-            $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeratedNodes);
+    public function enumerateNodeLists(
+        EnumeratedNode $enumeratedNode,
+        ContentReleaseIdentifier $releaseIdentifier,
+        ContentReleaseLogger $logger,
+    ): void {
+        $nodeAddress = $enumeratedNode->getNodeAddress();
+        $contentRepository = $this->contentRepositoryRegistry->get($nodeAddress->contentRepositoryId);
+        $nodeType = $contentRepository->getNodeTypeManager()->getNodeType($enumeratedNode->getNodeTypeName());
+        if ($nodeType === null || !$nodeType->isOfType('Vendor.Site:Document.Blog.Folder')) {
+            return;
         }
+
+        $documentNode = $contentRepository
+            ->getContentGraph($nodeAddress->workspaceName)
+            ->getSubgraph($nodeAddress->dimensionSpacePoint, NeosVisibilityConstraints::excludeRemoved()->merge(
+                NeosVisibilityConstraints::excludeDisabled(),
+            ))
+            ->findNodeById($nodeAddress->aggregateId);
+        if ($documentNode === null) {
+            return;
+        }
+
+        // count the number of pages to render
+        // $pageCount = ...
+        if ($pageCount <= 1) {
+            return;
+        }
+
+        // Start after the first page, because the first page will be the document without arguments
+        $enumeratedNodes = [];
+        for ($page = 2; $page <= $pageCount; $page++) {
+            $enumeratedNodes[] = EnumeratedNode::fromNode($documentNode, ['page' => $page]);
+        }
+
+        $this->redisEnumerationRepository->addDocumentNodesToEnumeration($releaseIdentifier, ...$enumeratedNodes);
     }
 }
 ```
@@ -822,7 +867,7 @@ The factory throws if the package is missing - the setting is only ever reachabl
 purpose, so it fails loudly rather than silently doing nothing.
 
 Two spans are recorded per document: `Content Release: Render Document`, same name for every document so a profiler can
-sum it into one figure, and `Content Release Document: <contextPath>`, one distinct name per page.
+sum it into one figure, and `Content Release Document: <NodeAddress JSON>`, one distinct name per page.
 
 What the resulting profiles look like:
 
@@ -841,8 +886,22 @@ To write your own tracer - e.g. one that just appends `duration<TAB>url` lines a
 
 ### Testing the Rendering
 
-The behavioral tests need the `neos/behat` package (`composer require --dev neos/behat`), which brings Behat itself
-along. Behat is used from the main composer installation:
+The behavioral tests run inside a Neos installation and need, in its composer installation:
+
+* `neos/behat` (brings Behat itself along),
+* `neos/contentrepository-testsuite` (the scenarios set up node types, dimensions and nodes through its
+  `CRTestSuiteTrait`, and the `Testing/Behat` settings use its fake node type manager and dimension source),
+* `neos/contentgraph-doctrinedbaladapter`, the content graph adapter (a Neos 9 distribution usually requires it already).
+
+```bash
+composer require --dev neos/behat neos/contentrepository-testsuite
+```
+
+They also need a **SQL database** (MariaDB, MySQL or PostgreSQL) configured for the `Testing/Behat` context: the
+content repository keeps its events and projections there, and the scenarios create Flow entities (sites, domains)
+as well. Besides that, they need the Redis instance described below.
+
+Behat is used from the main composer installation:
 
 ```bash
 cd Packages/Application/Flowpack.DecoupledContentStore/Tests/Behavior
@@ -856,9 +915,8 @@ The tests bootstrap the `Testing/Behat` context, so the database and the Redis i
 configured in `Configuration/Testing/Behat/`.
 
 **Every feature file is tagged `@resetRedis`, and that hook calls `FLUSHALL`** on the primary content store - not just
-the configured database, but every database on that Redis server. Point the Behat context at a Redis instance whose
-contents you are willing to lose; if it is the same server a development content store uses, running the tests wipes it,
-including caches other applications keep there.
+the configured database, but every database on that Redis server. It's recommended to point the Behat context at a Redis
+instance only used for testing.
 
 Behat also supports running single tests or single files - they need to be specified after the config file, e.g.
 

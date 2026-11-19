@@ -14,51 +14,32 @@ use Flowpack\Prunner\Dto\Job;
 use Flowpack\Prunner\PrunnerApiService;
 use Flowpack\Prunner\ValueObject\JobId;
 use Flowpack\Prunner\ValueObject\PipelineName;
-use Neos\ContentRepository\Domain\Model\Workspace;
+use Neos\ContentRepository\Core\SharedModel\Workspace\Workspace;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Log\Utility\LogEnvironment;
 use Neos\Flow\Security\Context;
 use Psr\Log\LoggerInterface;
 
-/**
- * @Flow\Scope("singleton")
- */
-class ContentReleaseManager
+#[Flow\Scope('singleton')]
+final readonly class ContentReleaseManager
 {
-    /**
-     * @Flow\Inject
-     * @var PrunnerApiService
-     */
-    protected $prunnerApiService;
+    private const string REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
+    public const string NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
+    public const string CONTENT_RELEASE_PIPELINE_NAME = 'do_content_release';
+    public const string QUICK_CONTENT_RELEASE_PIPELINE_NAME = 'do_quick_content_release';
 
     /**
-     * @Flow\Inject
-     * @var RedisClientManager
+     * @param array<string, mixed> $configEpochSettings
      */
-    protected $redisClientManager;
-
-    /**
-     * @Flow\InjectConfiguration("configEpoch")
-     * @var array
-     */
-    protected $configEpochSettings;
-
-    /**
-     * @FLow\Inject
-     * @var Context
-     */
-    protected $securityContext;
-
-    #[Flow\Inject]
-    protected AutomaticReleaseSwitchService $automaticReleaseSwitchService;
-
-    #[Flow\Inject]
-    protected LoggerInterface $logger;
-
-    const REDIS_CURRENT_RELEASE_KEY = 'contentStore:current';
-    const NO_PREVIOUS_RELEASE = 'NO_PREVIOUS_RELEASE';
-    const CONTENT_RELEASE_PIPELINE_NAME = 'do_content_release';
-    const QUICK_CONTENT_RELEASE_PIPELINE_NAME = 'do_quick_content_release';
+    public function __construct(
+        private PrunnerApiService $prunnerApiService,
+        private RedisClientManager $redisClientManager,
+        private AutomaticReleaseSwitchService $automaticReleaseSwitchService,
+        private LoggerInterface $logger,
+        private Context $securityContext,
+        #[Flow\InjectConfiguration('configEpoch')]
+        protected array $configEpochSettings,
+    ) {}
 
     /**
      * All automatic release triggers (workspace publish, asset change, re-release after a rendering error) run through
@@ -96,7 +77,7 @@ class ContentReleaseManager
                 'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
                 'validate' => true,
                 'flushContentCache' => false,
-                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'workspaceName' => $workspace !== null ? $workspace->workspaceName->value : 'live',
                 'accountId' => $this->getAccountId(),
             ]),
         );
@@ -121,7 +102,7 @@ class ContentReleaseManager
                 'currentContentReleaseId' => $this->resolveCurrentContentReleaseId($currentContentReleaseId),
                 'validate' => $validate,
                 'flushContentCache' => true,
-                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'workspaceName' => $workspace !== null ? $workspace->workspaceName->value : 'live',
                 'accountId' => $this->getAccountId(),
             ]),
         );
@@ -163,12 +144,14 @@ class ContentReleaseManager
         // Jobs::waiting() means "never started", which is true of a job cancelled while it was still queued as well.
         // Such a job stays in prunner's list until it falls out of the pipeline's retention_count - a window only
         // quick releases consume - so without the isCompleted() guard one cancelled job blocks them all until then.
-        $queuedQuickReleaseJobs = $quickReleaseJobs->waiting()
+        $queuedQuickReleaseJobs = $quickReleaseJobs
+            ->waiting()
             ->filter(static fn(Job $job): bool => !$job->isCompleted());
         // Jobs::running() means "started but not ended". A job that was running when prunner stopped
         // is flagged cancelled on its next boot but never gets an end timestamp, and cancelling it
         // again is a no-op for prunner - so it reads as running for the rest of its retention window.
-        $runningQuickReleaseJobs = $quickReleaseJobs->running()
+        $runningQuickReleaseJobs = $quickReleaseJobs
+            ->running()
             ->filter(static fn(Job $job): bool => !$job->isCanceled());
         if ($runningQuickReleaseJobs->getArray() !== [] || $queuedQuickReleaseJobs->getArray() !== []) {
             throw new QuickContentReleaseNotPossibleException(
@@ -184,7 +167,7 @@ class ContentReleaseManager
                 'contentReleaseId' => $contentReleaseId,
                 'currentContentReleaseId' => $currentContentReleaseId,
                 'quickPublishNodeIdentifiers' => (string) $nodeIdentifiers,
-                'workspaceName' => $workspace !== null ? $workspace->getName() : 'live',
+                'workspaceName' => $workspace !== null ? $workspace->workspaceName->value : 'live',
                 'accountId' => $this->getAccountId(),
             ]),
         );

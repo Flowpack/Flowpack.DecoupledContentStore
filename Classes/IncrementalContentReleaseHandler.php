@@ -6,32 +6,55 @@ namespace Flowpack\DecoupledContentStore;
 
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class IncrementalContentReleaseHandler
+#[Flow\Scope('singleton')]
+final class IncrementalContentReleaseHandler
 {
-    /**
-     * @Flow\Inject
-     * @var ContentReleaseManager
-     */
-    protected $contentReleaseManager;
+    private bool $nodePublishedInThisRequest = false;
 
-    /**
-     * @Flow\InjectConfiguration("startIncrementalReleaseOnWorkspacePublish")
-     */
-    protected $startIncrementalReleaseOnWorkspacePublish;
+    private bool $liveVisibilityChangedInThisRequest = false;
 
-    protected $nodePublishedInThisRequest = false;
+    public function __construct(
+        private readonly ContentReleaseManager $contentReleaseManager,
+        #[Flow\InjectConfiguration('startIncrementalReleaseOnWorkspacePublish')]
+        protected readonly bool $startIncrementalReleaseOnWorkspacePublish,
+    ) {}
 
-    public function nodePublished()
+    public function nodePublished(): void
     {
         $this->nodePublishedInThisRequest = true;
     }
 
-    public function startContentReleaseIfNodesWerePublishedBefore()
+    public function liveVisibilityChanged(): void
     {
-        if ($this->startIncrementalReleaseOnWorkspacePublish === true && $this->nodePublishedInThisRequest === true) {
+        $this->liveVisibilityChangedInThisRequest = true;
+    }
+
+    /**
+     * Called after a web request.
+     */
+    public function startContentReleaseIfNodesWerePublishedBefore(): void
+    {
+        if ($this->nodePublishedInThisRequest || $this->liveVisibilityChangedInThisRequest) {
+            $this->startContentRelease();
+        }
+    }
+
+    /**
+     * Called after a CLI command. Publishing from the CLI does not start a release, but enabling or disabling nodes
+     * in live does: that is what timeableNodeVisibility:execute does when a page's enable or disable date is reached.
+     */
+    public function startContentReleaseIfLiveVisibilityChanged(): void
+    {
+        if ($this->liveVisibilityChangedInThisRequest) {
+            $this->startContentRelease();
+        }
+    }
+
+    private function startContentRelease(): void
+    {
+        $this->nodePublishedInThisRequest = false;
+        $this->liveVisibilityChangedInThisRequest = false;
+        if ($this->startIncrementalReleaseOnWorkspacePublish) {
             $this->contentReleaseManager->startIncrementalContentRelease();
         }
     }

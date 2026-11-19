@@ -69,6 +69,10 @@
             <trans-unit id="quickPublish.scheduled.flashMessage" xml:space="preserve">
 				<source>Content release {0} was started and publishes the pages you named.</source>
 			</trans-unit>
+            <!-- {0}: the content store identifier -->
+            <trans-unit id="manualSwitch.disabled.flashMessage" xml:space="preserve">
+				<source>Switching content releases on {0} is disabled in this environment.</source>
+			</trans-unit>
 		</body>
 	</file>
 </xliff>

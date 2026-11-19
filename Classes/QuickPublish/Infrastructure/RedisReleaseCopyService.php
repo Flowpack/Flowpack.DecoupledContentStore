@@ -24,27 +24,23 @@ use Redis;
  * the client and back, which is what makes copying a release cheaper than rendering it.
  */
 #[Flow\Scope('singleton')]
-final class RedisReleaseCopyService
+final readonly class RedisReleaseCopyService
 {
     /**
      * COPY exists since Redis 6.2, while the rest of this package runs on older servers as well.
      */
-    private const MINIMUM_REDIS_VERSION = '6.2.0';
-
-    #[Flow\Inject]
-    protected RedisClientManager $redisClientManager;
-
-    #[Flow\Inject]
-    protected RedisKeyService $redisKeyService;
-
-    #[Flow\Inject]
-    protected RedisContentReleaseService $redisContentReleaseService;
+    private const string MINIMUM_REDIS_VERSION = '6.2.0';
 
     /**
-     * @var array<string, mixed>
+     * @param array<string, mixed> $redisKeyPostfixesForEachReleaseConfiguration
      */
-    #[Flow\InjectConfiguration('redisKeyPostfixesForEachRelease')]
-    protected array $redisKeyPostfixesForEachReleaseConfiguration;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+        private RedisContentReleaseService $redisContentReleaseService,
+        #[Flow\InjectConfiguration('redisKeyPostfixesForEachRelease')]
+        protected array $redisKeyPostfixesForEachReleaseConfiguration,
+    ) {}
 
     /**
      * @throws Exception if the source release cannot be built upon, or the server is too old for COPY
@@ -180,13 +176,13 @@ final class RedisReleaseCopyService
             );
         }
 
-        if (!$metadata->getStatus()->isSuccessful()) {
+        if (!$metadata->status->isSuccessful()) {
             throw new InvalidReleaseException(
                 sprintf(
                     'Content release %s has the status "%s" instead of "success", so it cannot be copied. Run a full '
                     . 'content release instead.',
                     $sourceContentReleaseIdentifier->getIdentifier(),
-                    $metadata->getStatus()->getStatus(),
+                    $metadata->status->getStatus(),
                 ),
                 1786953589,
             );

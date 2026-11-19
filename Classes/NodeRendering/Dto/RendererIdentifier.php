@@ -6,15 +6,10 @@ namespace Flowpack\DecoupledContentStore\NodeRendering\Dto;
 
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class RendererIdentifier
+#[Flow\Proxy(false)]
+final readonly class RendererIdentifier
 {
-    /**
-     * @var string
-     */
-    private $identifier;
+    private string $identifier;
 
     private function __construct(string $identifier)
     {

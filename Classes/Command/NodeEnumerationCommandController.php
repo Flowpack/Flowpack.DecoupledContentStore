@@ -7,21 +7,20 @@ namespace Flowpack\DecoupledContentStore\Command;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeEnumeration\NodeEnumerator;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
 /**
  * Commands for the ENUMERATE stage in the pipeline. Not meant to be called manually.
  */
-class NodeEnumerationCommandController extends CommandController
+final class NodeEnumerationCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var NodeEnumerator
-     */
-    protected $nodeEnumerator;
+    public function __construct(
+        private readonly NodeEnumerator $nodeEnumerator,
+    ) {
+        parent::__construct();
+    }
 
-    public function enumerateAllNodesCommand(string $contentReleaseIdentifier)
+    public function enumerateAllNodesCommand(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);

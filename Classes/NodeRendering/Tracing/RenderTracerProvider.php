@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\NodeRendering\Tracing;
 
 use Neos\Flow\Annotations as Flow;
+use RuntimeException;
 
 /**
  * Builds the configured tracer once per process.
@@ -13,15 +14,17 @@ use Neos\Flow\Annotations as Flow;
  * factory or it does not. This follows the performanceTracer slot of the Neos 9 ContentRepositoryRegistry.
  */
 #[Flow\Scope('singleton')]
-class RenderTracerProvider
+final class RenderTracerProvider
 {
-    /**
-     * @var array{factoryObjectName: ?string, options: ?array{minimumDocumentDurationMs: int}}|null
-     */
-    #[Flow\InjectConfiguration('nodeRendering.performanceTracer')]
-    protected ?array $configuration = null;
+    private ?RenderTracerInterface $tracer = null;
 
-    protected ?RenderTracerInterface $tracer = null;
+    /**
+     * @param array{factoryObjectName?: ?string, options?: ?array{minimumDocumentDurationMs: int}}|null $configuration
+     */
+    public function __construct(
+        #[Flow\InjectConfiguration('nodeRendering.performanceTracer')]
+        protected readonly ?array $configuration,
+    ) {}
 
     public function getTracer(): RenderTracerInterface
     {
@@ -41,7 +44,7 @@ class RenderTracerProvider
 
         $factory = new $factoryObjectName();
         if (!$factory instanceof RenderTracerFactoryInterface) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf(
                     'The configured performanceTracer factory %s does not implement %s',
                     $factoryObjectName,

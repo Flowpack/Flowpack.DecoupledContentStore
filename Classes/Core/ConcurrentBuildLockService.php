@@ -6,8 +6,10 @@ namespace Flowpack\DecoupledContentStore\Core;
 
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
+use Flowpack\DecoupledContentStore\PrepareContentRelease\Dto\ContentReleaseMetadata;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
 use Neos\Flow\Annotations as Flow;
+use RuntimeException;
 
 /**
  * We usually rely on prunner to ensure that only one build per workspace is running at any given time.
@@ -25,50 +27,42 @@ use Neos\Flow\Annotations as Flow;
  *   `./flow contentReleasePrepare:ensureAllOtherInProgressContentReleasesWillBeTerminated`
  * - In the "Enumerate" and "Render" phases, we periodically check whether the concurrentBuildLock is set to the currently
  *   in-progress content release. If NO, we abort.
- *
- * @Flow\Scope("singleton")
  */
-class ConcurrentBuildLockService
+#[Flow\Scope('singleton')]
+final readonly class ConcurrentBuildLockService
 {
-    private const CONTENT_STORE_CONCURRENT_BUILD_LOCK = 'contentStore:concurrentBuildLocks';
+    private const string CONTENT_STORE_CONCURRENT_BUILD_LOCK = 'contentStore:concurrentBuildLocks';
 
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisContentReleaseService $redisContentReleaseService,
+    ) {}
 
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    public function ensureAllOtherInProgressContentReleasesWillBeTerminated(ContentReleaseIdentifier $contentReleaseIdentifier): void
-    {
-        $metadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
+    public function ensureAllOtherInProgressContentReleasesWillBeTerminated(
+        ContentReleaseIdentifier $contentReleaseIdentifier,
+    ): void {
+        $metadata = $this->fetchMetadata($contentReleaseIdentifier);
         $this->redisClientManager->getPrimaryRedis()->hSet(
             self::CONTENT_STORE_CONCURRENT_BUILD_LOCK,
-            $metadata->getWorkspaceName(),
+            $metadata->workspaceName,
             (string) $contentReleaseIdentifier,
         );
     }
 
     public function assertNoOtherContentReleaseWasStarted(ContentReleaseIdentifier $contentReleaseIdentifier): void
     {
-        $metadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
+        $metadata = $this->fetchMetadata($contentReleaseIdentifier);
         $concurrentBuildLockStrings = $this->redisClientManager
             ->getPrimaryRedis()
             ->hGetAll(self::CONTENT_STORE_CONCURRENT_BUILD_LOCK);
-        $concurrentBuildLockStringForWorkspace = $concurrentBuildLockStrings[$metadata->getWorkspaceName()] ?? null;
+        $concurrentBuildLockStringForWorkspace = $concurrentBuildLockStrings[$metadata->workspaceName] ?? null;
 
         if (!$concurrentBuildLockStringForWorkspace) {
             echo
                 '!!!!! Hard-aborting the current job '
                     . $contentReleaseIdentifier->getIdentifier()
                     . ' because the concurrentBuildLock does not exist.'
-                    . "\n\n"
-            ;
+                    . "\n\n";
             echo "This should never happen for correctly configured jobs (that run after prepare_finished).\n\n";
             exit(1);
         }
@@ -81,15 +75,25 @@ class ConcurrentBuildLockService
                 '!!!!! Hard-aborting the current job '
                     . $contentReleaseIdentifier->getIdentifier()
                     . ' because the concurrentBuildLock for workspace "'
-                    . $metadata->getWorkspaceName()
+                    . $metadata->workspaceName
                     . '" contains '
                     . $concurrentBuildLock->getIdentifier()
-                    . "\n\n"
-            ;
+                    . "\n\n";
             echo
-                "This is no error during deployment, but should never happen outside a deployment.\n\n It can only happen if two prunner instances run concurrently.\n\n"
-            ;
+                "This is no error during deployment, but should never happen outside a deployment.\n\n It can only happen if two prunner instances run concurrently.\n\n";
             exit(1);
         }
+    }
+
+    private function fetchMetadata(ContentReleaseIdentifier $contentReleaseIdentifier): ContentReleaseMetadata
+    {
+        $metadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
+        if ($metadata === null) {
+            throw new RuntimeException(sprintf(
+                'No metadata found for content release %s.',
+                $contentReleaseIdentifier->getIdentifier(),
+            ));
+        }
+        return $metadata;
     }
 }

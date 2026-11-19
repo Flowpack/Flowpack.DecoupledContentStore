@@ -7,15 +7,13 @@ namespace Flowpack\DecoupledContentStore\Core\Domain\Dto;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Proxy(false)
- */
-final class ContentReleaseBatchResult
+#[Flow\Proxy(false)]
+final readonly class ContentReleaseBatchResult
 {
     /**
      * @var array key is a content release identifier (stringified); value is a value (depending on which method was asked)
      */
-    protected array $results;
+    private array $results;
 
     private function __construct(array $results)
     {
@@ -27,7 +25,7 @@ final class ContentReleaseBatchResult
         return new self($in);
     }
 
-    public function getResultForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier)
+    public function getResultForContentRelease(ContentReleaseIdentifier $contentReleaseIdentifier): mixed
     {
         return $this->results[(string) $contentReleaseIdentifier] ?? null;
     }

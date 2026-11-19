@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure;
 
+use DateTimeImmutable;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifier;
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
@@ -13,46 +14,31 @@ use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisCon
 use Flowpack\DecoupledContentStore\Transfer\Dto\RedisKeyPostfixesForEachRelease;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisReleaseSwitchService
+#[Flow\Scope('singleton')]
+final readonly class RedisReleaseSwitchService
 {
     /**
-     * @Flow\Inject
-     * @var RedisClientManager
+     * @param array<string, mixed> $redisKeyPostfixesForEachReleaseConfiguration
+     * @param array<string, mixed> $configEpochSettings
      */
-    protected $redisClient;
+    public function __construct(
+        private RedisClientManager $redisClient,
+        private RedisContentReleaseService $redisContentReleaseService,
+        private RedisKeyService $redisKeyService,
+        #[Flow\InjectConfiguration('redisKeyPostfixesForEachRelease')]
+        protected array $redisKeyPostfixesForEachReleaseConfiguration,
+        #[Flow\InjectConfiguration('configEpoch')]
+        protected array $configEpochSettings,
+    ) {}
 
     /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
+     * @return bool whether the release was switched; the reason it was not is logged
      */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
-
-    /**
-     * @Flow\InjectConfiguration("redisKeyPostfixesForEachRelease")
-     * @var array
-     */
-    protected $redisKeyPostfixesForEachReleaseConfiguration;
-
-    /**
-     * @Flow\InjectConfiguration("configEpoch")
-     * @var array
-     */
-    protected $configEpochSettings;
-
     public function switchContentRelease(
         RedisInstanceIdentifier $redisInstanceIdentifier,
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-    ) {
+    ): bool {
         $redis = $this->redisClient->getRedis($redisInstanceIdentifier);
         $current = $redis->get('contentStore:current');
 
@@ -68,7 +54,7 @@ class RedisReleaseSwitchService
                 . $contentReleaseIdentifier->getIdentifier()
                 . ' is not listed in current releases thus we do not switch.',
             );
-            return;
+            return false;
         }
 
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
@@ -89,8 +75,7 @@ class RedisReleaseSwitchService
         }
         if ($hasError === true) {
             $contentReleaseLogger->error('ABORTING directly before switch because final key validation failed.');
-            exit(1);
-            return;
+            return false;
         }
 
         $redis->set('contentStore:current', $contentReleaseIdentifier->getIdentifier());
@@ -98,7 +83,7 @@ class RedisReleaseSwitchService
         $releaseMetadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
         $this->redisContentReleaseService->setContentReleaseMetadata(
             $contentReleaseIdentifier,
-            $releaseMetadata->withSwitchTime(new \DateTimeImmutable()),
+            $releaseMetadata->withSwitchTime(new DateTimeImmutable()),
             $redisInstanceIdentifier,
         );
 
@@ -108,6 +93,8 @@ class RedisReleaseSwitchService
             $current,
             $contentReleaseIdentifier->getIdentifier(),
         ));
+
+        return true;
     }
 
     public function getCurrentRelease(RedisInstanceIdentifier $redisInstanceIdentifier): ?ContentReleaseIdentifier

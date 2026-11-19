@@ -17,29 +17,22 @@ use Neos\Flow\Cli\CommandController;
 /**
  * Commands for the VALIDATION stage in the pipeline. Not meant to be called manually.
  */
-class ContentReleaseValidationCommandController extends CommandController
+final class ContentReleaseValidationCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingErrorManager
-     */
-    protected $redisRenderingErrorManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisReleaseSwitchService
-     */
-    protected $redisReleaseSwitchService;
-
-    #[Flow\Inject]
-    protected ContentReleaseScope $contentReleaseScope;
-
     /**
      * Factor between 0 and 1 for the amount of URLs a new release needs to include to be valid
      */
     protected float $validReleaseUrlCountThreshold = 0.7;
 
-    public function validateCommand(string $contentReleaseIdentifier)
+    public function __construct(
+        private readonly RedisRenderingErrorManager $redisRenderingErrorManager,
+        private readonly RedisReleaseSwitchService $redisReleaseSwitchService,
+        private readonly ContentReleaseScope $contentReleaseScope,
+    ) {
+        parent::__construct();
+    }
+
+    public function validateCommand(string $contentReleaseIdentifier): void
     {
         $startedAt = microtime(true);
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
@@ -122,7 +115,7 @@ class ContentReleaseValidationCommandController extends CommandController
         ));
     }
 
-    public function ensureNoValidationErrorsExistCommand(string $contentReleaseIdentifier)
+    public function ensureNoValidationErrorsExistCommand(string $contentReleaseIdentifier): void
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);

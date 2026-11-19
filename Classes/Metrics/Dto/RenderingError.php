@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Metrics\Dto;
 
-use JsonSerializable;
 use Flowpack\DecoupledContentStore\Metrics\NodeIdentifierExtractor;
+use JsonSerializable;
 use Neos\Flow\Annotations as Flow;
 
 /**
  * One rendering error of a content release, split into the parts an external log aggregator can filter on.
  */
 #[Flow\Proxy(false)]
-final class RenderingError implements JsonSerializable
+final readonly class RenderingError implements JsonSerializable
 {
     private function __construct(
-        public readonly string $message,
-        public readonly ?string $node,
-        public readonly ?string $nodeIdentifier,
-        public readonly ?string $nodeUri,
+        public string $message,
+        public ?string $node,
+        public ?string $nodeIdentifier,
+        public ?string $nodeUri,
     ) {}
 
     /**

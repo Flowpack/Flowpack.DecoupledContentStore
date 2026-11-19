@@ -10,34 +10,26 @@ use Flowpack\Prunner\Dto\TaskResult;
 use Flowpack\Prunner\PrunnerApiService;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class WorkerErrorLogAggregator
+#[Flow\Scope('singleton')]
+final readonly class WorkerErrorLogAggregator
 {
-    /**
-     * @Flow\Inject
-     * @var PrunnerApiService
-     */
-    protected $prunnerApiService;
-
-    /**
-     * @Flow\Inject
-     * @var RenderingErrorExtractor
-     */
-    protected $renderingErrorExtractor;
-
     /**
      * Exit code 143 = 128 + SIGTERM(15): orchestrator killed this worker after another one failed.
      */
-    public const EXIT_CODE_SIGTERM = 143;
+    public const int EXIT_CODE_SIGTERM = 143;
+
+    public function __construct(
+        private PrunnerApiService $prunnerApiService,
+        private RenderingErrorExtractor $renderingErrorExtractor,
+    ) {}
 
     /**
      * @return WorkerErrorLog[]
      */
     public function aggregate(Job $job): array
     {
-        $renderTasks = $job->getTaskResults()
+        $renderTasks = $job
+            ->getTaskResults()
             ->filteredByPrefix('render_')
             ->withoutTasks('render_finished', 'render_orchestrator');
 

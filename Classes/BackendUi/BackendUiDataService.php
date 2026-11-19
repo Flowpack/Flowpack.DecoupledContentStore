@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\BackendUi;
 
+use Exception;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseDetails;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\ContentReleaseOverviewRow;
 use Flowpack\DecoupledContentStore\BackendUi\Dto\RemovedContentReleaseOverviewRow;
@@ -21,49 +22,25 @@ use Flowpack\DecoupledContentStore\ReleaseSwitch\Infrastructure\RedisReleaseSwit
 use Flowpack\Prunner\Dto\Job;
 use Flowpack\Prunner\PrunnerApiService;
 use Neos\Flow\Annotations as Flow;
+use Throwable;
 
-/**
- * @Flow\Scope("singleton")
- */
-class BackendUiDataService
+#[Flow\Scope('singleton')]
+final readonly class BackendUiDataService
 {
-    /**
-     * @Flow\Inject
-     * @var PrunnerApiService
-     */
-    protected $prunnerApiService;
+    public function __construct(
+        private PrunnerApiService $prunnerApiService,
+        private RedisEnumerationRepository $redisEnumerationRepository,
+        private RedisContentReleaseService $redisContentReleaseService,
+        private RedisRenderingTimeStatisticsStore $redisRenderingStatisticsStore,
+        private RedisRenderingErrorManager $redisRenderingErrorManager,
+        private RedisReleaseSwitchService $redisReleaseSwitchService,
+    ) {}
 
     /**
-     * @Flow\Inject
-     * @var RedisEnumerationRepository
+     * @return ContentReleaseOverviewRow[]
+     * @throws Exception
      */
-    protected $redisEnumerationRepository;
-
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingTimeStatisticsStore
-     */
-    protected $redisRenderingStatisticsStore;
-
-    /**
-     * @Flow\Inject
-     * @var RedisRenderingErrorManager
-     */
-    protected $redisRenderingErrorManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisReleaseSwitchService
-     */
-    protected $redisReleaseSwitchService;
-
-    public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier)
+    public function loadBackendOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier): array
     {
         $contentReleaseIds = $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier);
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentReleases(
@@ -93,7 +70,7 @@ class BackendUiDataService
             foreach ($this->prunnerApiService->loadPipelinesAndJobs()->getJobs() as $job) {
                 $jobsById[$job->getId()->getId()] = $job;
             }
-        } catch (\Throwable $throwable) {
+        } catch (Throwable) {
             // the overview also holds the controls to pause releases, which must keep working while prunner is down
             $jobsById = null;
         }
@@ -112,7 +89,7 @@ class BackendUiDataService
                 $metadataForContentRelease = null;
             }
             $jobForContentRelease = $metadataForContentRelease !== null
-                ? $jobsById[$metadataForContentRelease->getPrunnerJobId()->getIdentifier()] ?? null
+                ? $jobsById[$metadataForContentRelease->prunnerJobId->getIdentifier()] ?? null
                 : null;
             $status = match (true) {
                 $jobForContentRelease !== null => ContentReleaseStatus::fromJob(
@@ -139,7 +116,7 @@ class BackendUiDataService
                 $contentReleaseId->equals($this->redisReleaseSwitchService->getCurrentRelease(
                     $redisInstanceIdentifier,
                 )),
-                $metadataForContentRelease?->getContentReleaseSize(),
+                $metadataForContentRelease?->contentReleaseSize,
                 $status,
             );
         }
@@ -155,6 +132,7 @@ class BackendUiDataService
      * "replace", most of them were replaced while waiting and have no logs at all.
      *
      * @return RemovedContentReleaseOverviewRow[]|null NULL when the prunner API could not be reached
+     * @throws Exception
      */
     public function loadRemovedReleasesOverviewData(RedisInstanceIdentifier $redisInstanceIdentifier): ?array
     {
@@ -164,7 +142,7 @@ class BackendUiDataService
 
         try {
             $jobs = $this->prunnerApiService->loadPipelinesAndJobs()->getJobs();
-        } catch (\Throwable $throwable) {
+        } catch (Throwable) {
             // the overview also holds the controls to pause releases, which must keep working while prunner is down
             return null;
         }
@@ -173,21 +151,19 @@ class BackendUiDataService
             static fn(ContentReleaseIdentifier $id): string => $id->getIdentifier(),
             $this->redisContentReleaseService->fetchAllReleaseIds($redisInstanceIdentifier),
         );
-        $releasePipelines = [
-            ContentReleaseManager::CONTENT_RELEASE_PIPELINE_NAME,
-            ContentReleaseManager::QUICK_CONTENT_RELEASE_PIPELINE_NAME,
-        ];
-        $removedReleaseJobs = $jobs->filter(
-            static function (Job $job) use ($releasePipelines, $registeredReleaseIds): bool {
-                $contentReleaseId = $job->getVariables()['contentReleaseId'] ?? null;
-                return (
-                    in_array($job->getPipeline(), $releasePipelines, true)
-                    && $job->getStart() !== null
-                    && is_string($contentReleaseId)
-                    && !in_array($contentReleaseId, $registeredReleaseIds, true)
-                );
-            },
-        )->getArray();
+        $removedReleaseJobs = $jobs->filter(static function (Job $job) use ($registeredReleaseIds): bool {
+            $releasePipelines = [
+                ContentReleaseManager::CONTENT_RELEASE_PIPELINE_NAME,
+                ContentReleaseManager::QUICK_CONTENT_RELEASE_PIPELINE_NAME,
+            ];
+            $contentReleaseId = $job->getVariables()['contentReleaseId'] ?? null;
+            return (
+                in_array($job->getPipeline(), $releasePipelines, true)
+                && $job->getStart() !== null
+                && is_string($contentReleaseId)
+                && !in_array($contentReleaseId, $registeredReleaseIds, true)
+            );
+        })->getArray();
         usort($removedReleaseJobs, static fn(Job $a, Job $b): int => $b->getStart() <=> $a->getStart());
 
         $contentReleaseIds = array_map(
@@ -234,18 +210,16 @@ class BackendUiDataService
             return null;
         }
 
-        $contentReleaseJob = $this->prunnerApiService->loadJobDetail(
-            $contentReleaseMetadata->getPrunnerJobId()->toJobId(),
-        );
+        $contentReleaseJob = $this->prunnerApiService->loadJobDetail($contentReleaseMetadata->prunnerJobId->toJobId());
 
-        $manualTransferJobs = count($contentReleaseMetadata->getManualTransferJobIds())
-            ? array_map(function (PrunnerJobId $item) {
+        $manualTransferJobs = count($contentReleaseMetadata->manualTransferJobIds) > 0
+            ? array_filter(array_map(function (PrunnerJobId $item): ?Job {
                 return $this->prunnerApiService->loadJobDetail($item->toJobId());
-            }, $contentReleaseMetadata->getManualTransferJobIds())
+            }, $contentReleaseMetadata->manualTransferJobIds))
             : [];
 
         $renderingStatistics = array_map(
-            function (string $item) {
+            function (string $item): RenderingStatistics {
                 return RenderingStatistics::fromJsonString($item);
             },
             $this->redisRenderingStatisticsStore->getRenderingStatistics(
@@ -254,10 +228,10 @@ class BackendUiDataService
             ),
         );
 
-        $renderingErrorCount = count($this->redisRenderingErrorManager->getRenderingErrors(
+        $renderingErrors = $this->redisRenderingErrorManager->getRenderingErrors(
             $contentReleaseIdentifier,
             $redisInstanceIdentifier,
-        ));
+        );
 
         $currentReleaseIdentifier = $this->redisReleaseSwitchService->getCurrentRelease($redisInstanceIdentifier);
 
@@ -266,10 +240,10 @@ class BackendUiDataService
             $contentReleaseJob,
             $this->redisEnumerationRepository->count($contentReleaseIdentifier),
             $renderingStatistics,
-            $renderingErrorCount,
+            $renderingErrors,
             $contentReleaseIdentifier->equals($currentReleaseIdentifier),
             $manualTransferJobs,
-            $contentReleaseMetadata->getContentReleaseSize(),
+            $contentReleaseMetadata->contentReleaseSize,
             !$this->redisContentReleaseService->isRegistered($contentReleaseIdentifier, $redisInstanceIdentifier),
         );
     }

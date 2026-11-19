@@ -13,27 +13,18 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderingStatistics;
 use Flowpack\DecoupledContentStore\Utility\GeneratorUtility;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisRenderingTimeStatisticsStore
+#[Flow\Scope('singleton')]
+final readonly class RedisRenderingTimeStatisticsStore
 {
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
-
-    /**
-     * @Flow\Inject
-     * @var RedisKeyService
-     */
-    protected $redisKeyService;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+    ) {}
 
     public function addStatisticsIteration(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ?RenderingStatistics $renderingStatistics,
-    ) {
+    ): void {
         $this->redisClientManager->getPrimaryRedis()->rPush(
             $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingStatistics'),
             json_encode($renderingStatistics),
@@ -43,7 +34,7 @@ class RedisRenderingTimeStatisticsStore
     public function replaceLastStatisticsIteration(
         ContentReleaseIdentifier $contentReleaseIdentifier,
         RenderingStatistics $renderingStatistics,
-    ) {
+    ): void {
         $this->redisClientManager
             ->getPrimaryRedis()
             ->rPop($this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'renderingStatistics'));
@@ -61,7 +52,7 @@ class RedisRenderingTimeStatisticsStore
         );
     }
 
-    public function flush(ContentReleaseIdentifier $contentReleaseIdentifier)
+    public function flush(ContentReleaseIdentifier $contentReleaseIdentifier): void
     {
         $this->redisClientManager->getPrimaryRedis()->del($this->redisKeyService->getRedisKeyForPostfix(
             $contentReleaseIdentifier,

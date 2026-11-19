@@ -5,18 +5,17 @@ declare(strict_types=1);
 namespace Flowpack\DecoupledContentStore\Command;
 
 use Flowpack\DecoupledContentStore\ContentReleaseManager;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 
-class ContentStorePublishCommandController extends CommandController
+final class ContentStorePublishCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var ContentReleaseManager
-     */
-    protected $contentReleaseManager;
+    public function __construct(
+        private readonly ContentReleaseManager $contentReleaseManager,
+    ) {
+        parent::__construct();
+    }
 
-    public function allCommand()
+    public function allCommand(): void
     {
         $this->contentReleaseManager->cancelAllRunningContentReleases();
         $this->contentReleaseManager->startFullContentRelease();

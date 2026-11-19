@@ -4,33 +4,25 @@ declare(strict_types=1);
 
 namespace Flowpack\DecoupledContentStore\Core\Infrastructure;
 
+use Exception;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\RendererIdentifier;
+use Neos\Error\Messages\Result;
 use Neos\Flow\Cli\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Throwable;
 
-class ContentReleaseLogger
+final readonly class ContentReleaseLogger
 {
-    /**
-     * @var OutputInterface
-     */
-    protected $output;
+    private OutputInterface $output;
 
-    /**
-     * @var StatisticsEventOutputInterface
-     */
-    protected $statisticsEventOutput;
+    private StatisticsEventOutputInterface $statisticsEventOutput;
 
-    /**
-     * @var ContentReleaseIdentifier
-     */
-    protected $contentReleaseIdentifier;
+    private ContentReleaseIdentifier $contentReleaseIdentifier;
 
-    protected string $logPrefix = '';
+    private string $logPrefix;
 
-    protected ?RendererIdentifier $rendererIdentifier;
-
-    protected function __construct(
+    private function __construct(
         OutputInterface $output,
         ContentReleaseIdentifier $contentReleaseIdentifier,
         StatisticsEventOutputInterface $statisticsEventOutput,
@@ -39,12 +31,7 @@ class ContentReleaseLogger
         $this->output = $output;
         $this->contentReleaseIdentifier = $contentReleaseIdentifier;
         $this->statisticsEventOutput = $statisticsEventOutput;
-        $this->rendererIdentifier = $rendererIdentifier;
-        $this->logPrefix = '';
-
-        if ($this->rendererIdentifier !== null) {
-            $this->logPrefix = '[Renderer ' . $this->rendererIdentifier->string() . '] ';
-        }
+        $this->logPrefix = $rendererIdentifier !== null ? '[Renderer ' . $rendererIdentifier->string() . '] ' : '';
     }
 
     public static function fromConsoleOutput(
@@ -83,13 +70,13 @@ class ContentReleaseLogger
         $this->logToOutput('ERROR', $message, $additionalPayload);
     }
 
-    protected function logToOutput(string $level, string $message, array $additionalPayload = []): void
+    private function logToOutput(string $level, string $message, array $additionalPayload = []): void
     {
         $formattedPayload = $additionalPayload ? ' ' . json_encode($additionalPayload) : '';
         $this->output->writeln($this->timePrefix() . $this->logPrefix . $level . ': ' . $message . $formattedPayload);
     }
 
-    public function logException(\Exception $exception, string $message, array $additionalPayload)
+    public function logException(Exception $exception, string $message, array $additionalPayload): void
     {
         $this->output->writeln(
             $this->timePrefix()
@@ -97,6 +84,7 @@ class ContentReleaseLogger
                 . $message
                 . "\n\n"
                 . $exception->getMessage()
+                . $this->formatValidationErrors($exception)
                 . "\n\n"
                 . $exception->getTraceAsString()
                 . "\n\n"
@@ -105,15 +93,35 @@ class ContentReleaseLogger
     }
 
     /**
+     * Some exceptions (e.g. Fusion PropType validation) keep their details in a validation Result
+     * instead of the message; without this the log only says that validation failed, not which property.
+     */
+    private function formatValidationErrors(Throwable $exception): string
+    {
+        $lines = '';
+        for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if (!method_exists($current, 'getResult') || !$current->getResult() instanceof Result) {
+                continue;
+            }
+            foreach ($current->getResult()->getFlattenedErrors() as $propertyPath => $errors) {
+                foreach ($errors as $error) {
+                    $lines .= "\n  " . $propertyPath . ': ' . $error->render();
+                }
+            }
+        }
+        return $lines;
+    }
+
+    /**
      * Every log line carries the wall-clock time it was written, so that a pipeline task which looks
      * stuck in the UI can be told apart from one which is simply slow (compare the last line's time).
      */
-    protected function timePrefix(): string
+    private function timePrefix(): string
     {
         return '[' . date('H:i:s') . '] ';
     }
 
-    public function logStatisticsEvent(string $event, array $additionalPayload = [])
+    public function logStatisticsEvent(string $event, array $additionalPayload = []): void
     {
         $this->statisticsEventOutput->writeEvent(
             $this->contentReleaseIdentifier,

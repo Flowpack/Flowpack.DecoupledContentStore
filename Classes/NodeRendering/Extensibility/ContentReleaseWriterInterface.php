@@ -17,11 +17,12 @@ use Flowpack\DecoupledContentStore\NodeRendering\Dto\RenderedDocumentFromContent
 interface ContentReleaseWriterInterface
 {
     /**
+     * @param array<string, mixed> $options the writer's configured "options"
+     */
+    public function __construct(array $options = []);
+
+    /**
      * take a rendered document and add it to the content release
-     *
-     * @param ContentReleaseIdentifier $contentReleaseIdentifier
-     * @param RenderedDocumentFromContentCache $renderedDocumentFromContentCache
-     * @param ContentReleaseLogger $logger
      */
     public function processRenderedDocument(
         ContentReleaseIdentifier $contentReleaseIdentifier,

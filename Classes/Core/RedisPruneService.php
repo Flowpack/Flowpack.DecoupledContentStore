@@ -8,16 +8,14 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\Core\Infrastructure\RedisClientManager;
 use Neos\Flow\Annotations as Flow;
 
-/**
- * @Flow\Scope("singleton")
- */
-class RedisPruneService
+#[Flow\Scope('singleton')]
+final readonly class RedisPruneService
 {
     // go through all keys in the selected content store
     // check whether they are reserved keys or currently active or contain one of the currently registered releases ids
     // if not: delete - unless the key expires on its own, which is how a removed release keeps its details for the
     // Backend UI (see removedReleaseRetentionSeconds)
-    const PRUNE_LUA_SCRIPT = '
+    private const string PRUNE_LUA_SCRIPT = '
         local contentStoreCurrent = redis.call("GET", "contentStore:current")
         local contentStoreAllKeys = redis.call("KEYS", "*")
         local contentStoreRegisteredReleases = redis.call("ZRANGE", "contentStore:registeredReleases", 0, -1)
@@ -44,13 +42,11 @@ class RedisPruneService
         end
         ';
 
-    /**
-     * @Flow\Inject
-     * @var RedisClientManager
-     */
-    protected $redisClientManager;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+    ) {}
 
-    public function pruneRedisInstance(RedisInstanceIdentifier $redisInstanceIdentifier)
+    public function pruneRedisInstance(RedisInstanceIdentifier $redisInstanceIdentifier): void
     {
         $this->redisClientManager->getRedis($redisInstanceIdentifier)->eval(self::PRUNE_LUA_SCRIPT, []);
     }

@@ -7,16 +7,16 @@ namespace Flowpack\DecoupledContentStore\Core\Infrastructure;
 use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentifier;
 use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\Exception;
+use JsonException;
 use Neos\Flow\Annotations as Flow;
 
 #[Flow\Scope('singleton')]
-class RedisStatisticsEventService
+final readonly class RedisStatisticsEventService
 {
-    #[Flow\Inject]
-    protected RedisClientManager $redisClientManager;
-
-    #[Flow\Inject]
-    protected RedisKeyService $redisKeyService;
+    public function __construct(
+        private RedisClientManager $redisClientManager,
+        private RedisKeyService $redisKeyService,
+    ) {}
 
     public function addEvent(
         ContentReleaseIdentifier $contentReleaseIdentifier,
@@ -40,13 +40,10 @@ class RedisStatisticsEventService
      * @param string[] $groupBy
      * @return array<>
      * @throws Exception
-     * @throws \JsonException
+     * @throws JsonException
      */
-    public function countEvents(
-        ContentReleaseIdentifier $contentReleaseIdentifier,
-        array $where,
-        array $groupBy,
-    ): array {
+    public function countEvents(ContentReleaseIdentifier $contentReleaseIdentifier, array $where, array $groupBy): array
+    {
         $redis = $this->redisClientManager->getPrimaryRedis();
         $key = $this->redisKeyService->getRedisKeyForPostfix($contentReleaseIdentifier, 'statisticsEvents');
         $chunkSize = 1000;

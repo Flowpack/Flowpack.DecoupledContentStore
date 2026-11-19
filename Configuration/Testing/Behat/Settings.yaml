@@ -21,3 +21,31 @@ Flowpack:
         # the key is written by documentMetadataGenerators, and the test setup registers none - so nothing that
         # requires every registered key to exist could ever pass here
         isRequired: false
+
+Neos:
+  ContentRepositoryRegistry:
+    contentRepositories:
+      # The scenarios declare node types and dimensions themselves (see FeatureContext), and the release code reads
+      # the "default" content repository.
+      default:
+        authProvider:
+          factoryObjectName: Neos\ContentRepository\TestSuite\Fakes\FakeAuthProviderFactory
+        nodeTypeManager:
+          factoryObjectName: Neos\ContentRepository\TestSuite\Fakes\FakeNodeTypeManagerFactory
+        contentDimensionSource:
+          factoryObjectName: Neos\ContentRepository\TestSuite\Fakes\FakeContentDimensionSourceFactory
+
+  Neos:
+    sites:
+      'test':
+        preset: default
+        uriPathSuffix: ''
+        contentDimensions:
+          resolver:
+            factoryClassName: Neos\Neos\FrontendRouting\DimensionResolution\Resolver\UriPathResolverFactory
+            options:
+              segments:
+                -
+                  dimensionIdentifier: language
+                  dimensionValueMapping:
+                    de: de

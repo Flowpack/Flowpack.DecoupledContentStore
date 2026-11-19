@@ -10,6 +10,7 @@ use Flowpack\DecoupledContentStore\Core\RedisKeyService;
 use Flowpack\DecoupledContentStore\QuickPublish\ContentReleaseScope;
 use Neos\Flow\Tests\UnitTestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use Redis;
 
 /**
  * Tests what a validator is told about the release it is checking.
@@ -19,11 +20,11 @@ use PHPUnit\Framework\MockObject\MockObject;
  */
 final class ContentReleaseScopeTest extends UnitTestCase
 {
-    private const CHANGED_URLS_KEY = 'contentStore:5:quickPublish:changedUrls';
+    private const string CHANGED_URLS_KEY = 'contentStore:5:quickPublish:changedUrls';
 
     public function testAReleaseWhichWasRenderedAsAWholeHasNoScope(): void
     {
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->createMock(Redis::class);
         $redis->method('sMembers')->with(self::CHANGED_URLS_KEY)->willReturn([]);
 
         self::assertNull($this->buildContentReleaseScope($redis)->getChangedUrls($this->contentReleaseIdentifier()));
@@ -31,8 +32,9 @@ final class ContentReleaseScopeTest extends UnitTestCase
 
     public function testAQuickReleaseIsScopedToTheUrlsItRendered(): void
     {
-        $redis = $this->createMock(\Redis::class);
-        $redis->method('sMembers')
+        $redis = $this->createMock(Redis::class);
+        $redis
+            ->method('sMembers')
             ->with(self::CHANGED_URLS_KEY)
             ->willReturn([
                 'http://test.de/de',
@@ -47,8 +49,9 @@ final class ContentReleaseScopeTest extends UnitTestCase
 
     public function testTheScopeIsStoredWithTheReleaseItBelongsTo(): void
     {
-        $redis = $this->createMock(\Redis::class);
-        $redis->expects(self::once())
+        $redis = $this->createMock(Redis::class);
+        $redis
+            ->expects(self::once())
             ->method('sAdd')
             ->with(self::CHANGED_URLS_KEY, 'http://test.de/de', 'http://test.de/de/nested');
 
@@ -61,7 +64,7 @@ final class ContentReleaseScopeTest extends UnitTestCase
     public function testAnEmptyScopeIsNotStored(): void
     {
         // it would be indistinguishable from a full release, which is validated as a whole
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->createMock(Redis::class);
         $redis->expects(self::never())->method('sAdd');
 
         $this->buildContentReleaseScope($redis)->setChangedUrls($this->contentReleaseIdentifier(), []);
@@ -69,7 +72,7 @@ final class ContentReleaseScopeTest extends UnitTestCase
 
     public function testPublishedUrlsAreCountedFromTheUrlIndexRatherThanTheEnumeration(): void
     {
-        $redis = $this->createMock(\Redis::class);
+        $redis = $this->createMock(Redis::class);
         $redis->method('zCard')->with('contentStore:5:meta:urls')->willReturn(18015);
 
         self::assertSame(
@@ -84,15 +87,14 @@ final class ContentReleaseScopeTest extends UnitTestCase
     }
 
     /**
-     * @param \Redis&MockObject $redis
+     * @param Redis&MockObject $redis
      */
-    private function buildContentReleaseScope(\Redis $redis): ContentReleaseScope
+    private function buildContentReleaseScope(Redis $redis): ContentReleaseScope
     {
         $redisClientManager = $this->createMock(RedisClientManager::class);
         $redisClientManager->method('getPrimaryRedis')->willReturn($redis);
 
-        $redisKeyService = new RedisKeyService();
-        $this->inject($redisKeyService, 'redisKeyPostfixesForEachReleaseConfiguration', [
+        $redisKeyService = new RedisKeyService([
             'metaUrls' => [
                 'redisKeyPostfix' => 'meta:urls',
                 'transfer' => true,
@@ -109,10 +111,6 @@ final class ContentReleaseScopeTest extends UnitTestCase
             ],
         ]);
 
-        $contentReleaseScope = new ContentReleaseScope();
-        $this->inject($contentReleaseScope, 'redisClientManager', $redisClientManager);
-        $this->inject($contentReleaseScope, 'redisKeyService', $redisKeyService);
-
-        return $contentReleaseScope;
+        return new ContentReleaseScope($redisClientManager, $redisKeyService);
     }
 }

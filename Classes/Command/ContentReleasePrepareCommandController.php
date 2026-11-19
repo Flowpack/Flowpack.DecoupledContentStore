@@ -11,32 +11,21 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\RedisInstanceIdentifi
 use Flowpack\DecoupledContentStore\Core\Infrastructure\ContentReleaseLogger;
 use Flowpack\DecoupledContentStore\NodeRendering\Dto\NodeRenderingCompletionStatus;
 use Flowpack\DecoupledContentStore\PrepareContentRelease\Infrastructure\RedisContentReleaseService;
-use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 use Neos\Fusion\Core\Cache\ContentCache;
 
 /**
  * Commands for the PREPARE stage in the pipeline. Not meant to be called manually.
  */
-class ContentReleasePrepareCommandController extends CommandController
+final class ContentReleasePrepareCommandController extends CommandController
 {
-    /**
-     * @Flow\Inject
-     * @var RedisContentReleaseService
-     */
-    protected $redisContentReleaseService;
-
-    /**
-     * @Flow\Inject
-     * @var ConcurrentBuildLockService
-     */
-    protected $concurrentBuildLock;
-
-    /**
-     * @Flow\Inject
-     * @var ContentCache
-     */
-    protected $contentCache;
+    public function __construct(
+        private readonly RedisContentReleaseService $redisContentReleaseService,
+        private readonly ConcurrentBuildLockService $concurrentBuildLock,
+        private readonly ContentCache $contentCache,
+    ) {
+        parent::__construct();
+    }
 
     public function createContentReleaseCommand(
         string $contentReleaseIdentifier,
@@ -56,8 +45,9 @@ class ContentReleasePrepareCommandController extends CommandController
         );
     }
 
-    public function ensureAllOtherInProgressContentReleasesWillBeTerminatedCommand(string $contentReleaseIdentifier): void
-    {
+    public function ensureAllOtherInProgressContentReleasesWillBeTerminatedCommand(
+        string $contentReleaseIdentifier,
+    ): void {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
 
         $this->concurrentBuildLock->ensureAllOtherInProgressContentReleasesWillBeTerminated($contentReleaseIdentifier);
@@ -84,7 +74,7 @@ class ContentReleasePrepareCommandController extends CommandController
     {
         $contentReleaseIdentifier = ContentReleaseIdentifier::fromString($contentReleaseIdentifier);
         $metadata = $this->redisContentReleaseService->fetchMetadataForContentRelease($contentReleaseIdentifier);
-        if ($metadata === null || $metadata->getPrunnerJobId()->getIdentifier() !== $prunnerJobId) {
+        if ($metadata === null || $metadata->prunnerJobId->getIdentifier() !== $prunnerJobId) {
             return;
         }
 

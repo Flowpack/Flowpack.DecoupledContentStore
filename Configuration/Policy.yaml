@@ -11,6 +11,13 @@ privilegeTargets:
     'Flowpack.DecoupledContentStore:ReleaseControl':
       matcher: 'method(Flowpack\DecoupledContentStore\Controller\BackendController->(pauseAutomaticReleases|resumeAutomaticReleases|quickPublishForm|quickPublishPreview|quickPublish)Action())'
 
+    # Everything which changes what the delivery layer serves: switching the live release of a content store by hand,
+    # transferring a release to another store, toggling the config epoch, and removing or pruning releases. Separate
+    # from the module privilege for the same reason as ReleaseControl: watching the module must not mean being able to
+    # change what the delivery layer serves.
+    'Flowpack.DecoupledContentStore:ReleaseSwitch':
+      matcher: 'method(Flowpack\DecoupledContentStore\Controller\BackendController->(switch|switchContentReleaseOnOtherInstance|toggleConfigEpoch|remove|pruneContentStore)Action())'
+
 roles:
   'Neos.Neos:Administrator':
     privileges:
@@ -19,4 +26,7 @@ roles:
         permission: GRANT
       -
         privilegeTarget: 'Flowpack.DecoupledContentStore:ReleaseControl'
+        permission: GRANT
+      -
+        privilegeTarget: 'Flowpack.DecoupledContentStore:ReleaseSwitch'
         permission: GRANT

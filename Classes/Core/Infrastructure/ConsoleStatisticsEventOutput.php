@@ -8,9 +8,9 @@ use Flowpack\DecoupledContentStore\Core\Domain\ValueObject\ContentReleaseIdentif
 use Neos\Flow\Cli\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class ConsoleStatisticsEventOutput implements StatisticsEventOutputInterface
+final readonly class ConsoleStatisticsEventOutput implements StatisticsEventOutputInterface
 {
-    protected OutputInterface $output;
+    private OutputInterface $output;
 
     function __construct(OutputInterface $output)
     {
