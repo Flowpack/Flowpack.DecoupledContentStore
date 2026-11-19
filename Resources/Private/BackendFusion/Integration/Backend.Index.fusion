@@ -287,7 +287,7 @@ prototype(Flowpack.DecoupledContentStore:ContentStoreActions) < prototype(Neos.F
         }
 
         renderer = afx`
-            <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning">
+            <button form="postHelper" formaction={props._pruneContentStoreUri} type="submit" class="neos-button neos-button-warning" @if.hasAccess={Security.hasAccess('Flowpack.DecoupledContentStore:ReleaseSwitch')}>
                 Prune content store
             </button>
         `
@@ -317,7 +317,7 @@ prototype(Flowpack.DecoupledContentStore:ContentStoreActions) < prototype(Neos.F
         }
 
         renderer = afx`
-            <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} form="postHelper" formaction={props._toggleConfigEpochUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
+            <button @if.showToggleConfigEpochButton={showToggleConfigEpochButton} @if.hasAccess={Security.hasAccess('Flowpack.DecoupledContentStore:ReleaseSwitch')} form="postHelper" formaction={props._toggleConfigEpochUri} type="submit" class="neos-button neos-button-danger" style="margin-top: 300px;">
                 {'Toggle config epoch: ' + toggleFromConfigEpoch + ' to ' + toggleToConfigEpoch}
             </button>
         `

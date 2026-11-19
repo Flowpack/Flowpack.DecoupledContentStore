@@ -29,10 +29,13 @@ final class ContentReleaseSwitchCommandController extends CommandController
         $logger = ContentReleaseLogger::fromConsoleOutput($this->output, $contentReleaseIdentifier);
 
         $redisInstanceIdentifier = RedisInstanceIdentifier::fromString($redisInstanceIdentifier);
-        $this->redisReleaseSwitchService->switchContentRelease(
+        $switched = $this->redisReleaseSwitchService->switchContentRelease(
             $redisInstanceIdentifier,
             $contentReleaseIdentifier,
             $logger,
         );
+        if (!$switched) {
+            $this->quit(1);
+        }
     }
 }

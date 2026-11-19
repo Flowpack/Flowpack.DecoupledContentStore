@@ -368,3 +368,7 @@ remain valid rollback targets.
 * A changed asset starts an incremental release also when only Fusion renders it (see "Asset cache tags").
 * Quick publish no longer reports `orphaned` nodes, and resolves pasted node identifiers in the `default` content
   repository only.
+* Switching a release, *Transfer and switch on …*, toggling the config epoch, removing a release and pruning a content
+  store in the backend module need the new `Flowpack.DecoupledContentStore:ReleaseSwitch` privilege target (granted to
+  `Neos.Neos:Administrator`); 4.x allowed everybody with access to the module. Grant it to other roles in your
+  `Policy.yaml` if they need it.

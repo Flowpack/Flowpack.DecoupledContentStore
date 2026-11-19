@@ -502,12 +502,13 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
             }
 
             renderer = afx`
-                <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right" @if.isNotPrimary={item != "primary"}>
+                <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right" @if.isNotPrimary={item != "primary"} @if.manualSwitchEnabled={Array.indexOf(manualSwitchEnabledStores, item) != -1}>
                     Transfer and switch on {item}
                 </button>
             `
         }
     }
+    _renderedSwitchButtons.@if.hasAccess = ${Security.hasAccess('Flowpack.DecoupledContentStore:ReleaseSwitch')}
 
     renderer = afx`
         <div class="neos-footer">
@@ -520,10 +521,10 @@ prototype(Flowpack.DecoupledContentStore:DetailsFooter) < prototype(Neos.Fusion:
             </Neos.Fusion:Link.Action>
 
             <Neos.Fusion:Fragment @if.isRegistered={detailsData && !detailsData.isRemoved}>
-                <button form="postHelper" formaction={props._removeUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
+                <button form="postHelper" formaction={props._removeUri} type="submit" class="neos-button neos-button-warning neos-pull-right" @if.hasAccess={Security.hasAccess('Flowpack.DecoupledContentStore:ReleaseSwitch')}>
                     Remove release
                 </button>
-                <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right">
+                <button form="postHelper" formaction={props._switchUri} type="submit" class="neos-button neos-button-warning neos-pull-right" @if.manualSwitchEnabled={Array.indexOf(manualSwitchEnabledStores, contentStore) != -1} @if.hasAccess={Security.hasAccess('Flowpack.DecoupledContentStore:ReleaseSwitch')}>
                     Switch to release
                 </button>
 

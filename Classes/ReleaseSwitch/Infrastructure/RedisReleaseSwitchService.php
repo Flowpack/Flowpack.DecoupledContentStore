@@ -31,11 +31,14 @@ final readonly class RedisReleaseSwitchService
         protected array $configEpochSettings,
     ) {}
 
+    /**
+     * @return bool whether the release was switched; the reason it was not is logged
+     */
     public function switchContentRelease(
         RedisInstanceIdentifier $redisInstanceIdentifier,
         ContentReleaseIdentifier $contentReleaseIdentifier,
         ContentReleaseLogger $contentReleaseLogger,
-    ): void {
+    ): bool {
         $redis = $this->redisClient->getRedis($redisInstanceIdentifier);
         $current = $redis->get('contentStore:current');
 
@@ -51,7 +54,7 @@ final readonly class RedisReleaseSwitchService
                 . $contentReleaseIdentifier->getIdentifier()
                 . ' is not listed in current releases thus we do not switch.',
             );
-            return;
+            return false;
         }
 
         $redisKeyPostfixesForEachRelease = RedisKeyPostfixesForEachRelease::fromArray($this->redisKeyPostfixesForEachReleaseConfiguration);
@@ -72,8 +75,7 @@ final readonly class RedisReleaseSwitchService
         }
         if ($hasError === true) {
             $contentReleaseLogger->error('ABORTING directly before switch because final key validation failed.');
-            exit(1);
-            return;
+            return false;
         }
 
         $redis->set('contentStore:current', $contentReleaseIdentifier->getIdentifier());
@@ -91,6 +93,8 @@ final readonly class RedisReleaseSwitchService
             $current,
             $contentReleaseIdentifier->getIdentifier(),
         ));
+
+        return true;
     }
 
     public function getCurrentRelease(RedisInstanceIdentifier $redisInstanceIdentifier): ?ContentReleaseIdentifier

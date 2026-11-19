@@ -835,12 +835,6 @@ parameters:
 			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
 
 		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: Classes/ReleaseSwitch/Infrastructure/RedisReleaseSwitchService.php
-
-		-
 			message: '#^Only booleans are allowed in a negated boolean, Flowpack\\DecoupledContentStore\\Core\\Domain\\ValueObject\\ContentReleaseIdentifier\|null given\.$#'
 			identifier: booleanNot.exprNotBoolean
 			count: 2

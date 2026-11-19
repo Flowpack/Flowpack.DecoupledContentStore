@@ -116,6 +116,15 @@ final class BackendController extends ActionController
         $this->view->assign('detailsData', $detailsData);
         $this->view->assign('redisContentStores', array_keys($this->redisContentStores));
         $this->view->assign('isPrimary', $contentStore->isPrimary());
+        $this->view->assign(
+            'manualSwitchEnabledStores',
+            array_values(array_filter(
+                array_keys($this->redisContentStores),
+                fn(string $storeId): bool => $this->isManualSwitchEnabled(
+                    RedisInstanceIdentifier::fromString($storeId),
+                ),
+            )),
+        );
 
         // once the keys a removed release keeps have expired, its prunner job is all that is left of it
         $removedReleaseJob = null;
@@ -191,14 +200,21 @@ final class BackendController extends ActionController
             ? RedisInstanceIdentifier::fromString($redisInstanceIdentifier)
             : RedisInstanceIdentifier::primary();
 
+        $this->refuseIfManualSwitchIsDisabled($redisInstanceIdentifier);
+
         $bufferedOutput = new BufferedOutput();
         $logger = ContentReleaseLogger::fromSymfonyOutput($bufferedOutput, $contentReleaseIdentifier);
 
-        $this->redisReleaseSwitchService->switchContentRelease(
+        $switched = $this->redisReleaseSwitchService->switchContentRelease(
             $redisInstanceIdentifier,
             $contentReleaseIdentifier,
             $logger,
         );
+        if ($switched) {
+            $this->addManualSwitchNotice($redisInstanceIdentifier);
+        } else {
+            $this->addFlashMessage($bufferedOutput->fetch(), '', Message::SEVERITY_ERROR);
+        }
 
         $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
     }
@@ -206,7 +222,14 @@ final class BackendController extends ActionController
     public function switchContentReleaseOnOtherInstanceAction(
         string $targetRedisInstanceIdentifier,
         string $contentReleaseIdentifier,
-    ): void {
+    ): ResponseInterface {
+        if ($this->request->getHttpRequest()->getMethod() !== 'POST') {
+            return new Response(405, [], 'Method not allowed');
+        }
+
+        $targetRedisInstance = RedisInstanceIdentifier::fromString($targetRedisInstanceIdentifier);
+        $this->refuseIfManualSwitchIsDisabled($targetRedisInstance);
+
         $redis = $this->redisClientManager->getPrimaryRedis();
         $currentContentReleaseId = $redis->get('contentStore:current');
 
@@ -215,6 +238,7 @@ final class BackendController extends ActionController
             'currentContentReleaseId' => $currentContentReleaseId ?: ContentReleaseManager::NO_PREVIOUS_RELEASE,
             'redisInstanceId' => $targetRedisInstanceIdentifier,
         ]);
+        $this->addManualSwitchNotice($targetRedisInstance);
 
         $this->redirect('index', null, null, ['contentStore' => $targetRedisInstanceIdentifier]);
     }
@@ -328,6 +352,44 @@ final class BackendController extends ActionController
 
         $this->addFlashMessage($this->translateById('quickPublish.scheduled.flashMessage', [$contentReleaseIdentifier->getIdentifier()]));
         $this->redirect('index', null, null, $contentStore !== null ? ['contentStore' => $contentStore] : []);
+    }
+
+    /**
+     * Stores with `manualSwitchEnabled: false` are not switched or transferred to from this module.
+     */
+    private function refuseIfManualSwitchIsDisabled(RedisInstanceIdentifier $redisInstanceIdentifier): void
+    {
+        if ($this->isManualSwitchEnabled($redisInstanceIdentifier)) {
+            return;
+        }
+
+        $this->addFlashMessage(
+            $this->translateById('manualSwitch.disabled.flashMessage', [$redisInstanceIdentifier->getIdentifier()]),
+            '',
+            Message::SEVERITY_ERROR,
+        );
+        $this->redirect('index', null, null, ['contentStore' => $redisInstanceIdentifier->getIdentifier()]);
+    }
+
+    private function isManualSwitchEnabled(RedisInstanceIdentifier $redisInstanceIdentifier): bool
+    {
+        return (bool) ($this->storeSetting($redisInstanceIdentifier, 'manualSwitchEnabled') ?? true);
+    }
+
+    /**
+     * Shows the `manualSwitchNotice` of the store, e.g. a follow-up step the consumers of that store need.
+     */
+    private function addManualSwitchNotice(RedisInstanceIdentifier $redisInstanceIdentifier): void
+    {
+        $notice = (string) $this->storeSetting($redisInstanceIdentifier, 'manualSwitchNotice');
+        if ($notice !== '') {
+            $this->addFlashMessage($notice, '', Message::SEVERITY_NOTICE);
+        }
+    }
+
+    private function storeSetting(RedisInstanceIdentifier $redisInstanceIdentifier, string $key): mixed
+    {
+        return $this->redisContentStores[$redisInstanceIdentifier->getIdentifier()][$key] ?? null;
     }
 
     /**

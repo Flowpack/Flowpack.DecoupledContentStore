@@ -248,6 +248,20 @@ To enable this feature, do the following:
             database: 11
     ```
 
+   Two optional keys per content store control switching it by hand in the backend module:
+
+    ```yaml
+          staging:
+            # false hides the switch and transfer buttons for this store and refuses the request (default: true),
+            # e.g. from an environment variable: '%env(bool):ENABLE_STAGING%'
+            manualSwitchEnabled: true
+            # shown as a notice after a release was switched or transferred to this store by hand (default: none)
+            manualSwitchNotice: 'Also start the import on the staging site.'
+    ```
+
+   They only apply to the backend module; the `contentReleaseSwitch:switchActiveContentRelease` command and the
+   pipelines ignore them.
+
 2. In `pipelines.yml`, underneath `4) TRANSFER`, comment-in and adjust the `transfer_content` task.
 
 3. In `pipelines.yml`, underneath `5) TRANSFER`, comment-in the additional
@@ -445,6 +459,11 @@ Pause, resume and quick publish sit behind the `Flowpack.DecoupledContentStore:R
 the package grants to `Neos.Neos:Administrator`. It is separate from the module privilege, so an installation which lets
 editors watch the module can still restrict who may stop everybody's publishes from going live. The read-only status the
 content-module warning uses is outside the target, so editors can see the banner.
+
+Everything in the module which changes what the delivery layer serves sits behind the
+`Flowpack.DecoupledContentStore:ReleaseSwitch` privilege target, also granted to `Neos.Neos:Administrator`: switching a
+content store to a release, *Transfer and switch on …*, toggling the config epoch, removing a release and pruning a
+content store. Grant it to another role to let that role do these.
 
 ### Publishing single documents
 
